@@ -1,0 +1,13 @@
+# Lein
+.lein-failures
+.lein-repl-history
+target/*
+
+# Eclipse & CCW
+.externalToolBuilders/*
+.classpath
+.project
+.settings/*
+bin/*
+classes/*
+
