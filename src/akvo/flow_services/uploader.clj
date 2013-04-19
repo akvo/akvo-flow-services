@@ -18,15 +18,18 @@
            org.apache.ant.compress.taskdefs.Unzip
            org.waterforpeople.mapping.dataexport.SurveyDataImportExportFactory)
   (:require [clojure.java.io :as io]
+            [clojure.string :as str]
             [clojure.pprint :as pprint]))
 
 
 (def configs (atom {}))
 
 (defn set-config! [configs-map]
+  "Resets the value of configs map"
   (swap! configs into configs-map))
 
 (defn- get-path []
+  "Returns the main folder where temporary files will be stored"
   (format "%s/%s" (System/getProperty "java.io.tmpdir") "akvo/flow/uploads"))
 
 (defn save-chunk [params]
@@ -48,6 +51,15 @@
     (doseq [idx (range 1 (+ 1 no-parts))]
       (FileUtils/writeByteArrayToFile f (FileUtils/readFileToByteArray (io/file (format "%s/%s.%s" directory filename idx))) true))))
 
+(defn- cleanup [path]
+  "Removes all the chunks from a particular directory"
+  (doseq [file (filter #(re-find #".\d+$" (.getName ^File %)) (FileUtils/listFiles (io/file path) nil false))]
+    (FileUtils/deleteQuietly ^File file)))
+
+(defn delete-directory [path]
+  "Deletes a directory recursively"
+  (FileUtils/deleteDirectory (io/file path)))
+
 (defn- unzip-file [directory filename]
   "Extract the uploaded content to a folder `zip-content`"
   (let [dest (io/file (format "%s/%s" directory "zip-content"))]
@@ -59,7 +71,8 @@
       (.execute))
     dest))
 
-(defn get-criteria [upload-domain]
+(defn- get-criteria [upload-domain]
+  "Returns the criteria map required by the applet bulk uploader code"
   (let [config (@configs upload-domain)]
     {"uploadBase" (config "uploadUrl")
      "awsId" (config "s3Id")
@@ -78,4 +91,7 @@
   (let [path (format "%s/%s" (get-path) unique-identifier)
         no-parts (count (seq (FileUtils/listFiles (io/file path) nil false)))]
     (combine path filename no-parts)
-    (upload (unzip-file path filename) base-url upload-domain)))
+    (cleanup path)
+    (if (.endsWith ^String (str/upper-case filename) "ZIP")
+      (upload (unzip-file path filename) base-url upload-domain)
+      (upload path base-url upload-domain))))
