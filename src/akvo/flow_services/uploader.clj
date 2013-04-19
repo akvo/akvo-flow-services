@@ -94,4 +94,4 @@
     (cleanup path)
     (if (.endsWith ^String (str/upper-case filename) "ZIP")
       (upload (unzip-file path filename) base-url upload-domain)
-      (upload path base-url upload-domain))))
+      (upload (io/file path) base-url upload-domain))))
