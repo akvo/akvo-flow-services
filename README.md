@@ -1,9 +1,9 @@
-# Akvo FLOW Reports
+# Akvo FLOW Services
 
 An HTTP layer on top of the existing Akvo FLOW applet functionality for:
 
-* generating reports
-* importing data
+* Generating reports
+* Importing data
 
 Please read the [installation](doc/InstallationNotes.md) and [deployment](doc/DeploymentNotes.md) notes.
 
