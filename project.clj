@@ -6,7 +6,7 @@
   :min-lein-version "2.0.0"
   :dependencies [[org.clojure/clojure "1.5.1"]
                  [org.clojure/tools.logging "0.2.6"]
-                 [cheshire "5.0.2"]
+                 [cheshire "5.1.1"]
                  [compojure "1.1.5"]
                  [clojurewerkz/quartzite "1.0.1"]
                  [ring/ring-core "1.1.8"]
