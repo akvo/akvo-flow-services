@@ -81,17 +81,25 @@
      "imagePolicy" (config "imageS3Policy")
      "imageSig" (config "imageS3Sig")}))
 
-(defn- upload [directory base-url upload-domain]
+(defn- get-upload-type [^File path]
+  (if (and (.isFile path)
+           (.endsWith (str/upper-case (.getName path)) "XLSX"))
+    "RAW_DATA"
+    "BULK_SURVEY"))
+
+(defn- upload [path base-url upload-domain]
   "Upload the content to S3 and notifies the server"
-  (let [importer (.getImporter (SurveyDataImportExportFactory.) "BULK_SURVEY")]
-    (.executeImport importer directory base-url (get-criteria upload-domain))))
+  (let [importer (.getImporter (SurveyDataImportExportFactory.) (get-upload-type path))]
+    (.executeImport importer path base-url (get-criteria upload-domain))))
 
 (defn bulk-upload [base-url unique-identifier filename upload-domain]
   "Combines the parts, extracts and uploads the content of a zip file"
   (let [path (format "%s/%s" (get-path) unique-identifier)
-        no-parts (count (seq (FileUtils/listFiles (io/file path) nil false)))]
+        no-parts (count (seq (FileUtils/listFiles (io/file path) nil false)))
+        uname (str/upper-case filename)]
     (combine path filename no-parts)
     (cleanup path)
-    (if (.endsWith ^String (str/upper-case filename) "ZIP")
-      (upload (unzip-file path filename) base-url upload-domain)
-      (upload (io/file path) base-url upload-domain))))
+    (cond
+      (.endsWith uname "ZIP") (upload (unzip-file path filename) base-url upload-domain) ; Extract and upload
+      (.endsWith uname "XLSX") (upload (io/file path filename) base-url upload-domain) ; Upload raw data
+      :else (upload (io/file path) base-url upload-domain)))) ; JPG? upload file in the folder
