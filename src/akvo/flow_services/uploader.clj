@@ -71,7 +71,7 @@
       (.execute))
     dest))
 
-(defn- get-criteria [upload-domain]
+(defn- get-criteria [upload-domain surveyId]
   "Returns the criteria map required by the applet bulk uploader code"
   (let [config (@configs upload-domain)]
     {"uploadBase" (config "uploadUrl")
@@ -79,7 +79,8 @@
      "dataPolicy" (config "surveyDataS3Policy")
      "dataSig" (config "surveyDataS3Sig")
      "imagePolicy" (config "imageS3Policy")
-     "imageSig" (config "imageS3Sig")}))
+     "imageSig" (config "imageS3Sig")
+     "surveyId" surveyId}))
 
 (defn- get-upload-type [^File path]
   (if (and (.isFile path)
@@ -87,12 +88,12 @@
     "RAW_DATA"
     "BULK_SURVEY"))
 
-(defn- upload [path base-url upload-domain]
+(defn- upload [path base-url upload-domain surveyId]
   "Upload the content to S3 and notifies the server"
   (let [importer (.getImporter (SurveyDataImportExportFactory.) (get-upload-type path))]
-    (.executeImport importer path base-url (get-criteria upload-domain))))
+    (.executeImport importer path base-url (get-criteria upload-domain surveyId))))
 
-(defn bulk-upload [base-url unique-identifier filename upload-domain]
+(defn bulk-upload [base-url unique-identifier filename upload-domain surveyId]
   "Combines the parts, extracts and uploads the content of a zip file"
   (let [path (format "%s/%s" (get-path) unique-identifier)
         no-parts (count (seq (FileUtils/listFiles (io/file path) nil false)))
@@ -100,6 +101,6 @@
     (combine path filename no-parts)
     (cleanup path)
     (cond
-      (.endsWith uname "ZIP") (upload (unzip-file path filename) base-url upload-domain) ; Extract and upload
-      (.endsWith uname "XLSX") (upload (io/file path filename) base-url upload-domain) ; Upload raw data
-      :else (upload (io/file path) base-url upload-domain)))) ; JPG? upload file in the folder
+      (.endsWith uname "ZIP") (upload (unzip-file path filename) base-url upload-domain surveyId) ; Extract and upload
+      (.endsWith uname "XLSX") (upload (io/file path filename) base-url upload-domain surveyId) ; Upload raw data
+      :else (upload (io/file path) base-url upload-domain surveyId)))) ; JPG? upload file in the folder
