@@ -28,7 +28,7 @@ First make sure that [Maven](https://maven.apache.org/) is installed on your sys
 
 The `project.clj` file defines a dependency on `[exporterapplet "1.0.0"]` which must be added to your local Maven cache manually as follows:
 
-    $ mvn install:install-file -Dfile=../GAE/war/exporterapplet.jar \
+    $ mvn install:install-file -Dfile=../akvo-flow/GAE/war/exporterapplet.jar \
           -DartifactId=exporterapplet \
           -Dversion=1.0.0 \
           -DgroupId=exporterapplet \

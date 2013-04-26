@@ -25,6 +25,6 @@
 
   :main akvo.flow-services.core
   :aot [akvo.flow-services.core]
-  :plugins [[lein-ring "0.8.3"]]
+  :plugins [[lein-ring "0.8.5"]]
   :ring {:handler akvo.flow-services.core/app
          :init akvo.flow-services.core/init})
