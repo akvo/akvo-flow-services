@@ -28,13 +28,11 @@
 (def cache (ref {}))
 
 (defn- valid-report? [report-path]
-  "Returns if a File is a valid one (exists and non zero length)"
   (if (and (.exists ^File report-path)
            (> (.length ^File report-path) 0))
     true false))
 
 (defn- get-path [report-file]
-  "Returns the path to the report or `INVALID_PATH` if not valid File"
   (if (valid-report? report-file)
     (string/join "/" (take-last 2 (string/split (.getAbsolutePath ^File report-file) #"/")))
     "INVALID_PATH"))
@@ -56,38 +54,30 @@
     (scheduler/delete-job (jobs/key id))))
 
 (defn- get-executing-jobs-by-key [key]
-  "Get a list of executing jobs by key (usually returns just 1 job)"
   (filter #(= (.. ^JobExecutionContext % (getJobDetail) (getKey)) (jobs/key key))
           (.getCurrentlyExecutingJobs ^Scheduler @scheduler/*scheduler*)))
 
 (defn- job-executing? [key]
-  "Returns true if there is a running job for that particular key"
   (if (seq (get-executing-jobs-by-key key)) true false))
 
 (defn- report-id [m]
-  "Generates a unique identifier based on the map"
   (format "id%s" (hash (str m))))
 
 (defn- get-random-id []
-  "Generates a unique identifier UUID"
   (str (UUID/randomUUID)))
 
 (defn- get-job [job-type id params]
-  "Returns a Job specification for the given parameters"
   (jobs/build
     (jobs/of-type job-type)
     (jobs/using-job-data (conj params {"id" id} ))
     (jobs/with-identity (jobs/key id))))
 
 (defn- get-trigger [id]
-  "Returns a Trigger to be executed now"
   (triggers/build
     (triggers/with-identity (triggers/key id))
     (triggers/start-now)))
 
 (defn- schedule-job [job-type id params]
-  "Schedule a report for generation. For concurrent requests only schedules the report
-   once."
   (let [job (get-job job-type id params)
         trigger (get-trigger id)]
     (scheduler/maybe-schedule job trigger)
@@ -95,13 +85,13 @@
      "message" "PROCESSING"}))
 
 (defn- get-report-by-id [id]
-  "Returns a report from the cache or nil if not found"
   (let [found (filter #(= id (:id %)) (keys @cache))]
     (if (seq found)
       (@cache (nth found 0)))))
 
-(defn invalidate-cache [params]
-  "Invalidates (removes) a given file from the cache"
+(defn invalidate-cache
+  "Invalidates (removes) a given file from the in memory cache"
+  [params]
   (let [baseURL (params "baseURL")]
     (doseq [sid (params "surveyIds")]
       (dosync
@@ -109,8 +99,9 @@
         (alter cache dissoc key))))
     "OK"))
 
-(defn generate-report [params]
+(defn generate-report
   "Returns the cached report for the given parameters, or schedules the report for generation"
+  [params]
   (if-let [file (get-report-by-id (report-id params))]
     (if (= file "INVALID_PATH")
       (do
@@ -122,5 +113,7 @@
        "file" file})
     (schedule-job ExportJob (report-id params) params)))
 
-(defn process-and-upload [params]
+(defn process-and-upload
+  "Schedules a bulk upload process"
+  [params]
   (schedule-job BulkUploadJob (get-random-id) params))

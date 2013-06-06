@@ -24,17 +24,18 @@
 
 (def configs (atom {}))
 
-(defn set-config! [configs-map]
+(defn set-config!
   "Resets the value of configs map"
+  [configs-map]
   (swap! configs into configs-map))
 
 (defn- get-path []
-  "Returns the main folder where temporary files will be stored"
   (format "%s/%s" (System/getProperty "java.io.tmpdir") "akvo/flow/uploads"))
 
-(defn save-chunk [params]
+(defn save-chunk
   "Saves the current produced ring temp file in a different folder.
    The expected `params` is a ring map containing a `file` part o the multipart request."
+  [params]
   (let [identifier (format "%s/%s" (get-path) (params "resumableIdentifier"))
         path (io/file identifier)
         tempfile (params "file")]
@@ -45,23 +46,20 @@
     "OK"))
 
 (defn- combine [directory filename no-parts]
-  "Combine parts of a file into a whole, e.g. file1.zip.1, file1.zip.2 -> file1.zip
-   The produced output will be in the same folder where the parts are located"
   (let [f (io/file (format "%s/%s" directory filename))]
     (doseq [idx (range 1 (+ 1 no-parts))]
       (FileUtils/writeByteArrayToFile f (FileUtils/readFileToByteArray (io/file (format "%s/%s.%s" directory filename idx))) true))))
 
 (defn- cleanup [path]
-  "Removes all the chunks from a particular directory"
   (doseq [file (filter #(re-find #".\d+$" (.getName ^File %)) (FileUtils/listFiles (io/file path) nil false))]
     (FileUtils/deleteQuietly ^File file)))
 
-(defn delete-directory [path]
+(defn delete-directory
   "Deletes a directory recursively"
+  [path]
   (FileUtils/deleteDirectory (io/file path)))
 
 (defn- unzip-file [directory filename]
-  "Extract the uploaded content to a folder `zip-content`"
   (let [dest (io/file (format "%s/%s" directory "zip-content"))]
     (if-not (.exists ^File dest)
       (.mkdirs dest))
@@ -72,7 +70,6 @@
     dest))
 
 (defn- get-criteria [upload-domain surveyId]
-  "Returns the criteria map required by the applet bulk uploader code"
   (let [config (@configs upload-domain)]
     {"uploadBase" (config "uploadUrl")
      "awsId" (config "s3Id")
@@ -89,12 +86,12 @@
     "BULK_SURVEY"))
 
 (defn- upload [path base-url upload-domain surveyId]
-  "Upload the content to S3 and notifies the server"
   (let [importer (.getImporter (SurveyDataImportExportFactory.) (get-upload-type path))]
     (.executeImport importer path base-url (get-criteria upload-domain surveyId))))
 
-(defn bulk-upload [base-url unique-identifier filename upload-domain surveyId]
+(defn bulk-upload
   "Combines the parts, extracts and uploads the content of a zip file"
+  [base-url unique-identifier filename upload-domain surveyId]
   (let [path (format "%s/%s" (get-path) unique-identifier)
         no-parts (count (seq (FileUtils/listFiles (io/file path) nil false)))
         uname (str/upper-case filename)]
