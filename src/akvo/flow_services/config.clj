@@ -16,30 +16,42 @@
   (:import org.apache.commons.io.FileUtils
            java.io.File)
   (:require [clojure.java.io :as io]
-            [clojure.string :as string :only (split)]))
+            [clojure.string :as string :only (split)]
+            [clojure.data.xml :as xml :only (parse)]))
 
 
 
 (defn- get-domain [url]
-  "Returns the domain from a URI expression like: http://host.tld/"
   (last (string/split url #"/")))
 
 (defn- load-properties [file]
-  "Returns a map {uploadUrl, {props}}
-   Loads a java.util.Properties file. It assumes that is an UploadConstants.properties
-   and that the `uploadUrl` key is present."
   (with-open [is ^java.io.InputStream (io/input-stream file)]
     (let [props (java.util.Properties.)]
       (.load props is)
       (assoc {} (get-domain (.getProperty ^java.util.Properties props "uploadUrl")) (into {} props)))))
 
 (defn- list-properties-files [path]
-  "List all files in the path (including subfolders) filtering by .properties files"
   (let [exts (into-array String ["properties"])]
     (FileUtils/listFiles (io/file path) ^"[Ljava.lang.String;" exts true)))
 
-(defn load-settings [path]
+(defn- get-system-properties [content]
+  (:content
+    (first (filter #(= (:tag %) :system-properties) (:content content)))))
+
+(defn- filter-xml [content]
+  (first
+    (filter #(= "alias" (let [{{:keys [name value]} :attrs} %] name)) (get-system-properties content))))
+
+(defn get-alias
+  "Get the alias value from the defined system properties in appengine-web.xml"
+  [path]
+  (let [content (xml/parse (io/reader (io/file path)))
+        {{:keys [name value]} :attrs} (filter-xml content)]
+    value))
+
+(defn load-settings
   "Returns a map of all UploadConstants.properties files in a directory"
+  [path]
   (loop [files (filter #(= "UploadConstants.properties" (.getName ^File %)) (list-properties-files path))
          m {}]
     (if-not (seq files)
