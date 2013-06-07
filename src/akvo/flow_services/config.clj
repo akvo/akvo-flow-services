@@ -76,12 +76,12 @@
     (get-map files load-properties)))
 
 (defn set-config!
-  "Resets the value of configs map"
+  "Resets the value of configs map based on the Upload.properties files"
   [path]
   (swap! configs into (load-upload-conf path)))
 
 (defn set-instance-alias!
-  "Resets the value of the instance-alias map"
+  "Resets the value of the instance-alias map based on the appengine-web.xml files"
   [path]
   (swap! instance-alias into (load-alias-map path)))
 

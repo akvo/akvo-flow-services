@@ -21,7 +21,8 @@
             [clojurewerkz.quartzite [conversion :as conversion]
                                     [jobs :as jobs]
                                     [scheduler :as scheduler]
-                                    [triggers :as triggers]])
+                                    [triggers :as triggers]]
+            [akvo.flow-services.config :as config])
   (:use [akvo.flow-services.exporter :only (export-report)]
         [akvo.flow-services.uploader :only (bulk-upload)]))
 
@@ -95,7 +96,9 @@
   (let [baseURL (params "baseURL")]
     (doseq [sid (params "surveyIds")]
       (dosync
-        (doseq [key (keys @cache) :when (and (= (:baseURL key) baseURL) (= (str sid) (:surveyId key)))]
+        (doseq [key (keys @cache) :when (and (or (= (:baseURL key) baseURL)
+                                                 (= (:baseURL key) (@config/instance-alias (:baseURL key))))
+                                             (= (str sid) (:surveyId key)))]
         (alter cache dissoc key))))
     "OK"))
 
