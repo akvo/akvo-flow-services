@@ -20,6 +20,9 @@
             [clojure.data.xml :as xml :only (parse)]))
 
 
+(def configs (atom {}))
+
+(def instance-alias (atom {}))
 
 (defn- get-domain [url]
   (last (string/split url #"/")))
@@ -51,8 +54,9 @@
 (defn- get-alias [file]
   (let [content (xml/parse (io/reader file))
         app-id (get-application-id content)
+        domain (format "%s.appspot.com" app-id)
         {{:keys [name value]} :attrs} (filter-xml content)]
-    {value app-id}))
+    {value domain}))
 
 (defn- get-map [coll pred]
   (loop [c coll
@@ -61,17 +65,34 @@
       m
       (recur (next c) (into m (pred (first c)))))))
 
-(defn load-alias-map
-  "Returns a map of all instance alias based on the defintion in appengine-web.xml
-   {alias1 instance-id1, alias2 instance-id2, ...}"
+(defn- load-alias-map
   [path]
   (let [files (filter #(= "appengine-web.xml" (.getName ^File %)) (list-config-files path))]
     (get-map files get-alias)))
 
-(defn load-upload-conf
-  "Returns a map of all UploadConstants.properties files in a directory
-   The map follows the follwing structure: {domain1 {config1}, domain2 {config2} ... }
-   The `domain` is the uploadUrl property in the properties file"
+(defn- load-upload-conf
   [path]
   (let [files (filter #(= "UploadConstants.properties" (.getName ^File %)) (list-config-files path))]
     (get-map files load-properties)))
+
+(defn set-config!
+  "Resets the value of configs map"
+  [path]
+  (swap! configs into (load-upload-conf path)))
+
+(defn set-instance-alias!
+  "Resets the value of the instance-alias map"
+  [path]
+  (swap! instance-alias into (load-alias-map path)))
+
+(defn get-criteria
+  "Returns a map of upload configuration criteria"
+  [upload-domain surveyId]
+  (let [config (@configs upload-domain)]
+    {"uploadBase" (config "uploadUrl")
+     "awsId" (config "s3Id")
+     "dataPolicy" (config "surveyDataS3Policy")
+     "dataSig" (config "surveyDataS3Sig")
+     "imagePolicy" (config "imageS3Policy")
+     "imageSig" (config "imageS3Sig")
+     "surveyId" surveyId}))

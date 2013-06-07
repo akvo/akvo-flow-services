@@ -19,15 +19,9 @@
            org.waterforpeople.mapping.dataexport.SurveyDataImportExportFactory)
   (:require [clojure.java.io :as io]
             [clojure.string :as str]
-            [clojure.pprint :as pprint]))
+            [clojure.pprint :as pprint]
+            [akvo.flow-services.config :as config]))
 
-
-(def configs (atom {}))
-
-(defn set-config!
-  "Resets the value of configs map"
-  [configs-map]
-  (swap! configs into configs-map))
 
 (defn- get-path []
   (format "%s/%s" (System/getProperty "java.io.tmpdir") "akvo/flow/uploads"))
@@ -69,16 +63,6 @@
       (.execute))
     dest))
 
-(defn- get-criteria [upload-domain surveyId]
-  (let [config (@configs upload-domain)]
-    {"uploadBase" (config "uploadUrl")
-     "awsId" (config "s3Id")
-     "dataPolicy" (config "surveyDataS3Policy")
-     "dataSig" (config "surveyDataS3Sig")
-     "imagePolicy" (config "imageS3Policy")
-     "imageSig" (config "imageS3Sig")
-     "surveyId" surveyId}))
-
 (defn- get-upload-type [^File path]
   (if (and (.isFile path)
            (.endsWith (str/upper-case (.getName path)) "XLSX"))
@@ -87,7 +71,7 @@
 
 (defn- upload [path base-url upload-domain surveyId]
   (let [importer (.getImporter (SurveyDataImportExportFactory.) (get-upload-type path))]
-    (.executeImport importer path base-url (get-criteria upload-domain surveyId))))
+    (.executeImport importer path base-url (config/get-criteria upload-domain surveyId))))
 
 (defn bulk-upload
   "Combines the parts, extracts and uploads the content of a zip file"
