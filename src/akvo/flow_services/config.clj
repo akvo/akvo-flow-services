@@ -30,30 +30,48 @@
       (.load props is)
       (assoc {} (get-domain (.getProperty ^java.util.Properties props "uploadUrl")) (into {} props)))))
 
-(defn- list-properties-files [path]
-  (let [exts (into-array String ["properties"])]
+(defn- list-config-files [path]
+  (let [exts (into-array String ["properties" "xml"])]
     (FileUtils/listFiles (io/file path) ^"[Ljava.lang.String;" exts true)))
 
 (defn- get-system-properties [content]
   (:content
     (first (filter #(= (:tag %) :system-properties) (:content content)))))
 
+(defn- get-application-id [content]
+  (first
+    (:content
+      (first
+        (filter #(= (:tag %) :application) (:content content))))))
+
 (defn- filter-xml [content]
   (first
     (filter #(= "alias" (let [{{:keys [name value]} :attrs} %] name)) (get-system-properties content))))
 
-(defn get-alias
-  "Get the alias value from the defined system properties in appengine-web.xml"
-  [path]
-  (let [content (xml/parse (io/reader (io/file path)))
+(defn- get-alias [file]
+  (let [content (xml/parse (io/reader file))
+        app-id (get-application-id content)
         {{:keys [name value]} :attrs} (filter-xml content)]
-    value))
+    {value app-id}))
 
-(defn load-settings
-  "Returns a map of all UploadConstants.properties files in a directory"
-  [path]
-  (loop [files (filter #(= "UploadConstants.properties" (.getName ^File %)) (list-properties-files path))
+(defn- get-map [coll pred]
+  (loop [c coll
          m {}]
-    (if-not (seq files)
+    (if-not (seq c)
       m
-      (recur (next files) (into m (load-properties (first files)))))))
+      (recur (next c) (into m (pred (first c)))))))
+
+(defn load-alias-map
+  "Returns a map of all instance alias based on the defintion in appengine-web.xml
+   {alias1 instance-id1, alias2 instance-id2, ...}"
+  [path]
+  (let [files (filter #(= "appengine-web.xml" (.getName ^File %)) (list-config-files path))]
+    (get-map files get-alias)))
+
+(defn load-upload-conf
+  "Returns a map of all UploadConstants.properties files in a directory
+   The map follows the follwing structure: {domain1 {config1}, domain2 {config2} ... }
+   The `domain` is the uploadUrl property in the properties file"
+  [path]
+  (let [files (filter #(= "UploadConstants.properties" (.getName ^File %)) (list-config-files path))]
+    (get-map files load-properties)))

@@ -72,7 +72,7 @@
 (def app (handler/site endpoints))
 
 (defn -main [& [config-folder port]]
-  (uploader/set-config! (config/load-settings config-folder))
+  (uploader/set-config! (config/load-upload-conf config-folder))
   (init)
   (run-jetty #'app {:join? false
                     :port (if port (Integer/valueOf ^String port) 8080)}))
