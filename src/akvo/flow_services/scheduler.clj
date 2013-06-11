@@ -93,13 +93,14 @@
 (defn invalidate-cache
   "Invalidates (removes) a given file from the in memory cache"
   [params]
-  (let [baseURL (params "baseURL")]
+  (let [baseURL (params "baseURL")
+        alias (@config/instance-alias baseURL)]
     (doseq [sid (params "surveyIds")]
       (dosync
-        (doseq [key (keys @cache) :when (and (or (= (:baseURL key) baseURL)
-                                                 (= (:baseURL key) (@config/instance-alias (:baseURL key))))
-                                             (= (str sid) (:surveyId key)))]
-        (alter cache dissoc key))))
+        (doseq [k (keys @cache) :when (and (= (:surveyId k) (str sid))
+                                           (or (= (:baseURL k) baseURL)
+                                               (= (:baseURL k) alias)))]
+        (alter cache dissoc k))))
     "OK"))
 
 (defn generate-report

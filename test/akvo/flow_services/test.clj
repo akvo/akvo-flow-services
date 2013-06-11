@@ -20,11 +20,16 @@
                 :surveyId (str survey-id)
                 :baseURL instance-alias} "/tmp/dummy.xlsx"})
 
+(def sample-3 {{:id "id3"
+                :surveyId (str survey-id)
+                :baseURL "http://akvoflow-13.appspot.com"} "/tmp/dummy.xlsx"})
+
 
 (defn- add-sample []
    (dosync
     (alter sched/cache conj sample-1)
-    (alter sched/cache conj sample-2)))
+    (alter sched/cache conj sample-2)
+    (alter sched/cache conj sample-3)))
 
 (deftest test-instance-alias
   (do
@@ -35,9 +40,9 @@
   (do
     (add-sample)
 
-    (is (= 2 (count @sched/cache)))
+    (is (= 3 (count @sched/cache)))
     
     (sched/invalidate-cache {"baseURL" instance-alias
-                             "surveIds" [survey-id]})
+                             "surveyIds" [survey-id]})
     
     (is (= 1 (count @sched/cache)))))
