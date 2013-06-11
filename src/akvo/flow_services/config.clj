@@ -48,15 +48,19 @@
         (filter #(= (:tag %) :application) (:content content))))))
 
 (defn- filter-xml [content]
-  (first
-    (filter #(= "alias" (let [{{:keys [name value]} :attrs} %] name)) (get-system-properties content))))
+  (let [{{:keys [name value]} :attrs}
+        (first
+          (filter #(= "alias" (let [{{:keys [name value]} :attrs} %] name)) (get-system-properties content)))]
+    (if (.startsWith ^String value "http")
+      value
+      (format "http://%s" value))))
 
 (defn- get-alias [file]
   (let [content (xml/parse (io/reader file))
         app-id (get-application-id content)
-        domain (format "%s.appspot.com" app-id)
-        {{:keys [name value]} :attrs} (filter-xml content)]
-    {value domain}))
+        domain (format "http://%s.appspot.com" app-id)
+        app-alias (filter-xml content)]
+    {app-alias domain}))
 
 (defn- get-map [coll pred]
   (loop [c coll
