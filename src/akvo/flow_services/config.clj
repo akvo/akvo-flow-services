@@ -99,4 +99,5 @@
      "dataSig" (config "surveyDataS3Sig")
      "imagePolicy" (config "imageS3Policy")
      "imageSig" (config "imageS3Sig")
+     "apiKey" (config "apiKey")
      "surveyId" surveyId}))
