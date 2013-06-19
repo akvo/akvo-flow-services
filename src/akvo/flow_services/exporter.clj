@@ -13,7 +13,8 @@
 ;  The full license text can also be seen at <http://www.gnu.org/licenses/agpl.html>..
 
 (ns akvo.flow-services.exporter
-  (:require [clojure.java.io :as io])
+  (:require [clojure.java.io :as io]
+            [akvo.flow-services.config :as config])
   (:import java.io.File
            java.util.UUID
            org.waterforpeople.mapping.dataexport.SurveyDataImportExportFactory))
@@ -31,8 +32,12 @@
     (.mkdirs (io/file path))
     (io/file (format "%s/%s-%s.%s" path et id (get-file-extension et)))))
 
-(defn ^File export-report [type base id options]
+(defn ^File export-report
+  "Exports a report using SurveyDataImportExportFactory based on the report type.
+   Returns the reference to the saved file."
+  [type base id options]
   (let [exporter (.getExporter (SurveyDataImportExportFactory.) type)
-        file (get-file type id)]
-    (.export exporter {"surveyId" id} file base options)
+        file (get-file type id)
+        criteria (config/get-criteria (options "uploadUrl") id)]
+    (.export exporter criteria file base options)
     file))

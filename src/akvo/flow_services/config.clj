@@ -92,7 +92,8 @@
 (defn get-criteria
   "Returns a map of upload configuration criteria"
   [upload-domain surveyId]
-  (let [config (@configs upload-domain)]
+  (let [domain (get-domain upload-domain)
+        config (@configs domain)]
     {"uploadBase" (config "uploadUrl")
      "awsId" (config "s3Id")
      "dataPolicy" (config "surveyDataS3Policy")
