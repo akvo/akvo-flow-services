@@ -30,6 +30,6 @@ The `project.clj` file defines a dependency on `[exporterapplet "1.0.0"]` which 
 
     $ mvn install:install-file -Dfile=../akvo-flow/GAE/war/exporterapplet.jar \
           -DartifactId=exporterapplet \
-          -Dversion=1.0.0 \
+          -Dversion=1.1.0 \
           -DgroupId=exporterapplet \
           -Dpackaging=jar

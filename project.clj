@@ -21,7 +21,7 @@
                  [org.slf4j/slf4j-api "1.7.3"]
                  [org.slf4j/slf4j-simple "1.7.3"]
                  ; Akvo FLOW dependencies
-                 [exporterapplet "1.0.0"]
+                 [exporterapplet "1.1.0"]
                  [org.json/json "20090211"]]
 
   :main akvo.flow-services.core
