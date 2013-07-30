@@ -20,9 +20,10 @@
            org.waterforpeople.mapping.dataexport.SurveyDataImportExportFactory))
 
 (defn- get-file-extension [t]
-  (if (= t "SURVEY_FORM")
-    "xls"
-    "xlsx"))
+  (cond
+    (= t "SURVEY_FORM") "xls"
+    (= t "RAW_DATA_TEXT") "txt"
+    :else "xlsx"))
 
 (defn- get-path []
   (format "%s/%s/%s" (System/getProperty "java.io.tmpdir") "akvo/flow/reports" (UUID/randomUUID)))
