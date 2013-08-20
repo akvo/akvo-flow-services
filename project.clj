@@ -22,7 +22,7 @@
                  [org.slf4j/slf4j-simple "1.7.3"]
                  [com.google.gdata/core "1.47.1"]
                  ; Akvo FLOW dependencies
-                 [exporterapplet "1.1.0"]
+                 [exporterapplet "1.2.0"]
                  [org.json/json "20090211"]]
 
   :main akvo.flow-services.core
