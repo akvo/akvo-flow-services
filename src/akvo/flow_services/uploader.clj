@@ -84,4 +84,5 @@
     (cond
       (.endsWith uname "ZIP") (upload (unzip-file path filename) base-url upload-domain surveyId) ; Extract and upload
       (.endsWith uname "XLSX") (upload (io/file path filename) base-url upload-domain surveyId) ; Upload raw data
-      :else (upload (io/file path) base-url upload-domain surveyId)))) ; JPG? upload file in the folder
+      :else (upload (io/file path) base-url upload-domain surveyId)) ; JPG? upload file in the folder
+    (delete-directory path)))
