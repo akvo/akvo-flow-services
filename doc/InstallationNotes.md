@@ -26,10 +26,10 @@ Verify that the `lein` command is now available:
 
 First make sure that [Maven](https://maven.apache.org/) is installed on your system.
 
-The `project.clj` file defines a dependency on `[exporterapplet "1.3.0"]` which must be added to your local Maven cache manually as follows:
+The `project.clj` file defines a dependency on `[exporterapplet "1.4.0"]` which must be added to your local Maven cache manually as follows:
 
     $ mvn install:install-file -Dfile=GAE/war/exporterapplet.jar \
           -DartifactId=exporterapplet \
-          -Dversion=1.3.0 \
+          -Dversion=1.4.0 \
           -DgroupId=exporterapplet \
           -Dpackaging=jar
