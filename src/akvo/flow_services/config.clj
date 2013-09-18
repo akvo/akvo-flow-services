@@ -38,7 +38,7 @@
     (FileUtils/listFiles (io/file path) ^"[Ljava.lang.String;" exts true)))
 
 (defn- get-alias [file]
-  (let [appengine-web (-> file .getAbsolutePath (AppEngineWebXmlReader. "") (.readAppEngineWebXml))
+  (let [appengine-web (-> file .getAbsolutePath (AppEngineWebXmlReader. "") .readAppEngineWebXml)
         app-id (.getAppId appengine-web)
         app-alias (-> appengine-web .getSystemProperties (get "alias"))
         domain (format "http://%s.appspot.com" app-id)]
