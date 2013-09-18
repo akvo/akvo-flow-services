@@ -5,13 +5,10 @@
             :url "https://www.gnu.org/licenses/agpl"}
   :min-lein-version "2.0.0"
   :dependencies [[org.clojure/clojure "1.5.1"]
-                 [org.clojure/tools.logging "0.2.6"]
-                 [org.clojure/data.xml "0.0.7"]
                  [cheshire "5.1.1"]
                  [compojure "1.1.5"]
                  [clojurewerkz/quartzite "1.0.1"]
                  [ring/ring-core "1.1.8"]
-                 [ring/ring-servlet "1.1.8"]
                  [ring/ring-jetty-adapter "1.1.8"]
                  ; Java libraries
                  [jfree/jfreechart "1.0.13"]
