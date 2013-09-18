@@ -14,10 +14,10 @@
 
 (ns akvo.flow-services.config
   (:import org.apache.commons.io.FileUtils
-           java.io.File)
+           java.io.File
+           [com.google.apphosting.utils.config AppEngineWebXml AppEngineWebXmlReader AppEngineConfigException])
   (:require [clojure.java.io :as io]
-            [clojure.string :as string :only (split)]
-            [clojure.data.xml :as xml :only (parse)]))
+            [clojure.string :as string :only (split)]))
 
 
 (def configs (atom {}))
@@ -37,29 +37,11 @@
   (let [exts (into-array String ["properties" "xml"])]
     (FileUtils/listFiles (io/file path) ^"[Ljava.lang.String;" exts true)))
 
-(defn- get-system-properties [content]
-  (:content
-    (first (filter #(= (:tag %) :system-properties) (:content content)))))
-
-(defn- get-application-id [content]
-  (first
-    (:content
-      (first
-        (filter #(= (:tag %) :application) (:content content))))))
-
-(defn- filter-xml [content]
-  (let [{{:keys [name value]} :attrs}
-        (first
-          (filter #(= "alias" (let [{{:keys [name value]} :attrs} %] name)) (get-system-properties content)))]
-    (if (.startsWith ^String value "http")
-      value
-      (format "http://%s" value))))
-
 (defn- get-alias [file]
-  (let [content (xml/parse (io/reader file))
-        app-id (get-application-id content)
-        domain (format "http://%s.appspot.com" app-id)
-        app-alias (filter-xml content)]
+  (let [appengine-web (.readAppEngineWebXml (AppEngineWebXmlReader. (.getAbsolutePath file) ""))
+        app-id (.getAppId appengine-web)
+        app-alias (-> appengine-web .getSystemProperties (get "alias"))
+        domain (format "http://%s.appspot.com" app-id)]
     {app-alias domain}))
 
 (defn- get-map [coll pred]

@@ -23,7 +23,9 @@
                  [com.google.gdata/core "1.47.1"]
                  ; Akvo FLOW dependencies
                  [exporterapplet "1.4.0"]
-                 [org.json/json "20090211"]]
+                 [org.json/json "20090211"]
+                 ; Configuration
+                 [com.google.appengine/appengine-tools-sdk "1.8.4"]]
 
   :main akvo.flow-services.core
   :aot [akvo.flow-services.core]
