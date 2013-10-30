@@ -24,14 +24,36 @@
 
 (def instance-alias (atom {}))
 
+(def property-alias
+       {"uploadUrl"          "uploadBase"  
+        "s3Id"               "awsId"       
+        "surveyDataS3Policy" "dataPolicy"  
+        "surveyDataS3Sig"    "dataSig"     
+        "imageS3Policy"      "imagePolicy" 
+        "imageS3Sig"         "imageSig"    
+        "apiKey"             "apiKey"})
+
 (defn- get-domain [url]
   (last (string/split url #"/")))
+
+(defn- transform-map 
+  "Build a map with a given Properties file and
+  the alias of the keys to be modified"
+  [props alias-map]
+  (loop [properties (keys props)
+         m {}]
+    (if (seq properties)
+      (recur (next properties) (assoc m (if-let [k (alias-map (first properties))]
+                                           k; Only if it exists on the alias map
+                                           (first properties)); The original key otherwise
+                                       (.getProperty props (first properties))))
+      m)))
 
 (defn- load-properties [file]
   (with-open [is ^java.io.InputStream (io/input-stream file)]
     (let [props (java.util.Properties.)]
       (.load props is)
-      (assoc {} (get-domain (.getProperty ^java.util.Properties props "uploadUrl")) (into {} props)))))
+      (assoc {} (get-domain (.getProperty ^java.util.Properties props "uploadUrl")) (transform-map props property-alias)))))
 
 (defn- list-config-files [path]
   (let [exts (into-array String ["properties" "xml"])]
@@ -58,8 +80,8 @@
 
 (defn- load-upload-conf
   [path]
-  (let [files (filter #(= "UploadConstants.properties" (.getName ^File %)) (list-config-files path))]
-    (get-map files load-properties)))
+  (let [files (filter #(= "UploadConstants.properties" (.getName ^File %)) (list-config-files path))
+        props (get-map files load-properties)]
 
 (defn set-config!
   "Resets the value of configs map based on the Upload.properties files"
@@ -76,11 +98,4 @@
   [upload-domain surveyId]
   (let [domain (get-domain upload-domain)
         config (@configs domain)]
-    {"uploadBase" (config "uploadUrl")
-     "awsId" (config "s3Id")
-     "dataPolicy" (config "surveyDataS3Policy")
-     "dataSig" (config "surveyDataS3Sig")
-     "imagePolicy" (config "imageS3Policy")
-     "imageSig" (config "imageS3Sig")
-     "apiKey" (config "apiKey")
-     "surveyId" surveyId}))
+    (assoc config "surveyId" surveyId)))
