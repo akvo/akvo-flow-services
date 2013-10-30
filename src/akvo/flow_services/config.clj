@@ -44,8 +44,8 @@
          m {}]
     (if (seq properties)
       (recur (next properties) (assoc m (if-let [k (alias-map (first properties))]
-                                           k; Only if it exists on the alias map
-                                           (first properties)); The original key otherwise
+                                           k ; Only if it exists on the alias map
+                                           (first properties)) ; The original key otherwise
                                        (.getProperty props (first properties))))
       m)))
 
@@ -80,8 +80,8 @@
 
 (defn- load-upload-conf
   [path]
-  (let [files (filter #(= "UploadConstants.properties" (.getName ^File %)) (list-config-files path))
-        props (get-map files load-properties)]
+  (let [files (filter #(= "UploadConstants.properties" (.getName ^File %)) (list-config-files path))]
+    (get-map files load-properties)))
 
 (defn set-config!
   "Resets the value of configs map based on the Upload.properties files"
