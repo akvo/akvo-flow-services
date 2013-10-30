@@ -17,7 +17,8 @@
            java.io.File
            [com.google.apphosting.utils.config AppEngineWebXml AppEngineWebXmlReader AppEngineConfigException])
   (:require [clojure.java.io :as io]
-            [clojure.string :as string :only (split)]))
+            [clojure.string :as string :only (split)]
+            [clojure.java.shell :as shell]))
 
 
 (def configs (atom {}))
@@ -99,3 +100,9 @@
   (let [domain (get-domain upload-domain)
         config (@configs domain)]
     (assoc config "surveyId" surveyId)))
+
+(defn reload [path]
+  (let [pull (shell/with-sh-dir path (shell/sh "git" "pull"))]
+    (when (zero? (pull :exit))
+        (set-config! path)
+        (set-instance-alias! path))))
