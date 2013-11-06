@@ -67,6 +67,8 @@
   (OPTIONS "/upload" [:as {params :params}] 
         (-> (response "OK")
             (header "Access-Control-Allow-Origin" "*")))
+  
+  (route/resources "/")
 
   (route/not-found "Page not found"))
 
