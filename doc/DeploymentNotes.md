@@ -73,7 +73,7 @@ The Akvo FLOW Dashboard app explicitly depends on being able to fetch generated 
     }
 
 Full Nginx configuration for the service is available at
-[config/server/etc/nginx/sites-enabled/flow-services.conf](config/server/etc/nginx/sites-enabled/flow-services.conf)
+[config/server/etc/nginx/sites-enabled/flow-services.conf](/config/server/etc/nginx/sites-enabled/flow-services.conf)
 
 
 ## Automatic configuration reload
