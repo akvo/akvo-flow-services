@@ -51,6 +51,13 @@
   (GET "/generate" [:as {params :params}]
         (generate-report (transform-map params)))
 
+  (GET "/status" []
+       (-> {:cache (keys @scheduler/cache)}
+         json/generate-string
+         response
+         (content-type "application/json")
+         (charset "UTF-8")))
+
   (POST "/invalidate" [:as {params :params}]
         (invalidate-cache (transform-map params)))
   
