@@ -44,8 +44,11 @@
     (doseq [idx (range 1 (+ 1 no-parts))]
       (FileUtils/writeByteArrayToFile f (FileUtils/readFileToByteArray (io/file (format "%s/%s.%s" directory filename idx))) true))))
 
+(defn- get-parts [path]
+  (filter #(re-find #"\.\d+$" (.getName ^File %)) (FileUtils/listFiles (io/file path) nil false)))
+
 (defn- cleanup [path]
-  (doseq [file (filter #(re-find #".\d+$" (.getName ^File %)) (FileUtils/listFiles (io/file path) nil false))]
+  (doseq [file (get-parts path)]
     (FileUtils/deleteQuietly ^File file)))
 
 (defn delete-directory
@@ -77,10 +80,11 @@
   "Combines the parts, extracts and uploads the content of a zip file"
   [base-url unique-identifier filename upload-domain surveyId]
   (let [path (format "%s/%s" (get-path) unique-identifier)
-        no-parts (count (seq (FileUtils/listFiles (io/file path) nil false)))
+        no-parts (count (get-parts path))
         uname (str/upper-case filename)]
-    (combine path filename no-parts)
-    (cleanup path)
+    (when (> no-parts 0)
+      (combine path filename no-parts)
+      (cleanup path))
     (cond
       (.endsWith uname "ZIP") (upload (unzip-file path filename) base-url upload-domain surveyId) ; Extract and upload
       (.endsWith uname "XLSX") (upload (io/file path filename) base-url upload-domain surveyId) ; Upload raw data
