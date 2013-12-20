@@ -100,7 +100,8 @@
         (doseq [k (keys @cache) :when (and (= (:surveyId k) (str sid))
                                            (or (= (:baseURL k) baseURL)
                                                (= (:baseURL k) alias)))]
-        (alter cache dissoc k))))
+          (prn "Invalidating: " k)
+          (alter cache dissoc k))))
     "OK"))
 
 (defn generate-report
