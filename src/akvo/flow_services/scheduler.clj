@@ -14,7 +14,7 @@
 
 (ns akvo.flow-services.scheduler
   (:refer-clojure :exclude [key])
-  (:import [org.quartz JobExecutionContext Scheduler]
+  (:import [org.quartz JobExecutionContext Scheduler ObjectAlreadyExistsException]
            java.io.File
            java.util.UUID)
   (:require [clojure.string :as string :only (split join)]
@@ -64,9 +64,6 @@
 (defn- report-id [m]
   (format "id%s" (hash (str m))))
 
-(defn- get-random-id []
-  (str (UUID/randomUUID)))
-
 (defn- get-job [job-type id params]
   (jobs/build
     (jobs/of-type job-type)
@@ -81,7 +78,9 @@
 (defn- schedule-job [job-type id params]
   (let [job (get-job job-type id params)
         trigger (get-trigger id)]
-    (scheduler/maybe-schedule job trigger)
+    (try
+      (scheduler/maybe-schedule job trigger)
+      (catch ObjectAlreadyExistsException _))
     {"status" "OK"
      "message" "PROCESSING"}))
 
@@ -121,4 +120,4 @@
 (defn process-and-upload
   "Schedules a bulk upload process"
   [params]
-  (schedule-job BulkUploadJob (get-random-id) params))
+  (schedule-job BulkUploadJob (params "uniqueIdentifier") params))
