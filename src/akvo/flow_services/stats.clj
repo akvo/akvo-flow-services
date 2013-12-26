@@ -1,6 +1,7 @@
 (ns akvo.flow-services.stats
   (:import [com.google.appengine.tools.remoteapi RemoteApiInstaller RemoteApiOptions]
-           [com.google.appengine.api.datastore DatastoreService DatastoreServiceFactory Entity Query PreparedQuery FetchOptions]))
+           [com.google.appengine.api.datastore DatastoreService DatastoreServiceFactory Entity Query
+            Query$FilterOperator Query$FilterPredicate PreparedQuery FetchOptions FetchOptions$Builder]))
 
 
 (defn get-options 
@@ -21,7 +22,7 @@
 (defn get-defaults
   "Returns the defaults options for a PreparedQuery"
   []
-  (com.google.appengine.api.datastore.FetchOptions$Builder/withDefaults))
+  (FetchOptions$Builder/withDefaults))
 
 (defn get-ds
   "Returns an instance of a DatastoreService"
@@ -31,8 +32,7 @@
 (defn get-filter
   "Helper function that returns a FilterPredicate based on a property"
   [property value]
-  (com.google.appengine.api.datastore.Query$FilterPredicate.
-    property com.google.appengine.api.datastore.Query$FilterOperator/EQUAL value))
+  (Query$FilterPredicate. property Query$FilterOperator/EQUAL value))
 
 (defn get-stats
   "Returns a list of stats for the given instance"
