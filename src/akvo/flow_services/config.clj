@@ -13,13 +13,13 @@
 ;  The full license text can also be seen at <http://www.gnu.org/licenses/agpl.html>.
 
 (ns akvo.flow-services.config
-  (:import org.apache.commons.io.FileUtils
-           java.io.File
+  (:import java.io.File
            [com.google.apphosting.utils.config AppEngineWebXml AppEngineWebXmlReader AppEngineConfigException])
   (:require [clojure.java.io :as io]
             [clojure.string :as string :only (split)]
             [clojure.java.shell :as shell]
-            [clojure.edn :as edn :only (read-string)]))
+            [clojure.edn :as edn :only (read-string)]
+            [me.raynes.fs :as fs :only (find-files)]))
 
 
 (def configs (atom {}))
@@ -59,10 +59,6 @@
       (.load props is)
       (assoc {} (get-domain (.getProperty ^java.util.Properties props "uploadUrl")) (transform-map props property-alias)))))
 
-(defn- list-config-files [path]
-  (let [exts (into-array String ["properties" "xml"])]
-    (FileUtils/listFiles (io/file path) ^"[Ljava.lang.String;" exts true)))
-
 (defn- get-alias [file]
   (let [appengine-web (-> file .getAbsolutePath (AppEngineWebXmlReader. "") .readAppEngineWebXml)
         app-id (.getAppId appengine-web)
@@ -70,22 +66,20 @@
         domain (format "http://%s.appspot.com" app-id)]
     {app-alias domain}))
 
-(defn- get-map [coll pred]
+(defn- get-map [coll func]
   (loop [c coll
          m {}]
     (if-not (seq c)
       m
-      (recur (next c) (into m (pred (first c)))))))
+      (recur (next c) (into m (func (first c)))))))
 
 (defn- load-alias-map
   [path]
-  (let [files (filter #(= "appengine-web.xml" (.getName ^File %)) (list-config-files path))]
-    (get-map files get-alias)))
+  (get-map (fs/find-files path #"appengine-web.xml") get-alias))
 
 (defn- load-upload-conf
   [path]
-  (let [files (filter #(= "UploadConstants.properties" (.getName ^File %)) (list-config-files path))]
-    (get-map files load-properties)))
+  (get-map (fs/find-files path #"UploadConstants.properties") load-properties))
 
 (defn set-config!
   "Resets the value of configs map based on the Upload.properties files"

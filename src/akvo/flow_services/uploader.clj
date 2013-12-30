@@ -14,13 +14,13 @@
 
 (ns akvo.flow-services.uploader
   (:import java.io.File
-           org.apache.commons.io.FileUtils
-           org.apache.ant.compress.taskdefs.Unzip
            org.waterforpeople.mapping.dataexport.SurveyDataImportExportFactory)
   (:require [clojure.java.io :as io]
             [clojure.string :as str]
             [clojure.pprint :as pprint]
-            [akvo.flow-services.config :as config]))
+            [akvo.flow-services.config :as config]
+            [me.raynes.fs :as fs :only (find-files delete delete-dir)]
+            [me.raynes.fs.compression :as fsc :only (unzip)]))
 
 
 (defn- get-path []
@@ -41,30 +41,23 @@
 
 (defn- combine [directory filename no-parts]
   (let [f (io/file (format "%s/%s" directory filename))]
-    (doseq [idx (range 1 (+ 1 no-parts))]
-      (FileUtils/writeByteArrayToFile f (FileUtils/readFileToByteArray (io/file (format "%s/%s.%s" directory filename idx))) true))))
+    (with-open [os (io/output-stream f)]
+      (doseq [idx (range 1 (+ 1 no-parts))]
+        (io/copy (io/file (format "%s/%s.%s" directory filename idx)) os)))))
 
 (defn- get-parts [path]
-  (filter #(re-find #"\.\d+$" (.getName ^File %)) (FileUtils/listFiles (io/file path) nil false)))
+  (fs/find-files path #".*\d+$"))
 
 (defn- cleanup [path]
   (doseq [file (get-parts path)]
-    (FileUtils/deleteQuietly ^File file)))
-
-(defn delete-directory
-  "Deletes a directory recursively"
-  [path]
-  (FileUtils/deleteDirectory (io/file path)))
+    (fs/delete file)))
 
 (defn- unzip-file [directory filename]
-  (let [dest (io/file (format "%s/%s" directory "zip-content"))]
+  (let [dest (io/file (format "%s/%s" directory "zip-content"))
+        source (io/file (format "%s/%s" directory filename))]
     (if-not (.exists ^File dest)
       (.mkdirs dest))
-    (doto (Unzip.)
-      (.setSrc (io/file (format "%s/%s" directory filename)))
-      (.setDest dest)
-      (.execute))
-    dest))
+    (fsc/unzip source dest)))
 
 (defn- get-upload-type [^File path]
   (if (and (.isFile path)
@@ -89,4 +82,4 @@
       (.endsWith uname "ZIP") (upload (unzip-file path filename) base-url upload-domain surveyId) ; Extract and upload
       (.endsWith uname "XLSX") (upload (io/file path filename) base-url upload-domain surveyId) ; Upload raw data
       :else (upload (io/file path) base-url upload-domain surveyId)) ; JPG? upload file in the folder
-    (delete-directory path)))
+    (fs/delete-dir path)))
