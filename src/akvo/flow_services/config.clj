@@ -18,12 +18,15 @@
            [com.google.apphosting.utils.config AppEngineWebXml AppEngineWebXmlReader AppEngineConfigException])
   (:require [clojure.java.io :as io]
             [clojure.string :as string :only (split)]
-            [clojure.java.shell :as shell]))
+            [clojure.java.shell :as shell]
+            [clojure.edn :as edn :only (read-string)]))
 
 
 (def configs (atom {}))
 
 (def instance-alias (atom {}))
+
+(def settings (atom {}))
 
 (def property-alias
        {"uploadUrl"          "uploadBase"  
@@ -87,12 +90,17 @@
 (defn set-config!
   "Resets the value of configs map based on the Upload.properties files"
   [path]
-  (swap! configs into (load-upload-conf path)))
+  (reset! configs (load-upload-conf path)))
 
 (defn set-instance-alias!
   "Resets the value of the instance-alias map based on the appengine-web.xml files"
   [path]
-  (swap! instance-alias into (load-alias-map path)))
+  (reset! instance-alias (load-alias-map path)))
+
+(defn set-settings!
+  "Resets the value of settings reading the new values from the file path"
+  [path]
+  (reset! settings (-> path io/file slurp edn/read-string)))
 
 (defn get-criteria
   "Returns a map of upload configuration criteria"

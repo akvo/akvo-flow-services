@@ -24,8 +24,6 @@
             [akvo.flow-services [scheduler :as scheduler] [uploader :as uploader] [config :as config]])
   (:gen-class))
 
-(def settings (atom {}))
-
 (defn- generate-report [params]
   (let [criteria (json/parse-string (params "criteria")) ; TODO: validation
         callback (params "callback")
@@ -69,7 +67,7 @@
             (header "Access-Control-Allow-Origin" "*"))))
 
   (POST "/reload" [params]
-        (config/reload (@settings :config-folder)))
+        (config/reload (:config-folder @config/settings)))
   
   (OPTIONS "/upload" [:as {params :params}] 
         (-> (response "OK")
@@ -85,9 +83,8 @@
 
 (def app (handler/site endpoints))
 
-(defn -main [config-folder & [port]]
-  (swap! settings into {:config-folder config-folder})
-  (config/reload config-folder)
+(defn -main [config-file]
+  (config/set-settings! config-file)
+  (config/reload (:config-folder @config/settings))
   (init)
-  (run-jetty #'app {:join? false
-                    :port (if port (Integer/valueOf ^String port) 8080)}))
+  (run-jetty #'app {:join? false :port (:http-port @config/settings)}))
