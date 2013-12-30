@@ -14,8 +14,9 @@
 
 (ns akvo.flow-services.stats
   (:import [com.google.appengine.tools.remoteapi RemoteApiInstaller RemoteApiOptions]
-           [com.google.appengine.api.datastore DatastoreService DatastoreServiceFactory Entity Query
-            Query$FilterOperator Query$FilterPredicate PreparedQuery FetchOptions FetchOptions$Builder]))
+           [com.google.appengine.api.datastore DatastoreServiceFactory Entity Query
+            Query$FilterOperator Query$FilterPredicate PreparedQuery FetchOptions FetchOptions$Builder])
+  (:require [clojurewerkz.quartzite.jobs :as jobs]))
 
 
 (defn get-options 
@@ -60,4 +61,4 @@
         qk (.setFilter (Query. "__Stat_Kind__") (get-filter "timestamp" ts))
         stats (.asList (.prepare ds qk) (get-defaults))]
     (.uninstall installer)
-    stats))
+    (seq stats)))
