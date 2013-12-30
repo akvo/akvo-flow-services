@@ -16,7 +16,11 @@
   (:import [com.google.appengine.tools.remoteapi RemoteApiInstaller RemoteApiOptions]
            [com.google.appengine.api.datastore DatastoreServiceFactory Entity Query
             Query$FilterOperator Query$FilterPredicate PreparedQuery FetchOptions FetchOptions$Builder])
-  (:require [clojurewerkz.quartzite.jobs :as jobs]))
+  (:require [clojurewerkz.quartzite [conversion :as conversion]
+                                    [jobs :as jobs]]
+            [akvo.flow-services.core :as core :only (settings)]
+            [clojure.data.csv :as csv]
+            [clojure.java.io :as io]))
 
 
 (defn get-options 
@@ -51,7 +55,7 @@
 
 (defn get-stats
   "Returns a list of stats for the given instance"
-  [server usr pwd]
+  [server usr pwd kinds]
   (let [opts (get-options server usr pwd)
         installer (get-installer opts)
         ds (get-ds)
@@ -61,4 +65,25 @@
         qk (.setFilter (Query. "__Stat_Kind__") (get-filter "timestamp" ts))
         stats (.asList (.prepare ds qk) (get-defaults))]
     (.uninstall installer)
-    (seq stats)))
+    stats (filter #(kinds (.getProperty % "kind_name")) stats)))
+
+(defn calc-stats [kinds stats]
+   (for [e (filter #(kinds (.getProperty % "kind_name")) stats)
+         k kinds
+         :when (= (.getProperty e "kind_name") k)]
+     (.getProperty e "count")))
+
+(defn write-stats [kinds data]
+  (with-open [out-file (io/writer "out-file.csv")]
+    (csv/write-csv out-file
+                   (conj data kinds))))
+
+(defn get-all-data [server-list user password kinds]
+  (for [server server-list 
+        :let [stats (get-stats server user password kinds)]] 
+    (calc-stats kinds stats)))
+
+(jobs/defjob StatsJob [job-data]
+  (let [{:strs [user password server-list kinds]} (conversion/from-job-data job-data)
+        all-data (get-all-data server-list user password kinds)]
+    (write-stats kinds all-data)))
