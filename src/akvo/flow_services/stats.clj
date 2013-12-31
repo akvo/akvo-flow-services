@@ -19,9 +19,11 @@
            java.util.Date java.text.SimpleDateFormat)
   (:require [clojurewerkz.quartzite [conversion :as conversion]
                                     [jobs :as jobs]]
-            [akvo.flow-services.core :as core :only (settings)]
-            [clojure.data.csv :as csv]
-            [clojure.java.io :as io]))
+            [akvo.flow-services.config :as config :only (settings instance-alias)]
+            [clojure.data.csv :as csv :only (write-csv)]
+            [clojure.java.io :as io]
+            [clojure.string :as str :only (split)]
+            [clojure.set :refer (difference)]))
 
 
 (defn get-options 
@@ -57,6 +59,7 @@
 (defn get-stats
   "Returns a list of stats for the given instance"
   [server usr pwd kinds]
+  (prn server usr pwd kinds)
   (let [opts (get-options server usr pwd)
         installer (get-installer opts)
         ds (get-ds)
@@ -90,3 +93,14 @@
   (let [{:strs [user password server-list kinds stats-path]} (conversion/from-job-data job-data)
         all-data (get-all-data server-list user password kinds)]
     (write-stats kinds all-data)))
+
+(defn schedule-job
+  []
+  (let [settings @config/settings
+        {:keys [username password stats-path]} settings
+        all-instances (set (map #(last (str/split % #"https?://")) (vals @config/instance-alias)))
+        dev-instances (set (:dev-instances @config/settings))
+        server-list (difference all-instances dev-instances)
+        kinds (apply sorted-set (:stats-kinds settings))
+        all-data (get-all-data server-list username password kinds)]
+    (write-stats kinds all-data stats-path)))

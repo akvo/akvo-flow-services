@@ -21,7 +21,8 @@
   (:require [cheshire.core :as json]
             [compojure [handler :as handler] [route :as route]]
             [clojurewerkz.quartzite.scheduler :as quartzite-scheduler]
-            [akvo.flow-services [scheduler :as scheduler] [uploader :as uploader] [config :as config]])
+            [akvo.flow-services [scheduler :as scheduler] [uploader :as uploader]
+                                [config :as config] [stats :as stats]])
   (:gen-class))
 
 (defn- generate-report [params]
@@ -87,4 +88,5 @@
   (config/set-settings! config-file)
   (config/reload (:config-folder @config/settings))
   (init)
+  (stats/schedule-job)
   (run-jetty #'app {:join? false :port (:http-port @config/settings)}))
