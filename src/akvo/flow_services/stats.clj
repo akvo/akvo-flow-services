@@ -18,7 +18,10 @@
             Query$FilterOperator Query$FilterPredicate PreparedQuery FetchOptions FetchOptions$Builder]
            java.util.Date java.text.SimpleDateFormat)
   (:require [clojurewerkz.quartzite [conversion :as conversion]
-                                    [jobs :as jobs]]
+                                    [jobs :as jobs]
+                                    [triggers :as triggers]
+                                    [scheduler :as scheduler]]
+            [clojurewerkz.quartzite.schedule.daily-interval :as interval]
             [akvo.flow-services.config :as config :only (settings instance-alias)]
             [clojure.data.csv :as csv :only (write-csv)]
             [clojure.java.io :as io]
@@ -84,15 +87,15 @@
       (csv/write-csv out-file
                      (conj data kinds)))))
 
-(defn get-all-data [server-list user password kinds]
+(defn get-all-data [server-list username password kinds]
   (for [server server-list 
-        :let [stats (get-stats server user password kinds)]] 
+        :let [stats (get-stats server username password kinds)]] 
     (conj (calc-stats kinds stats) server)))
 
 (jobs/defjob StatsJob [job-data]
-  (let [{:strs [user password server-list kinds stats-path]} (conversion/from-job-data job-data)
-        all-data (get-all-data server-list user password kinds)]
-    (write-stats kinds all-data)))
+  (let [{:strs [username password server-list kinds stats-path]} (conversion/from-job-data job-data)
+        all-data (get-all-data server-list username password kinds)]
+    (write-stats (conj (seq kinds) "Instance") all-data stats-path)))
 
 (defn schedule-job
   []
@@ -102,5 +105,19 @@
         dev-instances (set (:dev-instances @config/settings))
         server-list (difference all-instances dev-instances)
         kinds (apply sorted-set (:stats-kinds settings))
-        all-data (get-all-data server-list username password kinds)]
-    (write-stats (conj (seq kinds) "Instance") all-data stats-path)))
+        job (jobs/build 
+              (jobs/of-type StatsJob) 
+              (jobs/with-identity (jobs/key "stats"))
+              (jobs/using-job-data {"username" username
+                                    "password" password 
+                                    "server-list" server-list 
+                                    "stats-path" stats-path 
+                                    "kinds" kinds}))
+        trigger (triggers/build
+                  (triggers/with-identity (triggers/key "stats-trigger"))
+                  (triggers/start-now)
+                  (triggers/with-schedule 
+                    (interval/schedule 
+                      (interval/starting-daily-at 
+                        (interval/time-of-day 13 52 00)))))]
+    (scheduler/schedule job trigger)))
