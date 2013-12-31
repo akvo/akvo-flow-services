@@ -85,8 +85,8 @@
 (def app (handler/site endpoints))
 
 (defn -main [config-file]
-  (config/set-settings! config-file)
-  (config/reload (:config-folder @config/settings))
-  (init)
-  (stats/schedule-job)
-  (run-jetty #'app {:join? false :port (:http-port @config/settings)}))
+  (when-let [cfg (config/set-settings! config-file)]
+    (config/reload (:config-folder cfg))
+    (init)
+    (stats/schedule-stats-job (:stats-schedule-time cfg))
+    (run-jetty #'app {:join? false :port (:http-port cfg)})))

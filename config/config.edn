@@ -11,6 +11,9 @@
  ;; Output directory where the statistics file will be written
  :stats-path "/path/to/stats/folder"
  
+ ;; Scheduling time for the daily stats job [HH mm ss]
+ :stats-schedule-time [01 00 00]
+
  ;; Google account username used for making remote api calls (needs to be developer in all instances)
  :username "usr@gmail.com"
  

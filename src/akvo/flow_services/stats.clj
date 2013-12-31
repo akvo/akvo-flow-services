@@ -97,8 +97,9 @@
         all-data (get-all-data server-list username password kinds)]
     (write-stats (conj (seq kinds) "Instance") all-data stats-path)))
 
-(defn schedule-job
-  []
+(defn schedule-stats-job
+  "Schedule a daily job execution based on the sch-time in the form [HH mm ss]"
+  [sch-time]
   (let [settings @config/settings
         {:keys [username password stats-path]} settings
         all-instances (set (map #(last (str/split % #"https?://")) (vals @config/instance-alias)))
@@ -107,7 +108,7 @@
         kinds (apply sorted-set (:stats-kinds settings))
         job (jobs/build 
               (jobs/of-type StatsJob) 
-              (jobs/with-identity (jobs/key "stats"))
+              (jobs/with-identity (jobs/key "stats-job"))
               (jobs/using-job-data {"username" username
                                     "password" password 
                                     "server-list" server-list 
@@ -117,7 +118,8 @@
                   (triggers/with-identity (triggers/key "stats-trigger"))
                   (triggers/start-now)
                   (triggers/with-schedule 
-                    (interval/schedule 
+                    (interval/schedule
+                      (interval/with-interval-in-days 1)
                       (interval/starting-daily-at 
-                        (interval/time-of-day 13 52 00)))))]
+                        (apply interval/time-of-day sch-time)))))]
     (scheduler/schedule job trigger)))
