@@ -15,7 +15,8 @@
 (ns akvo.flow-services.stats
   (:import [com.google.appengine.tools.remoteapi RemoteApiInstaller RemoteApiOptions]
            [com.google.appengine.api.datastore DatastoreServiceFactory Entity Query
-            Query$FilterOperator Query$FilterPredicate PreparedQuery FetchOptions FetchOptions$Builder])
+            Query$FilterOperator Query$FilterPredicate PreparedQuery FetchOptions FetchOptions$Builder]
+           java.util.Date java.text.SimpleDateFormat)
   (:require [clojurewerkz.quartzite [conversion :as conversion]
                                     [jobs :as jobs]]
             [akvo.flow-services.core :as core :only (settings)]
@@ -65,7 +66,7 @@
         qk (.setFilter (Query. "__Stat_Kind__") (get-filter "timestamp" ts))
         stats (.asList (.prepare ds qk) (get-defaults))]
     (.uninstall installer)
-    stats (filter #(kinds (.getProperty % "kind_name")) stats)))
+    (filter #(kinds (.getProperty % "kind_name")) stats)))
 
 (defn calc-stats [kinds stats]
    (for [e (filter #(kinds (.getProperty % "kind_name")) stats)
@@ -73,10 +74,12 @@
          :when (= (.getProperty e "kind_name") k)]
      (.getProperty e "count")))
 
-(defn write-stats [kinds data]
-  (with-open [out-file (io/writer "out-file.csv")]
-    (csv/write-csv out-file
-                   (conj data kinds))))
+(defn write-stats [kinds data stats-path]
+  (let [filename (.format (SimpleDateFormat. "yyyy-MM-dd") (Date.))
+        file (str stats-path "/" filename ".csv")]
+    (with-open [out-file (io/writer file)]
+      (csv/write-csv out-file
+                     (conj data kinds)))))
 
 (defn get-all-data [server-list user password kinds]
   (for [server server-list 
@@ -84,6 +87,6 @@
     (calc-stats kinds stats)))
 
 (jobs/defjob StatsJob [job-data]
-  (let [{:strs [user password server-list kinds]} (conversion/from-job-data job-data)
+  (let [{:strs [user password server-list kinds stats-path]} (conversion/from-job-data job-data)
         all-data (get-all-data server-list user password kinds)]
     (write-stats kinds all-data)))
