@@ -94,7 +94,7 @@
 (defn set-settings!
   "Resets the value of settings reading the new values from the file path"
   [path]
-  (reset! settings (-> path io/file slurp edn/read-string)))
+  (reset! settings (-> path (io/file) (slurp) (edn/read-string))))
 
 (defn get-criteria
   "Returns a map of upload configuration criteria"

@@ -6,13 +6,16 @@
  :http-port 3000
  
  ;; List of kinds interesting for stats
- :stat-kinds ["User" "Device" "SurveyInstance" "Survey"]
+ :stats-kinds ["User" "Device" "SurveyInstance" "Survey"]
+
+ ;; Output directory where the statistics file will be written
+ :stats-path "/path/to/stats/folder"
  
  ;; Google account username used for making remote api calls (needs to be developer in all instances)
  :username "usr@gmail.com"
  
- ;; List of kinds interesting for stats gathering
- :password "PassW0rD"
+ ;; Google account password used for making remote api calls
+ :password "passW0rD"
  
  ;; List of instances to be excluded from the stats report
  :dev-instances ["akvoflowsandbox" "watermappingmonitoring-hrd"
