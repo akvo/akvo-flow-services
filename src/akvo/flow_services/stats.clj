@@ -59,7 +59,6 @@
 (defn get-stats
   "Returns a list of stats for the given instance"
   [server usr pwd kinds]
-  (prn server usr pwd kinds)
   (let [opts (get-options server usr pwd)
         installer (get-installer opts)
         ds (get-ds)
@@ -72,10 +71,11 @@
     (filter #(kinds (.getProperty % "kind_name")) stats)))
 
 (defn calc-stats [kinds stats]
-   (for [e (filter #(kinds (.getProperty % "kind_name")) stats)
-         k kinds
-         :when (= (.getProperty e "kind_name") k)]
-     (.getProperty e "count")))
+  (let [entities (reduce #(assoc %1 (.getProperty %2 "kind_name") (.getProperty %2 "count")) {} stats)]
+    (for [k kinds]
+      (if (entities k)
+        (entities k)
+        0))))
 
 (defn write-stats [kinds data stats-path]
   (let [filename (.format (SimpleDateFormat. "yyyy-MM-dd") (Date.))
@@ -87,7 +87,7 @@
 (defn get-all-data [server-list user password kinds]
   (for [server server-list 
         :let [stats (get-stats server user password kinds)]] 
-    (calc-stats kinds stats)))
+    (conj (calc-stats kinds stats) server)))
 
 (jobs/defjob StatsJob [job-data]
   (let [{:strs [user password server-list kinds stats-path]} (conversion/from-job-data job-data)
@@ -103,4 +103,4 @@
         server-list (difference all-instances dev-instances)
         kinds (apply sorted-set (:stats-kinds settings))
         all-data (get-all-data server-list username password kinds)]
-    (write-stats kinds all-data stats-path)))
+    (write-stats (conj (seq kinds) "Instance") all-data stats-path)))
