@@ -19,7 +19,7 @@
             [clojure.string :as str]
             [clojure.pprint :as pprint]
             [akvo.flow-services.config :as config]
-            [me.raynes.fs :as fs :only (find-files delete delete-dir)]
+            [me.raynes.fs :as fs :only (find-files file? delete delete-dir)]
             [me.raynes.fs.compression :as fsc :only (unzip)]))
 
 
@@ -46,7 +46,7 @@
         (io/copy (io/file (format "%s/%s.%s" directory filename idx)) os)))))
 
 (defn- get-parts [path]
-  (fs/find-files path #".*\d+$"))
+  (filter #(fs/file? %) (fs/find-files path #".*\d+$")))
 
 (defn- cleanup [path]
   (doseq [file (get-parts path)]
