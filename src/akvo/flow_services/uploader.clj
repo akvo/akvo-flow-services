@@ -39,14 +39,16 @@
              (io/file (format "%s/%s.%s" identifier (params "resumableFilename") (params "resumableChunkNumber"))))
     "OK"))
 
-(defn- combine [directory filename no-parts]
-  (let [f (io/file (format "%s/%s" directory filename))]
-    (with-open [os (io/output-stream f)]
-      (doseq [idx (range 1 (+ 1 no-parts))]
-        (io/copy (io/file (format "%s/%s.%s" directory filename idx)) os)))))
-
 (defn- get-parts [path]
   (filter #(fs/file? %) (fs/find-files path #".*\d+$")))
+
+(defn- combine [directory filename]
+  (let [f (io/file (format "%s/%s" directory filename))
+        parts (get-parts directory)]
+    (if (seq parts)
+      (with-open [os (io/output-stream f)]
+        (doseq [p parts]
+          (io/copy p os))))))
 
 (defn- cleanup [path]
   (doseq [file (get-parts path)]
@@ -73,11 +75,9 @@
   "Combines the parts, extracts and uploads the content of a zip file"
   [base-url unique-identifier filename upload-domain surveyId]
   (let [path (format "%s/%s" (get-path) unique-identifier)
-        no-parts (count (get-parts path))
         uname (str/upper-case filename)]
-    (when (> no-parts 0)
-      (combine path filename no-parts)
-      (cleanup path))
+    (combine path filename)
+    (cleanup path)
     (cond
       (.endsWith uname "ZIP") (upload (unzip-file path filename) base-url upload-domain surveyId) ; Extract and upload
       (.endsWith uname "XLSX") (upload (io/file path filename) base-url upload-domain surveyId) ; Upload raw data
