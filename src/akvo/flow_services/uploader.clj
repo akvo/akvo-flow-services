@@ -40,7 +40,7 @@
     "OK"))
 
 (defn- get-parts [path]
-  (filter #(fs/file? %) (fs/find-files path #".*\d+$")))
+  (sort (filter #(fs/file? %) (fs/find-files path #".*\d+$"))))
 
 (defn- combine [directory filename]
   (let [f (io/file (format "%s/%s" directory filename))
