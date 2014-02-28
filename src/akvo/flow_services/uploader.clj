@@ -48,10 +48,12 @@
     (if (seq parts)
       (with-open [os (io/output-stream f)]
         (doseq [p parts]
+          (prn (format "Combining %s into %s" p f))
           (io/copy p os))))))
 
 (defn- cleanup [path]
   (doseq [file (get-parts path)]
+    (prn (format "Cleaning %s" file))
     (fs/delete file)))
 
 (defn- unzip-file [directory filename]
@@ -59,6 +61,7 @@
         source (io/file (format "%s/%s" directory filename))]
     (if-not (.exists ^File dest)
       (.mkdirs dest))
+    (prn (format "Unziping %s to %s" source dest))
     (fsc/unzip source dest)))
 
 (defn- get-upload-type [^File path]
