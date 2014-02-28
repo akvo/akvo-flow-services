@@ -36,9 +36,10 @@
         ds (get-ds)
         qt (Query. "__Stat_Total__")
         total (.asSingleEntity (.prepare ds qt))
-        ts (.getProperty total "timestamp")
-        qk (.setFilter (Query. "__Stat_Kind__") (get-filter "timestamp" ts))
-        stats (.asList (.prepare ds qk) (get-fetch-options))]
+        stats (if total ;; total can be nil on a new unused instance
+                (let [ts (.getProperty total "timestamp")
+                      qk (.setFilter (Query. "__Stat_Kind__") (get-filter "timestamp" ts))]
+                  (.asList (.prepare ds qk) (get-fetch-options))))]
     (.uninstall installer)
     (filter #(kinds (.getProperty % "kind_name")) stats)))
 
