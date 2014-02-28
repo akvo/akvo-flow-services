@@ -1,4 +1,4 @@
-;  Copyright (C) 2013 Stichting Akvo (Akvo Foundation)
+;  Copyright (C) 2013-2014 Stichting Akvo (Akvo Foundation)
 ;
 ;  This file is part of Akvo FLOW.
 ;
@@ -13,9 +13,7 @@
 ;  The full license text can also be seen at <http://www.gnu.org/licenses/agpl.html>.
 
 (ns akvo.flow-services.stats
-  (:import [com.google.appengine.tools.remoteapi RemoteApiInstaller RemoteApiOptions]
-           [com.google.appengine.api.datastore DatastoreServiceFactory Entity Query
-            Query$FilterOperator Query$FilterPredicate PreparedQuery FetchOptions FetchOptions$Builder]
+  (:import [com.google.appengine.api.datastore Entity Query]
            java.util.Date java.text.SimpleDateFormat)
   (:require [clojurewerkz.quartzite [conversion :as conversion]
                                     [jobs :as jobs]
@@ -23,41 +21,12 @@
                                     [scheduler :as scheduler]]
             [clojurewerkz.quartzite.schedule.daily-interval :as interval]
             [akvo.flow-services.config :as config :only (settings instance-alias)]
+            [akvo.flow-services.gae :refer :all]
             [clojure.data.csv :as csv :only (write-csv)]
             [clojure.java.io :as io]
             [clojure.string :as str :only (split)]
             [clojure.set :refer (difference)]))
 
-
-(defn get-options 
-  "Returns a RemoteApiOptions object"
-  [server usr pwd]
-  (doto
-    (RemoteApiOptions.)
-    (.server server 443)
-    (.credentials usr pwd)))
-
-(defn get-installer
-  "Returns a RemoteApiInstaller object"
-  [opts]
-  (doto
-    (RemoteApiInstaller.)
-    (.install opts)))
-
-(defn get-defaults
-  "Returns the defaults options for a PreparedQuery"
-  []
-  (FetchOptions$Builder/withDefaults))
-
-(defn get-ds
-  "Returns an instance of a DatastoreService"
-  []
-  (DatastoreServiceFactory/getDatastoreService))
-
-(defn get-filter
-  "Helper function that returns a FilterPredicate based on a property"
-  [property value]
-  (Query$FilterPredicate. property Query$FilterOperator/EQUAL value))
 
 (defn get-stats
   "Returns a list of stats for the given instance"
@@ -69,7 +38,7 @@
         total (.asSingleEntity (.prepare ds qt))
         ts (.getProperty total "timestamp")
         qk (.setFilter (Query. "__Stat_Kind__") (get-filter "timestamp" ts))
-        stats (.asList (.prepare ds qk) (get-defaults))]
+        stats (.asList (.prepare ds qk) (get-fetch-options))]
     (.uninstall installer)
     (filter #(kinds (.getProperty % "kind_name")) stats)))
 
