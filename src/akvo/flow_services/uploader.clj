@@ -39,8 +39,17 @@
              (io/file (format "%s/%s.%s" identifier (params "resumableFilename") (params "resumableChunkNumber"))))
     "OK"))
 
+(defn- part-no-comp
+  "Comparator function based on file part number
+   expects 2 files using filename.ext.number pattern"
+  [f1 f2]
+  (let [part-no #"\d+$"
+        p1 (read-string (re-find part-no (.getName f1)))
+        p2 (read-string (re-find part-no (.getName f2)))]
+    (< p1 p2)))
+
 (defn- get-parts [path]
-  (sort (filter #(fs/file? %) (fs/find-files path #".*\d+$"))))
+  (sort part-no-comp (filter #(fs/file? %) (fs/find-files path #".*\d+$"))))
 
 (defn- combine [directory filename]
   (let [f (io/file (format "%s/%s" directory filename))
