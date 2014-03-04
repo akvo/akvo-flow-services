@@ -49,7 +49,7 @@
     (< p1 p2)))
 
 (defn- get-parts [path]
-  (sort part-no-comp (filter fs/file? (fs/find-files path #".*\d+$"))))
+  (sort part-no-comp (filter fs/file? (fs/find-files path #".*\.\d+$"))))
 
 (defn- combine [directory filename]
   (let [f (io/file (format "%s/%s" directory filename))
