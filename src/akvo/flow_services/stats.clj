@@ -55,7 +55,7 @@
         file (str stats-path "/" filename ".csv")
         fstats-path (io/file stats-path)]
     (if-not (.exists fstats-path)
-      (.mkdirs stats-path)) ;; fstats-path should be used in this line
+      (.mkdirs fstats-path))
     (with-open [out-file (io/writer file)]
       (csv/write-csv out-file
                      (conj data kinds)))))
