@@ -52,7 +52,10 @@
 
 (defn write-stats [kinds data stats-path]
   (let [filename (.format (SimpleDateFormat. "yyyy-MM-dd") (Date.))
-        file (str stats-path "/" filename ".csv")]
+        file (str stats-path "/" filename ".csv")
+        fstats-path (io/file stats-path)]
+    (if-not (.exists fstats-path)
+      (.mkdirs stats-path))
     (with-open [out-file (io/writer file)]
       (csv/write-csv out-file
                      (conj data kinds)))))
