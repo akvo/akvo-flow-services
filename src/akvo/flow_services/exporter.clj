@@ -26,7 +26,7 @@
     :else "xlsx"))
 
 (defn- get-path []
-  (format "%s/%s/%s" (System/getProperty "java.io.tmpdir") "akvo/flow/reports" (UUID/randomUUID)))
+  (format "%s/%s/%s" (:base-path @config/settings) "reports" (UUID/randomUUID)))
 
 (defn- get-file [et id]
   (let [path (get-path)]
