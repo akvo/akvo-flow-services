@@ -25,20 +25,22 @@
     (= t "RAW_DATA_TEXT") "txt"
     :else "xlsx"))
 
-(defn- get-path []
-  (format "%s/%s/%s" (System/getProperty "java.io.tmpdir") "akvo/flow/reports" (UUID/randomUUID)))
+(defn- get-path [base-url]
+  (let [base-path (:base-path @config/settings)
+        domain (config/get-domain base-url)]
+    (format "%s/%s/%s/%s" base-path "reports" domain (UUID/randomUUID))))
 
-(defn- get-file [et id]
-  (let [path (get-path)]
+(defn- get-file [type base-url id]
+  (let [path (get-path base-url)]
     (.mkdirs (io/file path))
-    (io/file (format "%s/%s-%s.%s" path et id (get-file-extension et)))))
+    (io/file (format "%s/%s-%s.%s" path type id (get-file-extension type)))))
 
 (defn ^File export-report
   "Exports a report using SurveyDataImportExportFactory based on the report type.
    Returns the reference to the saved file."
-  [type base id options]
+  [type base-url id options]
   (let [exporter (.getExporter (SurveyDataImportExportFactory.) type)
-        file (get-file type id)
+        file (get-file type base-url id)
         criteria (config/get-criteria (options "uploadUrl") id)]
-    (.export exporter criteria file base options)
+    (.export exporter criteria file base-url options)
     file))

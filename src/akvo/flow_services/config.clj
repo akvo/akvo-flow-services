@@ -37,7 +37,10 @@
         "imageS3Sig"         "imageSig"    
         "apiKey"             "apiKey"})
 
-(defn- get-domain [url]
+(defn get-domain
+  "Extracts the domain from a string (takes care of trailing slash)
+  \"http://sub.akvoflow.org\" => \"sub.akvoflow.org\""
+  [url]
   (last (string/split url #"/")))
 
 (defn- transform-map 
