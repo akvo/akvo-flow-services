@@ -8,8 +8,11 @@
  ;; List of kinds interesting for stats
  :stats-kinds ["User" "Device" "SurveyInstance" "Survey"]
 
+ ;; Base path for reports and uploads
+ :base-path "/var/tmp/akvo/flow"
+
  ;; Output directory where the statistics file will be written
- :stats-path "/path/to/stats/folder"
+ :stats-path "/var/tmp/akvo/flow/reports/stats"
  
  ;; Scheduling time for the daily stats job [HH mm ss]
  :stats-schedule-time [01 00 00]

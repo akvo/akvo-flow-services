@@ -24,7 +24,7 @@
 
 
 (defn- get-path []
-  (format "%s/%s" (System/getProperty "java.io.tmpdir") "akvo/flow/uploads"))
+  (format "%s/%s" (:base-path @config/settings) "uploads"))
 
 (defn save-chunk
   "Saves the current produced ring temp file in a different folder.
