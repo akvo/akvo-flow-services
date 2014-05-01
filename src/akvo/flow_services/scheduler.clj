@@ -35,7 +35,7 @@
 
 (defn- get-path [report-file]
   (if (valid-report? report-file)
-    (string/join "/" (take-last 2 (string/split (.getAbsolutePath ^File report-file) #"/")))
+    (string/join "/" (take-last 3 (string/split (.getAbsolutePath ^File report-file) #"/")))
     "INVALID_PATH"))
 
 (jobs/defjob ExportJob [job-data]
