@@ -32,7 +32,7 @@
 
 (defn- get-file [type base-url id]
   (let [path (get-path base-url)]
-    (.mkdirs (io/file path)) ()
+    (.mkdirs (io/file path))
     (io/file (format "%s/%s-%s.%s" path type id (get-file-extension type)))))
 
 (defn ^File export-report
