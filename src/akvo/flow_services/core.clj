@@ -37,9 +37,10 @@
   (let [criteria (json/parse-string (params "criteria"))] ; TODO: validation
     (response (scheduler/invalidate-cache criteria))))
 
-(defn- transform-map [orig]
+(defn- transform-map
   "Returns a new map transforming keyword based keys into strings
    This is required to avoid cast exceptions in Quartz"
+  [orig]
   (into {}
         (for [[k v] orig]
           [(name k) v])))

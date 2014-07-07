@@ -1,4 +1,4 @@
-(defproject flow-services "0.6.1"
+(defproject flow-services "0.7.0"
   :description "HTTP layer to applets functionality"
   :url "https://github.com/akvo/akvo-flow-services"
   :license {:name "GNU Affero General Public License"
@@ -20,7 +20,7 @@
                  [org.slf4j/slf4j-simple "1.7.3"]
                  [com.google.gdata/core "1.47.1"]
                  ; Akvo FLOW dependencies
-                 [exporterapplet "1.5.0"]
+                 [exporterapplet "1.6.0"]
                  [org.json/json "20090211"]
                  ; Configuration and Stats
                  [com.google.appengine/appengine-tools-sdk "1.8.8"]
