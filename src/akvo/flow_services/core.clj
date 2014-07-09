@@ -1,4 +1,4 @@
-;  Copyright (C) 2013 Stichting Akvo (Akvo Foundation)
+;  Copyright (C) 2013-2014 Stichting Akvo (Akvo Foundation)
 ;
 ;  This file is part of Akvo FLOW.
 ;
@@ -13,12 +13,10 @@
 ;  The full license text can also be seen at <http://www.gnu.org/licenses/agpl.html>.
 
 (ns akvo.flow-services.core
-  (:use compojure.core
-        ring.middleware.params
-        ring.middleware.multipart-params
-        ring.util.response
-        ring.adapter.jetty)
-  (:require [cheshire.core :as json]
+  (:require [compojure.core :refer (defroutes GET POST OPTIONS)]
+            [ring.util.response :refer (response charset content-type header)]
+            [ring.adapter.jetty :refer (run-jetty)]
+            [cheshire.core :as json]
             [compojure [handler :as handler] [route :as route]]
             [clojurewerkz.quartzite.scheduler :as quartzite-scheduler]
             [akvo.flow-services [scheduler :as scheduler] [uploader :as uploader]

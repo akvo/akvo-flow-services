@@ -1,4 +1,4 @@
-;  Copyright (C) 2013 Stichting Akvo (Akvo Foundation)
+;  Copyright (C) 2013-2014 Stichting Akvo (Akvo Foundation)
 ;
 ;  This file is part of Akvo FLOW.
 ;
@@ -17,7 +17,6 @@
            org.waterforpeople.mapping.dataexport.SurveyDataImportExportFactory)
   (:require [clojure.java.io :as io]
             [clojure.string :as str]
-            [clojure.pprint :as pprint]
             [akvo.flow-services.config :as config]
             [me.raynes.fs :as fs :only (find-files file? delete delete-dir)]
             [me.raynes.fs.compression :as fsc :only (unzip)]))
@@ -35,7 +34,7 @@
         tempfile (params "file")]
     (if-not (.exists ^File path)
       (.mkdirs path))
-    (io/copy (tempfile :tempfile)
+    (io/copy (:tempfile tempfile)
              (io/file (format "%s/%s.%s" identifier (params "resumableFilename") (params "resumableChunkNumber"))))
     "OK"))
 
@@ -57,7 +56,7 @@
     (if (seq parts)
       (with-open [os (io/output-stream f)]
         (doseq [p parts]
-          (prn (format "Combining %s into %s" p f))
+          ;; (prn (format "Combining %s into %s" p f)) TODO: Move to proper logging
           (io/copy p os))))))
 
 (defn- cleanup [path]
@@ -70,7 +69,7 @@
         source (io/file (format "%s/%s" directory filename))]
     (if-not (.exists ^File dest)
       (.mkdirs dest))
-    (prn (format "Unziping %s to %s" source dest))
+    ;; (prn (format "Unziping %s to %s" source dest)) TODO: move to proper logging
     (fsc/unzip source dest)))
 
 (defn- get-upload-type [^File path]
@@ -93,5 +92,4 @@
     (cond
       (.endsWith uname "ZIP") (upload (unzip-file path filename) base-url upload-domain surveyId) ; Extract and upload
       (.endsWith uname "XLSX") (upload (io/file path filename) base-url upload-domain surveyId) ; Upload raw data
-      :else (upload (io/file path) base-url upload-domain surveyId)) ; JPG? upload file in the folder
-    (fs/delete-dir path)))
+      :else (upload (io/file path) base-url upload-domain surveyId))))

@@ -1,7 +1,7 @@
 (ns akvo.flow-services.test
-  (:use clojure.test)
   (:require [akvo.flow-services.config :as config]
-            [akvo.flow-services.scheduler :as sched]))
+            [akvo.flow-services.scheduler :as sched]
+            [clojure.test :refer :all]))
 
 (config/set-config! "/home/ivan/workspace/akvo/src/akvo-flow-server-config")
 (config/set-instance-alias! "/home/ivan/workspace/akvo/src/akvo-flow-server-config")
