@@ -1,4 +1,4 @@
-;  Copyright (C) 2013 Stichting Akvo (Akvo Foundation)
+;  Copyright (C) 2013-2014 Stichting Akvo (Akvo Foundation)
 ;
 ;  This file is part of Akvo FLOW.
 ;
@@ -14,12 +14,12 @@
 
 (ns akvo.flow-services.config
   (:import java.io.File
-           [com.google.apphosting.utils.config AppEngineWebXml AppEngineWebXmlReader AppEngineConfigException])
+    [com.google.apphosting.utils.config AppEngineWebXml AppEngineWebXmlReader AppEngineConfigException])
   (:require [clojure.java.io :as io]
-            [clojure.string :as string :only (split)]
-            [clojure.java.shell :as shell]
-            [clojure.edn :as edn :only (read-string)]
-            [me.raynes.fs :as fs :only (find-files)]))
+    [clojure.string :as str :only (split)]
+    [clojure.java.shell :as shell]
+    [clojure.edn :as edn :only (read-string)]
+    [me.raynes.fs :as fs :only (find-files)]))
 
 
 (def configs (atom {}))
@@ -28,71 +28,38 @@
 
 (def settings (atom {}))
 
-(def property-alias
-       {"uploadUrl"          "uploadBase"  
-        "s3Id"               "awsId"       
-        "surveyDataS3Policy" "dataPolicy"  
-        "surveyDataS3Sig"    "dataSig"     
-        "imageS3Policy"      "imagePolicy" 
-        "imageS3Sig"         "imageSig"    
-        "apiKey"             "apiKey"})
-
-(defn get-domain
-  "Extracts the domain from a string (takes care of trailing slash)
-  \"http://sub.akvoflow.org\" => \"sub.akvoflow.org\""
+(defn get-bucket-name
+  "Extracts the bucket name from an upload domain url: https://akvoflow-1.s3.amazonaws.com => akvoflow-1"
   [url]
-  (last (string/split url #"/")))
+  (last (str/split (first (str/split url #"\.s3\.amazonaws\.com")) #"//")))
 
-(defn- transform-map 
-  "Build a map with a given Properties file and
-  the alias of the keys to be modified"
-  [props alias-map]
-  (loop [properties (keys props)
-         m {}]
-    (if (seq properties)
-      (recur (next properties) (assoc m (if-let [k (alias-map (first properties))]
-                                           k ; Only if it exists on the alias map
-                                           (first properties)) ; The original key otherwise
-                                       (.getProperty props (first properties))))
-      m)))
-
-(defn- load-properties [file]
-  (with-open [is ^java.io.InputStream (io/input-stream file)]
-    (let [props (java.util.Properties.)]
-      (.load props is)
-      (assoc {} (get-domain (.getProperty ^java.util.Properties props "uploadUrl")) (transform-map props property-alias)))))
-
-(defn- get-alias [file]
+(defn- get-config [file]
   (let [appengine-web (-> file .getAbsolutePath (AppEngineWebXmlReader. "") .readAppEngineWebXml)
         app-id (.getAppId appengine-web)
-        app-alias (-> appengine-web .getSystemProperties (get "alias"))
-        domain (format "http://%s.appspot.com" app-id)]
-    {app-alias domain}))
-
-(defn- get-map [coll func]
-  (loop [c coll
-         m {}]
-    (if-not (seq c)
-      m
-      (recur (next c) (into m (func (first c)))))))
-
-(defn- load-alias-map
-  [path]
-  (get-map (fs/find-files path #"appengine-web.xml") get-alias))
-
-(defn- load-upload-conf
-  [path]
-  (get-map (fs/find-files path #"UploadConstants.properties") load-properties))
+        props (.getSystemProperties appengine-web)
+        app-alias (get props "alias")
+        access-key (get props "aws_identifier")
+        secret-key (get props "aws_secret_key")
+        s3bucket (get props "s3bucket")
+        apiKey (get props "restPrivateKey")
+        domain (format "%s.appspot.com" app-id)]
+    {:alias app-alias
+     :domain domain
+     :aws-access-key access-key
+     :aws-secret-key secret-key
+     :s3bucket s3bucket
+     :apiKey apiKey}))
 
 (defn set-config!
-  "Resets the value of configs map based on the Upload.properties files"
+  "Resets the value of configs and alias maps based on the appengine-web.xml files"
   [path]
-  (reset! configs (load-upload-conf path)))
-
-(defn set-instance-alias!
-  "Resets the value of the instance-alias map based on the appengine-web.xml files"
-  [path]
-  (reset! instance-alias (load-alias-map path)))
+  (let [cfgs (map get-config (fs/find-files path #"appengine.web.xml"))
+        bucket-fn (fn [res k v]
+                    (assoc res k (first v)))
+        alias-fn (fn [res k v]
+                   (assoc res k (:domain (first v))))]
+    (reset! configs (reduce-kv bucket-fn {} (group-by :s3bucket cfgs)))
+    (reset! instance-alias (reduce-kv alias-fn {} (group-by :alias cfgs)))))
 
 (defn set-settings!
   "Resets the value of settings reading the new values from the file path"
@@ -102,12 +69,11 @@
 (defn get-criteria
   "Returns a map of upload configuration criteria"
   [upload-domain surveyId]
-  (let [domain (get-domain upload-domain)
+  (let [domain (get-bucket-name upload-domain)
         config (@configs domain)]
-    (assoc config "surveyId" surveyId)))
+    (assoc config :surveyId surveyId)))
 
 (defn reload [path]
   (let [pull (shell/with-sh-dir path (shell/sh "git" "pull"))]
     (when (zero? (pull :exit))
-        (set-config! path)
-        (set-instance-alias! path))))
+        (set-config! path))))

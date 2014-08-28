@@ -14,9 +14,9 @@
 
 (ns akvo.flow-services.gae
   (:import [com.google.appengine.tools.remoteapi RemoteApiInstaller RemoteApiOptions]
-           [com.google.appengine.api.datastore DatastoreServiceFactory Entity Query
-            Query$FilterOperator Query$CompositeFilterOperator Query$FilterPredicate
-            PreparedQuery FetchOptions FetchOptions$Builder KeyFactory Key]))
+    [com.google.appengine.api.datastore DatastoreServiceFactory Entity Query
+     Query$FilterOperator Query$CompositeFilterOperator Query$FilterPredicate
+     PreparedQuery FetchOptions FetchOptions$Builder KeyFactory Key]))
 
 (defn get-options 
   "Returns a RemoteApiOptions object"

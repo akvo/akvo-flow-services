@@ -14,10 +14,11 @@
 
 (ns akvo.flow-services.exporter
   (:require [clojure.java.io :as io]
-            [akvo.flow-services.config :as config])
+    [clojure.walk :refer (stringify-keys)]
+    [akvo.flow-services.config :as config])
   (:import java.io.File
-           java.util.UUID
-           org.waterforpeople.mapping.dataexport.SurveyDataImportExportFactory))
+    java.util.UUID
+    org.waterforpeople.mapping.dataexport.SurveyDataImportExportFactory))
 
 (defn- get-file-extension [t]
   (cond
@@ -27,8 +28,8 @@
 
 (defn- get-path [base-url]
   (let [base-path (:base-path @config/settings)
-        domain (config/get-domain base-url)]
-    (format "%s/%s/%s/%s" base-path "reports" domain (UUID/randomUUID))))
+        bn (config/get-bucket-name base-url)]
+    (format "%s/%s/%s/%s" base-path "reports" bn (UUID/randomUUID))))
 
 (defn- get-file [type base-url id]
   (let [path (get-path base-url)]
@@ -41,6 +42,6 @@
   [type base-url id options]
   (let [exporter (.getExporter (SurveyDataImportExportFactory.) type)
         file (get-file type base-url id)
-        criteria (config/get-criteria (options "uploadUrl") id)]
+        criteria (stringify-keys (config/get-criteria (options "uploadUrl") id))]
     (.export exporter criteria file base-url options)
     file))
