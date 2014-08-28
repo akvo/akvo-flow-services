@@ -45,8 +45,8 @@
         domain (format "%s.appspot.com" app-id)]
     {:alias app-alias
      :domain domain
-     :aws-access-key access-key
-     :aws-secret-key secret-key
+     :access-key access-key
+     :secret-key secret-key
      :s3bucket s3bucket
      :apiKey apiKey}))
 

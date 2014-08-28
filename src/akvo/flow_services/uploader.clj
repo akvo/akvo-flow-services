@@ -33,7 +33,7 @@
   [params]
   (let [identifier (format "%s/%s" (get-path) (:resumableIdentifier params))
         path (io/file identifier)
-        tempfile (params "file")]
+        tempfile (:file params)]
     (if-not (.exists ^File path)
       (.mkdirs path))
     (io/copy (:tempfile tempfile)
@@ -89,7 +89,9 @@
     (str prefix fname)))
 
 (defn- upload [f bucket-name]
-  (s3/put-object {} bucket-name (.getName f) f))
+  (let [creds (select-keys (@config/configs bucket-name) [:access-key :secret-key])
+        obj-key (get-key f)]
+    (s3/put-object creds bucket-name obj-key f)))
 
 (defn- raw-data
   [path base-url bucket-name surveyId]
@@ -109,16 +111,17 @@
                (remove nil?
                  (distinct (mapcat get-data (fs/find-files path #".*\.zip$")))))]
     (doseq [k (keys data)
-            fname (format "/tmp/%s.zip" k)]
-      (fsc/zip fname ["data.txt" [(str/join "\n" (data k))]])
+            :let [fname (format "/tmp/%s.zip" k)]]
+      (fsc/zip fname ["data.txt" (str/join "\n" (data k))])
       (upload (io/file fname) bucket-name))))
 
 
 (defn bulk-upload
   "Combines the parts, extracts and uploads the content of a zip file"
-  [base-url unique-identifier filename bucket-name surveyId]
+  [base-url unique-identifier filename upload-domain surveyId]
   (let [path (format "%s/%s" (get-path) unique-identifier)
-        uname (str/upper-case filename)]
+        uname (str/upper-case filename)
+        bucket-name (config/get-bucket-name upload-domain)]
     (combine path filename)
     (cleanup path)
     (cond
