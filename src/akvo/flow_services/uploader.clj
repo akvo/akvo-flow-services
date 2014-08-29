@@ -21,7 +21,8 @@
             [akvo.flow-services.config :as config]
             [me.raynes.fs :as fs :only (find-files file? delete delete-dir)]
             [me.raynes.fs.compression :as fsc :only (zip unzip)]
-            [aws.sdk.s3 :as s3 :only (put-object grant)]))
+            [aws.sdk.s3 :as s3 :only (put-object grant)]
+            [clj-http.client :as http :only (get)]))
 
 
 (defn- get-path []
@@ -125,11 +126,14 @@
   [path bucket-name]
   (let [data (group-by #(nth (str/split % #"\t") 11) ;; 12th column contains the UUID
                (remove nil?
-                 (distinct (mapcat get-data (get-zip-files path)))))]
+                 (distinct (mapcat get-data (get-zip-files path)))))
+        server (:domain (@config/configs bucket-name))]
     (doseq [k (keys data)
-            :let [fname (format "/tmp/%s.zip" k)]]
-      (fsc/zip fname ["data.txt" (str/join "\n" (data k))])
-      (upload (io/file fname) bucket-name))
+            :let [fname (format "/tmp/%s.zip" k)
+                  fzip (io/file fname)]]
+      (fsc/zip fzip ["data.txt" (str/join "\n" (data k))])
+      (upload fzip bucket-name)
+      (http/get (format "http://%s/processor?action=submit&fileName=%s" server (.getName fzip))))
     (doseq [f (get-images path)]
       (upload f bucket-name))))
 
