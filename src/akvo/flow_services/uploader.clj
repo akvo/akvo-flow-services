@@ -105,15 +105,31 @@
           (doall
             (line-seq (io/reader (.getInputStream zf entry)))))))))
 
+(defn- filter-files
+  [fcoll]
+  (->> fcoll
+    (remove #(.contains (.getAbsolutePath %) "__MACOSX"))
+    (remove #(.contains (.getName %) "wfpGenerated"))))
+
+(defn- get-zip-files
+  [path]
+  (filter-files (fs/find-files path #".*\.zip$")))
+
+(defn- get-images
+  [path]
+  (filter-files (fs/find-files path #".*\.(jpg|JPG|jpeg|JPEG)$")))
+
 (defn- bulk-survey
   [path bucket-name]
   (let [data (group-by #(nth (str/split % #"\t") 11) ;; 12th column contains the UUID
                (remove nil?
-                 (distinct (mapcat get-data (fs/find-files path #".*\.zip$")))))]
+                 (distinct (mapcat get-data (get-zip-files path)))))]
     (doseq [k (keys data)
             :let [fname (format "/tmp/%s.zip" k)]]
       (fsc/zip fname ["data.txt" (str/join "\n" (data k))])
-      (upload (io/file fname) bucket-name))))
+      (upload (io/file fname) bucket-name))
+    (doseq [f (get-images path)]
+      (upload f bucket-name))))
 
 
 (defn bulk-upload

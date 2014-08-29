@@ -17,7 +17,7 @@
   (:import [org.quartz JobExecutionContext Scheduler ObjectAlreadyExistsException]
            java.io.File
            java.util.UUID)
-  (:require [clojure.string :as string :only (split join)]
+  (:require [clojure.string :as str :only (split join)]
             [clojurewerkz.quartzite [conversion :as conversion]
                                     [jobs :as jobs]
                                     [scheduler :as scheduler]
@@ -31,11 +31,11 @@
 (defn- valid-report? [report-path]
   (boolean
     (and (.exists report-path)
-      (> (.length report-path) 0))))
+      (pos? (.length report-path)))))
 
 (defn- get-path [report-file]
   (if (valid-report? report-file)
-    (string/join "/" (take-last 3 (string/split (.getAbsolutePath ^File report-file) #"/")))
+    (str/join "/" (take-last 3 (str/split (.getAbsolutePath ^File report-file) #"/")))
     "INVALID_PATH"))
 
 (jobs/defjob ExportJob [job-data]
@@ -45,7 +45,7 @@
     (dosync
       (alter cache conj {{:id id
                           :surveyId surveyId
-                          :baseURL baseURL} path}))
+                          :baseURL (config/get-domain baseURL)} path}))
     (scheduler/delete-job (jobs/key id))))
 
 
@@ -85,9 +85,9 @@
 (defn invalidate-cache
   "Invalidates (removes) a given file from the in memory cache"
   [params]
-  (let [baseURL (:baseURL params)
-        alias (@config/instance-alias baseURL)]
-    (doseq [sid (:surveyIds params)]
+  (let [baseURL (config/get-domain (params "baseURL"))
+        alias (config/get-alias baseURL)]
+    (doseq [sid (params "surveyIds")]
       (dosync
         (doseq [k (keys @cache) :when (and (= (:surveyId k) (str sid))
                                            (or (= (:baseURL k) baseURL)
@@ -102,8 +102,8 @@
   (if-let [file (get-report-by-id (report-id params))]
     (if (= file "INVALID_PATH")
       (do
-        (invalidate-cache {:baseURL (:baseURL params)
-                           :surveyIds [(:surveyId params)]})
+        (invalidate-cache {"baseURL" (config/get-domain (:baseURL params))
+                           "surveyIds" [(:surveyId params)]})
         {:status "ERROR"
          :message "_error_generating_report"})
       {:status "OK"

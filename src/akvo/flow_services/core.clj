@@ -53,17 +53,20 @@
   
   (POST "/upload" [:as {params :params}]
     (if (contains? params :file)
-      (-> (response (uploader/save-chunk params))
+      (-> params
+        uploader/save-chunk
+        response
         (header "Access-Control-Allow-Origin" "*"))
-      (-> (response (:status (scheduler/process-and-upload params)))
+      (-> params
+        scheduler/process-and-upload
+        :status
         (header "Access-Control-Allow-Origin" "*"))))
 
   (POST "/reload" [params]
     (config/reload (:config-folder @config/settings)))
   
   (OPTIONS "/upload" [:as {params :params}] 
-    (-> (response "OK")
-      (header "Access-Control-Allow-Origin" "*")))
+    (header (response "OK") "Access-Control-Allow-Origin" "*"))
   
   (route/resources "/")
 
