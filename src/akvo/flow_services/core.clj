@@ -60,6 +60,7 @@
       (-> params
         scheduler/process-and-upload
         :status
+        response
         (header "Access-Control-Allow-Origin" "*"))))
 
   (POST "/reload" [params]
