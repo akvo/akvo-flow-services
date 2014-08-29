@@ -21,7 +21,7 @@
             [akvo.flow-services.config :as config]
             [me.raynes.fs :as fs :only (find-files file? delete delete-dir)]
             [me.raynes.fs.compression :as fsc :only (zip unzip)]
-            [aws.sdk.s3 :as s3 :only (put-object)]))
+            [aws.sdk.s3 :as s3 :only (put-object grant)]))
 
 
 (defn- get-path []
@@ -91,7 +91,9 @@
 (defn- upload [f bucket-name]
   (let [creds (select-keys (@config/configs bucket-name) [:access-key :secret-key])
         obj-key (get-key f)]
-    (s3/put-object creds bucket-name obj-key f)))
+    (if (.startsWith obj-key "images/")
+      (s3/put-object creds bucket-name obj-key f {} (s3/grant :all-users :read))
+      (s3/put-object creds bucket-name obj-key f))))
 
 (defn- raw-data
   [path base-url bucket-name surveyId]
