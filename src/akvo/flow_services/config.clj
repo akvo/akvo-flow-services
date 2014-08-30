@@ -19,6 +19,7 @@
     [clojure.string :as str :only (split)]
     [clojure.java.shell :as shell]
     [clojure.edn :as edn :only (read-string)]
+    [clojure.walk :refer (stringify-keys)]
     [me.raynes.fs :as fs :only (find-files)]))
 
 
@@ -52,10 +53,9 @@
 
 (defn get-criteria
   "Returns a map of upload configuration criteria"
-  [upload-domain surveyId]
-  (let [domain (get-bucket-name upload-domain)
-        config (@configs domain)]
-    (assoc config :surveyId surveyId)))
+  [bucket-name surveyId]
+  (let [config (@configs bucket-name)]
+    (stringify-keys (assoc config :surveyId surveyId))))
 
 (defn get-domain
   "Returns the instance domain for a given base-url"

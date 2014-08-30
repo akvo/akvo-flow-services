@@ -98,17 +98,17 @@
 
 (defn generate-report
   "Returns the cached report for the given parameters, or schedules the report for generation"
-  [params]
-  (if-let [file (get-report-by-id (report-id params))]
+  [criteria]
+  (if-let [file (get-report-by-id (report-id criteria))]
     (if (= file "INVALID_PATH")
       (do
-        (invalidate-cache {"baseURL" (config/get-domain (:baseURL params))
-                           "surveyIds" [(:surveyId params)]})
+        (invalidate-cache {"baseURL" (criteria "baseURL")
+                           "surveyIds" [(criteria "surveyId")]})
         {:status "ERROR"
          :message "_error_generating_report"})
       {:status "OK"
        :file file})
-    (schedule-job ExportJob (report-id params) params)))
+    (schedule-job ExportJob (report-id criteria) criteria)))
 
 (defn process-and-upload
   "Schedules a bulk upload process"

@@ -14,7 +14,7 @@
 
 (ns akvo.flow-services.uploader
   (:import java.io.File
-           org.waterforpeople.mapping.dataexport.SurveyDataImportExportFactory
+           org.waterforpeople.mapping.dataexport.SurveySpreadsheetImporter
            java.util.zip.ZipFile)
   (:require [clojure.java.io :as io]
             [clojure.string :as str]
@@ -97,8 +97,13 @@
       (s3/put-object creds bucket-name obj-key f))))
 
 (defn- raw-data
-  [path base-url bucket-name surveyId]
-  (let [importer (.getImporter (SurveyDataImportExportFactory.) "RAW_DATA")]))
+  [f base-url bucket-name surveyId]
+  (let [importer (SurveySpreadsheetImporter.)
+        errors (.validate importer f)]
+    (if (empty? errors)
+      (.executeImport importer f base-url (config/get-criteria bucket-name surveyId))
+      (do
+        (prn errors)))))
 
 (defn- get-data [f]
   (try
