@@ -14,15 +14,16 @@
 
 (ns akvo.flow-services.uploader
   (:import java.io.File
-           org.waterforpeople.mapping.dataexport.SurveySpreadsheetImporter
+           org.waterforpeople.mapping.dataexport.RawDataSpreadsheetImporter
            java.util.zip.ZipFile)
   (:require [clojure.java.io :as io]
             [clojure.string :as str]
-            [akvo.flow-services.config :as config]
             [me.raynes.fs :as fs :only (find-files file? delete delete-dir)]
             [me.raynes.fs.compression :as fsc :only (zip unzip)]
             [aws.sdk.s3 :as s3 :only (put-object grant)]
-            [clj-http.client :as http :only (get)]))
+            [clj-http.client :as http :only (get)]
+            [akvo.flow-services.config :as config]
+            [akvo.flow-services.gae :as gae :only (put!)]))
 
 
 (defn- get-path []
@@ -98,12 +99,16 @@
 
 (defn- raw-data
   [f base-url bucket-name surveyId]
-  (let [importer (SurveySpreadsheetImporter.)
+  (let [importer (RawDataSpreadsheetImporter.)
         errors (.validate importer f)]
     (if (empty? errors)
       (.executeImport importer f base-url (config/get-criteria bucket-name surveyId))
-      (do
-        (prn errors)))))
+      (let [settings @config/settings
+            config (@config/configs bucket-name)
+            msg {"actionAbout" "importData"
+                 "objectId" (Long/parseLong surveyId)
+                 "shortMessage" (format "Invalid RAW DATA file: %s - Errors: %s" (.getName f) (str/join (vals errors) ","))}]
+        (gae/put! (:domain config) (:username settings) (:password settings) "Message" msg)))))
 
 (defn- get-data [f]
   (try

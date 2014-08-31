@@ -13,7 +13,8 @@
 ;  The full license text can also be seen at <http://www.gnu.org/licenses/agpl.html>.
 
 (ns akvo.flow-services.gae
-  (:import [com.google.appengine.tools.remoteapi RemoteApiInstaller RemoteApiOptions]
+  (:import java.util.Date
+    [com.google.appengine.tools.remoteapi RemoteApiInstaller RemoteApiOptions]
     [com.google.appengine.api.datastore DatastoreServiceFactory Entity Query
      Query$FilterOperator Query$CompositeFilterOperator Query$FilterPredicate
      PreparedQuery FetchOptions FetchOptions$Builder KeyFactory Key]))
@@ -72,3 +73,16 @@
   [kind id]
   (KeyFactory/createKey kind id))
 
+(defn put!
+  "Creates a new Entity using Remote API"
+  [server usr pwd entity-name props]
+  (let [opts (get-options server usr pwd)
+        installer (get-installer opts)
+        ds (get-ds)
+        entity (Entity. entity-name)
+        ts (Date.)]
+    (doseq [k (keys props)]
+      (.setProperty entity k (props k)))
+    (.setProperty entity "createdDateTime" ts)
+    (.setProperty entity "lastUpdateDateTime" ts)
+    (.put ds entity)))

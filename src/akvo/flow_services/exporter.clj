@@ -42,9 +42,10 @@
   [type base-url id options]
   (let [exporter (.getExporter (SurveyDataImportExportFactory.) type)
         file (get-file type base-url id)
-        criteria (stringify-keys (-> "uploadUrl"
-                                   options
-                                   config/get-bucket-name
-                                   (config/get-criteria id)))]
+        criteria (-> "uploadUrl"
+                   options
+                   config/get-bucket-name
+                   (config/get-criteria id)
+                   stringify-keys)]
     (.export exporter criteria file base-url options)
     file))
