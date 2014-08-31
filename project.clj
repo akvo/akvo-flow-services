@@ -12,7 +12,7 @@
                  [ring/ring-core "1.3.1"]
                  [ring/ring-jetty-adapter "1.3.1"]
                  [me.raynes/fs "1.4.6"]
-                 [clj-aws-s3 "0.3.9"]
+                 [clj-aws-s3 "0.3.9" :exclusions [joda-time]]
                  [clj-http "1.0.0"]
                  ; Java libraries
                  [jfree/jfreechart "1.0.13"]
