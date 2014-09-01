@@ -1,4 +1,4 @@
-;  Copyright (C) 2013 Stichting Akvo (Akvo Foundation)
+;  Copyright (C) 2013-2014 Stichting Akvo (Akvo Foundation)
 ;
 ;  This file is part of Akvo FLOW.
 ;
@@ -14,13 +14,16 @@
 
 (ns akvo.flow-services.uploader
   (:import java.io.File
-           org.waterforpeople.mapping.dataexport.SurveyDataImportExportFactory)
+           org.waterforpeople.mapping.dataexport.RawDataSpreadsheetImporter
+           java.util.zip.ZipFile)
   (:require [clojure.java.io :as io]
             [clojure.string :as str]
-            [clojure.pprint :as pprint]
-            [akvo.flow-services.config :as config]
             [me.raynes.fs :as fs :only (find-files file? delete delete-dir)]
-            [me.raynes.fs.compression :as fsc :only (unzip)]))
+            [me.raynes.fs.compression :as fsc :only (zip unzip)]
+            [aws.sdk.s3 :as s3 :only (put-object grant)]
+            [clj-http.client :as http :only (get)]
+            [akvo.flow-services.config :as config]
+            [akvo.flow-services.gae :as gae :only (put!)]))
 
 
 (defn- get-path []
@@ -30,13 +33,13 @@
   "Saves the current produced ring temp file in a different folder.
    The expected `params` is a ring map containing a `file` part o the multipart request."
   [params]
-  (let [identifier (format "%s/%s" (get-path) (params "resumableIdentifier"))
+  (let [identifier (format "%s/%s" (get-path) (:resumableIdentifier params))
         path (io/file identifier)
-        tempfile (params "file")]
+        tempfile (:file params)]
     (if-not (.exists ^File path)
       (.mkdirs path))
-    (io/copy (tempfile :tempfile)
-             (io/file (format "%s/%s.%s" identifier (params "resumableFilename") (params "resumableChunkNumber"))))
+    (io/copy (:tempfile tempfile)
+             (io/file (format "%s/%s.%s" identifier (:resumableFilename params) (:resumableChunkNumber params))))
     "OK"))
 
 (defn- part-no-comp
@@ -57,12 +60,10 @@
     (if (seq parts)
       (with-open [os (io/output-stream f)]
         (doseq [p parts]
-          (prn (format "Combining %s into %s" p f))
           (io/copy p os))))))
 
 (defn- cleanup [path]
   (doseq [file (get-parts path)]
-    (prn (format "Cleaning %s" file))
     (fs/delete file)))
 
 (defn- unzip-file [directory filename]
@@ -70,7 +71,6 @@
         source (io/file (format "%s/%s" directory filename))]
     (if-not (.exists ^File dest)
       (.mkdirs dest))
-    (prn (format "Unziping %s to %s" source dest))
     (fsc/unzip source dest)))
 
 (defn- get-upload-type [^File path]
@@ -79,19 +79,84 @@
     "RAW_DATA"
     "BULK_SURVEY"))
 
-(defn- upload [path base-url upload-domain surveyId]
-  (let [importer (.getImporter (SurveyDataImportExportFactory.) (get-upload-type path))]
-    (.executeImport importer path base-url (config/get-criteria upload-domain surveyId))))
+(defn- get-key
+  [f]
+  (let [fname (.getName f)
+        pos (.lastIndexOf fname ".")
+        ext (.substring fname (inc pos))
+        prefix (condp = (.toLowerCase ext)
+                 "zip" "devicezip/"
+                 "jpg" "images/"
+                 "jpeg" "images/")]
+    (str prefix fname)))
+
+(defn- upload [f bucket-name]
+  (let [creds (select-keys (@config/configs bucket-name) [:access-key :secret-key])
+        obj-key (get-key f)]
+    (if (.startsWith obj-key "images/")
+      (s3/put-object creds bucket-name obj-key f {} (s3/grant :all-users :read))
+      (s3/put-object creds bucket-name obj-key f))))
+
+(defn- raw-data
+  [f base-url bucket-name surveyId]
+  (let [importer (RawDataSpreadsheetImporter.)
+        errors (.validate importer f)]
+    (if (empty? errors)
+      (.executeImport importer f base-url (config/get-criteria bucket-name surveyId))
+      (let [settings @config/settings
+            config (@config/configs bucket-name)
+            msg {"actionAbout" "importData"
+                 "objectId" (Long/parseLong surveyId)
+                 "shortMessage" (format "Invalid RAW DATA file: %s - Errors: %s" (.getName f) (str/join (vals errors) ","))}]
+        (gae/put! (:domain config) (:username settings) (:password settings) "Message" msg)))))
+
+(defn- get-data [f]
+  (try
+    (with-open [zf (ZipFile. f)]
+      (let [entry (.getEntry zf "data.txt")]
+        (if entry
+          (doall
+            (line-seq (io/reader (.getInputStream zf entry)))))))))
+
+(defn- filter-files
+  [fcoll]
+  (->> fcoll
+    (remove #(.contains (.getAbsolutePath %) "__MACOSX"))
+    (remove #(.contains (.getName %) "wfpGenerated"))))
+
+(defn- get-zip-files
+  [path]
+  (filter-files (fs/find-files path #".*\.zip$")))
+
+(defn- get-images
+  [path]
+  (filter-files (fs/find-files path #".*\.(jpg|JPG|jpeg|JPEG)$")))
+
+(defn- bulk-survey
+  [path bucket-name]
+  (let [data (group-by #(nth (str/split % #"\t") 11) ;; 12th column contains the UUID
+               (remove nil?
+                 (distinct (mapcat get-data (get-zip-files path)))))
+        server (:domain (@config/configs bucket-name))]
+    (doseq [k (keys data)
+            :let [fname (format "/tmp/%s.zip" k)
+                  fzip (io/file fname)]]
+      (fsc/zip fzip ["data.txt" (str/join "\n" (data k))])
+      (upload fzip bucket-name)
+      (http/get (format "http://%s/processor?action=submit&fileName=%s" server (.getName fzip))))
+    (doseq [f (get-images path)]
+      (upload f bucket-name))))
+
 
 (defn bulk-upload
   "Combines the parts, extracts and uploads the content of a zip file"
   [base-url unique-identifier filename upload-domain surveyId]
   (let [path (format "%s/%s" (get-path) unique-identifier)
-        uname (str/upper-case filename)]
+        uname (str/upper-case filename)
+        bucket-name (config/get-bucket-name upload-domain)]
     (combine path filename)
     (cleanup path)
     (cond
-      (.endsWith uname "ZIP") (upload (unzip-file path filename) base-url upload-domain surveyId) ; Extract and upload
-      (.endsWith uname "XLSX") (upload (io/file path filename) base-url upload-domain surveyId) ; Upload raw data
-      :else (upload (io/file path) base-url upload-domain surveyId)) ; JPG? upload file in the folder
-    (fs/delete-dir path)))
+      (.endsWith uname "ZIP") (bulk-survey (unzip-file path filename) bucket-name) ; Extract and upload
+      (.endsWith uname "XLSX") (raw-data (io/file path filename) base-url bucket-name surveyId) ; Upload raw data
+      :else (upload (io/file path) bucket-name))))

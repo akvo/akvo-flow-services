@@ -1,4 +1,4 @@
-;  Copyright (C) 2013 Stichting Akvo (Akvo Foundation)
+;  Copyright (C) 2013-2014 Stichting Akvo (Akvo Foundation)
 ;
 ;  This file is part of Akvo FLOW.
 ;
@@ -17,7 +17,7 @@
   (:import [org.quartz JobExecutionContext Scheduler ObjectAlreadyExistsException]
            java.io.File
            java.util.UUID)
-  (:require [clojure.string :as string :only (split join)]
+  (:require [clojure.string :as str :only (split join)]
             [clojurewerkz.quartzite [conversion :as conversion]
                                     [jobs :as jobs]
                                     [scheduler :as scheduler]
@@ -29,13 +29,13 @@
 (def cache (ref {}))
 
 (defn- valid-report? [report-path]
-  (if (and (.exists ^File report-path)
-           (> (.length ^File report-path) 0))
-    true false))
+  (boolean
+    (and (.exists report-path)
+      (pos? (.length report-path)))))
 
 (defn- get-path [report-file]
   (if (valid-report? report-file)
-    (string/join "/" (take-last 3 (string/split (.getAbsolutePath ^File report-file) #"/")))
+    (str/join "/" (take-last 3 (str/split (.getAbsolutePath ^File report-file) #"/")))
     "INVALID_PATH"))
 
 (jobs/defjob ExportJob [job-data]
@@ -45,7 +45,7 @@
     (dosync
       (alter cache conj {{:id id
                           :surveyId surveyId
-                          :baseURL baseURL} path}))
+                          :baseURL (config/get-domain baseURL)} path}))
     (scheduler/delete-job (jobs/key id))))
 
 
@@ -54,20 +54,13 @@
     (bulk-upload baseURL uniqueIdentifier filename uploadDomain surveyId)
     (scheduler/delete-job (jobs/key id))))
 
-(defn- get-executing-jobs-by-key [key]
-  (filter #(= (.. ^JobExecutionContext % (getJobDetail) (getKey)) (jobs/key key))
-          (.getCurrentlyExecutingJobs ^Scheduler @scheduler/*scheduler*)))
-
-(defn- job-executing? [key]
-  (if (seq (get-executing-jobs-by-key key)) true false))
-
 (defn- report-id [m]
-  (format "id%s" (hash (str m))))
+  (format "id%s" (hash m)))
 
 (defn- get-job [job-type id params]
   (jobs/build
     (jobs/of-type job-type)
-    (jobs/using-job-data (conj params {"id" id} ))
+    (jobs/using-job-data (conj params {:id id} ))
     (jobs/with-identity (jobs/key id))))
 
 (defn- get-trigger [id]
@@ -81,8 +74,8 @@
     (try
       (scheduler/maybe-schedule job trigger)
       (catch ObjectAlreadyExistsException _))
-    {"status" "OK"
-     "message" "PROCESSING"}))
+    {:status "OK"
+     :message "PROCESSING"}))
 
 (defn- get-report-by-id [id]
   (let [found (filter #(= id (:id %)) (keys @cache))]
@@ -92,32 +85,32 @@
 (defn invalidate-cache
   "Invalidates (removes) a given file from the in memory cache"
   [params]
-  (let [baseURL (params "baseURL")
-        alias (@config/instance-alias baseURL)]
+  (let [baseURL (config/get-domain (params "baseURL"))
+        alias (config/get-alias baseURL)]
     (doseq [sid (params "surveyIds")]
       (dosync
         (doseq [k (keys @cache) :when (and (= (:surveyId k) (str sid))
                                            (or (= (:baseURL k) baseURL)
                                                (= (:baseURL k) alias)))]
-          (prn "Invalidating: " k)
+          (prn "Invalidating: " k) ;; TODO better logging
           (alter cache dissoc k))))
     "OK"))
 
 (defn generate-report
   "Returns the cached report for the given parameters, or schedules the report for generation"
-  [params]
-  (if-let [file (get-report-by-id (report-id params))]
+  [criteria]
+  (if-let [file (get-report-by-id (report-id criteria))]
     (if (= file "INVALID_PATH")
       (do
-        (invalidate-cache {"baseURL" (params "baseURL")
-                           "surveyIds" [(params "surveyId")]})
-        {"status" "ERROR"
-         "message" "_error_generating_report"})
-      {"status" "OK"
-       "file" file})
-    (schedule-job ExportJob (report-id params) params)))
+        (invalidate-cache {"baseURL" (criteria "baseURL")
+                           "surveyIds" [(criteria "surveyId")]})
+        {:status "ERROR"
+         :message "_error_generating_report"})
+      {:status "OK"
+       :file file})
+    (schedule-job ExportJob (report-id criteria) criteria)))
 
 (defn process-and-upload
   "Schedules a bulk upload process"
   [params]
-  (schedule-job BulkUploadJob (params "uniqueIdentifier") params))
+  (schedule-job BulkUploadJob (:uniqueIdentifier params) params))
