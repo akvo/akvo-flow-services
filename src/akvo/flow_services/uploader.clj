@@ -97,18 +97,22 @@
       (s3/put-object creds bucket-name obj-key f {} (s3/grant :all-users :read))
       (s3/put-object creds bucket-name obj-key f))))
 
+(defn- add-message [bucket-name action obj-id content]
+  (let [settings @config/settings
+        config (@config/configs bucket-name)
+        msg {"actionAbout" action
+             "objectId" (if obj-id (Long/parseLong obj-id))
+             "shortMessage" content}]
+    (gae/put! (:domain config) (:username settings) (:password settings) "Message" msg)))
+
 (defn- raw-data
   [f base-url bucket-name surveyId]
   (let [importer (RawDataSpreadsheetImporter.)
         errors (.validate importer f)]
     (if (empty? errors)
       (.executeImport importer f base-url (config/get-criteria bucket-name surveyId))
-      (let [settings @config/settings
-            config (@config/configs bucket-name)
-            msg {"actionAbout" "importData"
-                 "objectId" (Long/parseLong surveyId)
-                 "shortMessage" (format "Invalid RAW DATA file: %s - Errors: %s" (.getName f) (str/join (vals errors) ","))}]
-        (gae/put! (:domain config) (:username settings) (:password settings) "Message" msg)))))
+      (add-message bucket-name "importData" surveyId
+                   (format "Invalid RAW DATA file: %s - Errors: %s" (.getName f) (str/join (vals errors) ","))))))
 
 (defn- get-data [f]
   (try
@@ -133,7 +137,7 @@
   (filter-files (fs/find-files path #".*\.(jpg|JPG|jpeg|JPEG)$")))
 
 (defn- bulk-survey
-  [path bucket-name]
+  [path bucket-name filename]
   (let [data (group-by #(nth (str/split % #"\t") 11) ;; 12th column contains the UUID
                (remove nil?
                  (distinct (mapcat get-data (get-zip-files path)))))
@@ -145,7 +149,8 @@
       (upload fzip bucket-name)
       (http/get (format "http://%s/processor?action=submit&fileName=%s" server (.getName fzip))))
     (doseq [f (get-images path)]
-      (upload f bucket-name))))
+      (upload f bucket-name))
+    (add-message bucket-name "bulkUpload" nil (format "File: %s processed" filename))))
 
 
 (defn bulk-upload
@@ -157,6 +162,6 @@
     (combine path filename)
     (cleanup path)
     (cond
-      (.endsWith uname "ZIP") (bulk-survey (unzip-file path filename) bucket-name) ; Extract and upload
+      (.endsWith uname "ZIP") (bulk-survey (unzip-file path filename) bucket-name filename) ; Extract and upload
       (.endsWith uname "XLSX") (raw-data (io/file path filename) base-url bucket-name surveyId) ; Upload raw data
       :else (upload (io/file path) bucket-name))))
