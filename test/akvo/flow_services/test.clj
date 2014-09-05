@@ -1,14 +1,13 @@
 (ns akvo.flow-services.test
-  (:use clojure.test)
   (:require [akvo.flow-services.config :as config]
-            [akvo.flow-services.scheduler :as sched]))
+            [akvo.flow-services.scheduler :as sched]
+            [clojure.test :refer :all]))
 
 (config/set-config! "/home/ivan/workspace/akvo/src/akvo-flow-server-config")
-(config/set-instance-alias! "/home/ivan/workspace/akvo/src/akvo-flow-server-config")
 
-(def instance-id "http://akvoflow-12.appspot.com")
+(def instance-id "akvoflow-12.appspot.com")
 
-(def instance-alias "http://indiiwatsan2.akvoflow.org")
+(def instance-alias "indiiwatsan2.akvoflow.org")
 
 (def survey-id 123)
 
@@ -22,7 +21,7 @@
 
 (def sample-3 {{:id "id3"
                 :surveyId (str survey-id)
-                :baseURL "http://akvoflow-13.appspot.com"} "/tmp/dummy.xlsx"})
+                :baseURL "akvoflow-13.appspot.com"} "/tmp/dummy.xlsx"})
 
 
 (defn- add-sample []
@@ -34,7 +33,7 @@
 (deftest test-instance-alias
   (do
     (add-sample)
-    (is (= instance-id (@config/instance-alias instance-alias)))))
+    (is (= instance-alias (config/get-alias instance-id)))))
 
 (deftest test-cache-invalidation
   (do
@@ -42,7 +41,7 @@
 
     (is (= 3 (count @sched/cache)))
     
-    (sched/invalidate-cache {"baseURL" instance-alias
-                             "surveyIds" [survey-id]})
+    (sched/invalidate-cache {:baseURL "https://akvoflow-12.appspot.com"
+                             :surveyIds [survey-id]})
     
     (is (= 1 (count @sched/cache)))))

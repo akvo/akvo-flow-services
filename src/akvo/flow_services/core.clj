@@ -1,4 +1,4 @@
-;  Copyright (C) 2013 Stichting Akvo (Akvo Foundation)
+;  Copyright (C) 2013-2014 Stichting Akvo (Akvo Foundation)
 ;
 ;  This file is part of Akvo FLOW.
 ;
@@ -13,67 +13,61 @@
 ;  The full license text can also be seen at <http://www.gnu.org/licenses/agpl.html>.
 
 (ns akvo.flow-services.core
-  (:use compojure.core
-        ring.middleware.params
-        ring.middleware.multipart-params
-        ring.util.response
-        ring.adapter.jetty)
-  (:require [cheshire.core :as json]
-            [compojure [handler :as handler] [route :as route]]
-            [clojurewerkz.quartzite.scheduler :as quartzite-scheduler]
-            [akvo.flow-services [scheduler :as scheduler] [uploader :as uploader]
-                                [config :as config] [stats :as stats]])
+  (:require [compojure.core :refer (defroutes GET POST OPTIONS)]
+    [ring.util.response :refer (response charset content-type header)]
+    [ring.adapter.jetty :refer (run-jetty)]
+    [cheshire.core :as json]
+    [compojure [handler :as handler] [route :as route]]
+    [clojurewerkz.quartzite.scheduler :as quartzite-scheduler]
+    [akvo.flow-services [scheduler :as scheduler] [uploader :as uploader]
+    [config :as config] [stats :as stats]])
   (:gen-class))
 
 (defn- generate-report [params]
-  (let [criteria (json/parse-string (params "criteria")) ; TODO: validation
-        callback (params "callback")
+  (let [criteria (json/parse-string (:criteria params)) ; TODO: validation
+        callback (:callback params)
         resp (scheduler/generate-report criteria)]
     (-> (response (format "%s(%s);" callback (json/generate-string resp)))
         (content-type "text/javascript")
         (charset "UTF-8"))))
 
 (defn- invalidate-cache [params]
-  (let [criteria (json/parse-string (params "criteria"))] ; TODO: validation
+  (let [criteria (json/parse-string (:criteria params))] ; TODO: validation
     (response (scheduler/invalidate-cache criteria))))
-
-(defn- transform-map
-  "Returns a new map transforming keyword based keys into strings
-   This is required to avoid cast exceptions in Quartz"
-  [orig]
-  (into {}
-        (for [[k v] orig]
-          [(name k) v])))
 
 (defroutes ^:private endpoints
   (GET "/" [] "OK")
 
   (GET "/generate" [:as {params :params}]
-        (generate-report (transform-map params)))
+    (generate-report params))
 
   (GET "/status" []
-       (-> {:cache (keys @scheduler/cache)}
-         json/generate-string
-         response
-         (content-type "application/json")
-         (charset "UTF-8")))
+    (-> {:cache (keys @scheduler/cache)}
+      json/generate-string
+      response
+      (content-type "application/json")
+      (charset "UTF-8")))
 
   (POST "/invalidate" [:as {params :params}]
-        (invalidate-cache (transform-map params)))
+    (invalidate-cache params))
   
   (POST "/upload" [:as {params :params}]
-        (if (contains? params :file)
-          (-> (response (uploader/save-chunk (transform-map params)))
-            (header "Access-Control-Allow-Origin" "*"))
-          (-> (response (get (scheduler/process-and-upload (transform-map params)) "status"))
-            (header "Access-Control-Allow-Origin" "*"))))
+    (if (contains? params :file)
+      (-> params
+        uploader/save-chunk
+        response
+        (header "Access-Control-Allow-Origin" "*"))
+      (-> params
+        scheduler/process-and-upload
+        :status
+        response
+        (header "Access-Control-Allow-Origin" "*"))))
 
   (POST "/reload" [params]
-        (config/reload (:config-folder @config/settings)))
+    (config/reload (:config-folder @config/settings)))
   
   (OPTIONS "/upload" [:as {params :params}] 
-        (-> (response "OK")
-            (header "Access-Control-Allow-Origin" "*")))
+    (header (response "OK") "Access-Control-Allow-Origin" "*"))
   
   (route/resources "/")
 
