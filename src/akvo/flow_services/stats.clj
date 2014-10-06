@@ -75,7 +75,7 @@
   [sch-time]
   (let [settings @config/settings
         {:keys [username password stats-path]} settings
-        all-instances (set (map #(last (str/split % #"https?://")) (vals @config/instance-alias)))
+        all-instances (set (map #(last (str/split % #"https?://")) (keys @config/instance-alias)))
         dev-instances (set (:dev-instances @config/settings))
         server-list (difference all-instances dev-instances)
         kinds (apply sorted-set (:stats-kinds settings))
