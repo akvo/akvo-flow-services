@@ -87,5 +87,5 @@
     (config/reload (:config-folder cfg))
     (init)
     (stats/schedule-stats-job (:stats-schedule-time cfg))
-    (reset! nrepl-srv (nrepl/start-server :port 7888) )
+    (reset! nrepl-srv (nrepl/start-server :port 7888))
     (run-jetty #'app {:join? false :port (:http-port cfg)})))
