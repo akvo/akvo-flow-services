@@ -6,6 +6,7 @@
   :min-lein-version "2.0.0"
   :dependencies [[org.clojure/clojure "1.6.0"]
                  [org.clojure/data.csv "0.1.2"]
+                 [org.clojure/tools.nrepl "0.2.5"]
                  [cheshire "5.3.1"]
                  [compojure "1.1.8"]
                  [clojurewerkz/quartzite "1.3.0"]

@@ -20,7 +20,8 @@
     [compojure [handler :as handler] [route :as route]]
     [clojurewerkz.quartzite.scheduler :as quartzite-scheduler]
     [akvo.flow-services [scheduler :as scheduler] [uploader :as uploader]
-    [config :as config] [stats :as stats]])
+    [config :as config] [stats :as stats]]
+    [clojure.tools.nrepl.server :as nrepl :only (start-server stop-server)])
   (:gen-class))
 
 (defn- generate-report [params]
@@ -79,9 +80,12 @@
 
 (def app (handler/site endpoints))
 
+(def nrepl-srv (atom nil))
+
 (defn -main [config-file]
   (when-let [cfg (config/set-settings! config-file)]
     (config/reload (:config-folder cfg))
     (init)
     (stats/schedule-stats-job (:stats-schedule-time cfg))
+    (reset! nrepl-srv (nrepl/start-server :port 7888) )
     (run-jetty #'app {:join? false :port (:http-port cfg)})))
