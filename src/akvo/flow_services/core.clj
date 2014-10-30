@@ -21,7 +21,8 @@
     [clojurewerkz.quartzite.scheduler :as quartzite-scheduler]
     [akvo.flow-services [scheduler :as scheduler] [uploader :as uploader]
     [config :as config] [stats :as stats]]
-    [clojure.tools.nrepl.server :as nrepl :only (start-server stop-server)])
+    [clojure.tools.nrepl.server :as nrepl :only (start-server stop-server)]
+    [taoensso.timbre :as timbre :only (set-level!)])
   (:gen-class))
 
 (defn- generate-report [params]
@@ -51,7 +52,7 @@
 
   (POST "/invalidate" [:as {params :params}]
     (invalidate-cache params))
-  
+
   (POST "/upload" [:as {params :params}]
     (if (contains? params :file)
       (-> params
@@ -66,10 +67,10 @@
 
   (POST "/reload" [params]
     (config/reload (:config-folder @config/settings)))
-  
-  (OPTIONS "/upload" [:as {params :params}] 
+
+  (OPTIONS "/upload" [:as {params :params}]
     (header (response "OK") "Access-Control-Allow-Origin" "*"))
-  
+
   (route/resources "/")
 
   (route/not-found "Page not found"))
@@ -88,4 +89,5 @@
     (init)
     (stats/schedule-stats-job (:stats-schedule-time cfg))
     (reset! nrepl-srv (nrepl/start-server :port 7888))
+    (timbre/set-level! (or (:log-level cfg) :info))
     (run-jetty #'app {:join? false :port (:http-port cfg)})))
