@@ -28,7 +28,7 @@ You only need to use the `java` binary to run the JAR file:
 You might want to define the port number on which the HTTP service will run, e.g.
 
 
-    java -jar flow-services-x.y.z-standalone.jar /path/to/akvo-flow-server-config 3000
+    java -jar flow-services-x.y.z-standalone.jar /path/to/config/config.edn 3000
 
 
 This will start the HTTP service in the port 3000. The __default port__ is __8080__ if no argument is used.
