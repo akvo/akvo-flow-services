@@ -22,7 +22,7 @@ A new JAR file must be generated every time the application code changes.
 
 You only need to use the `java` binary to run the JAR file:
 
-    java -jar flow-services-x.y.z-standalone.jar /path/to/akvo-flow-server-config
+    java -jar flow-services-x.y.z-standalone.jar /path/to/config/config.edn
 
 
 You might want to define the port number on which the HTTP service will run, e.g.
