@@ -26,6 +26,7 @@
                  ; Akvo FLOW dependencies
                  [exporterapplet "1.6.0"]
                  [org.json/json "20090211"]
+                 [log4j/log4j "1.2.16"]
                  ; Configuration and Stats
                  [com.google.appengine/appengine-tools-sdk "1.9.9"]
                  [com.google.appengine/appengine-remote-api "1.9.9"]
