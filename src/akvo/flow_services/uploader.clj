@@ -23,7 +23,8 @@
             [aws.sdk.s3 :as s3 :only (put-object grant)]
             [clj-http.client :as http :only (get)]
             [akvo.flow-services.config :as config]
-            [akvo.flow-services.gae :as gae :only (put!)]))
+            [akvo.flow-services.gae :as gae :only (put!)]
+            [taoensso.timbre :as timbre :refer (debugf infof errorf)]))
 
 
 (defn- get-path []
@@ -93,6 +94,7 @@
 (defn- upload [f bucket-name]
   (let [creds (select-keys (@config/configs bucket-name) [:access-key :secret-key])
         obj-key (get-key f)]
+    (debugf "Uploading file: %s - bucket: %s" f bucket-name)
     (if (.startsWith obj-key "images/")
       (s3/put-object creds bucket-name obj-key f {} (s3/grant :all-users :read))
       (s3/put-object creds bucket-name obj-key f))))
@@ -109,6 +111,8 @@
   [f base-url bucket-name surveyId]
   (let [importer (RawDataSpreadsheetImporter.)
         errors (.validate importer f)]
+    (if (not (empty? errors))
+      (errorf "Errors in raw data upload - baseURL: %s - file: %s - surveyId: %s - errors: %s" base-url f surveyId errors))
     (if (empty? errors)
       (.executeImport importer f base-url (config/get-criteria bucket-name surveyId))
       (add-message bucket-name "importData" surveyId
@@ -138,6 +142,7 @@
 
 (defn- bulk-survey
   [path bucket-name filename]
+  (infof "Bulk upload - path: %s - bucket: %s - file: " path bucket-name filename)
   (let [data (group-by #(nth (str/split % #"\t") 11) ;; 12th column contains the UUID
                (remove nil?
                  (distinct (mapcat get-data (get-zip-files path)))))
@@ -147,7 +152,7 @@
                   fzip (io/file fname)]]
       (fsc/zip fzip ["data.txt" (str/join "\n" (data k))])
       (upload fzip bucket-name)
-      (http/get (format "http://%s/processor?action=submit&fileName=%s" server (.getName fzip))))
+      (http/get (format "https://%s/processor?action=submit&fileName=%s" server (.getName fzip))))
     (doseq [f (get-images path)]
       (upload f bucket-name))
     (add-message bucket-name "bulkUpload" nil (format "File: %s processed" filename))))
