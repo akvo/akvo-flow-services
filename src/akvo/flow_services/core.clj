@@ -21,8 +21,8 @@
     [clojurewerkz.quartzite.scheduler :as quartzite-scheduler]
     [akvo.flow-services [scheduler :as scheduler] [uploader :as uploader]
     [config :as config] [stats :as stats]]
-    [clojure.tools.nrepl.server :as nrepl :only (start-server stop-server)]
-    [taoensso.timbre :as timbre :only (set-level! example-config merge-config)])
+    [clojure.tools.nrepl.server :as nrepl]
+    [taoensso.timbre :as timbre])
   (:gen-class))
 
 (defn- generate-report [params]
