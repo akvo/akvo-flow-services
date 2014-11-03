@@ -6,6 +6,8 @@
   :min-lein-version "2.0.0"
   :dependencies [[org.clojure/clojure "1.6.0"]
                  [org.clojure/data.csv "0.1.2"]
+                 [org.clojure/tools.nrepl "0.2.5"]
+                 [com.taoensso/timbre "3.3.1"]
                  [cheshire "5.3.1"]
                  [compojure "1.1.8"]
                  [clojurewerkz/quartzite "1.3.0"]
@@ -24,6 +26,7 @@
                  ; Akvo FLOW dependencies
                  [exporterapplet "1.6.0"]
                  [org.json/json "20090211"]
+                 [log4j/log4j "1.2.16"]
                  ; Configuration and Stats
                  [com.google.appengine/appengine-tools-sdk "1.9.9"]
                  [com.google.appengine/appengine-remote-api "1.9.9"]
