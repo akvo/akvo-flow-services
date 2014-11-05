@@ -13,7 +13,7 @@
 ;  The full license text can also be seen at <http://www.gnu.org/licenses/agpl.html>.
 
 (ns akvo.flow-services.log
-  (:require [taoensso.timbre :as timbre :only (set-level!)])
+  (:require [taoensso.timbre :as timbre])
   (:import [org.apache.log4j LogManager Level]))
 
 (defn set-debug
