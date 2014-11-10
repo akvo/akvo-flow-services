@@ -15,7 +15,8 @@
 (ns akvo.flow-services.exporter
   (:require [clojure.java.io :as io]
     [clojure.walk :refer (stringify-keys)]
-    [akvo.flow-services.config :as config])
+    [akvo.flow-services.config :as config]
+    [taoensso.timbre :as timbre :refer (infof)])
   (:import java.io.File
     java.util.UUID
     org.waterforpeople.mapping.dataexport.SurveyDataImportExportFactory))
@@ -47,5 +48,6 @@
                    config/get-bucket-name
                    (config/get-criteria id)
                    stringify-keys)]
+    (infof "Exporting report baseURL: %s - criteria: %s - options: %s" base-url criteria options)
     (.export exporter criteria file base-url options)
     file))

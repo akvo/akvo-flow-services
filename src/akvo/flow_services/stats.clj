@@ -61,8 +61,8 @@
                      (conj data kinds)))))
 
 (defn get-all-data [server-list username password kinds]
-  (for [server server-list 
-        :let [stats (get-stats server username password kinds)]] 
+  (for [server server-list
+        :let [stats (get-stats server username password kinds)]]
     (conj (calc-stats kinds stats) server)))
 
 (jobs/defjob StatsJob [job-data]
@@ -79,20 +79,20 @@
         dev-instances (set (:dev-instances @config/settings))
         server-list (difference all-instances dev-instances)
         kinds (apply sorted-set (:stats-kinds settings))
-        job (jobs/build 
-              (jobs/of-type StatsJob) 
+        job (jobs/build
+              (jobs/of-type StatsJob)
               (jobs/with-identity (jobs/key "stats-job"))
               (jobs/using-job-data {"username" username
-                                    "password" password 
-                                    "server-list" server-list 
-                                    "stats-path" stats-path 
+                                    "password" password
+                                    "server-list" server-list
+                                    "stats-path" stats-path
                                     "kinds" kinds}))
         trigger (triggers/build
                   (triggers/with-identity (triggers/key "stats-trigger"))
                   (triggers/start-now)
-                  (triggers/with-schedule 
+                  (triggers/with-schedule
                     (interval/schedule
                       (interval/with-interval-in-days 1)
-                      (interval/starting-daily-at 
+                      (interval/starting-daily-at
                         (apply interval/time-of-day sch-time)))))]
     (scheduler/schedule job trigger)))
