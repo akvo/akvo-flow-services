@@ -155,7 +155,7 @@
                            (recur (inc attempts))))))]
     (if success?
       (infof "Successfully notified %s about uploaded file %s" server filename)
-      (infof "Failed to notify %s about uploaded file %s after %s attempts" server filename max-retries))))
+      (errorf "Failed to notify %s about uploaded file %s after %s attempts" server filename max-retries))))
 
 (defn- bulk-survey
   [path bucket-name filename]
