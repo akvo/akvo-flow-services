@@ -22,16 +22,15 @@ A new JAR file must be generated every time the application code changes.
 
 You only need to use the `java` binary to run the JAR file:
 
-    java -jar flow-services-x.y.z-standalone.jar /path/to/akvo-flow-server-config
+    java -jar flow-services-x.y.z-standalone.jar /path/to/config/config.edn
 
 
-You might want to define the port number on which the HTTP service will run, e.g.
+You might want to define the port number on which the HTTP service will run. This can be changed in the config.edn settings file, e.g.
 
-
-    java -jar flow-services-x.y.z-standalone.jar /path/to/akvo-flow-server-config 3000
-
-
-This will start the HTTP service in the port 3000. The __default port__ is __8080__ if no argument is used.
+    ;; port to run the HTTP service
+    :http-port 3000
+    
+This will start the HTTP service in the port 3000. The __default port__ is __3000__.
 
 ## Configuring the application to run as a service
 

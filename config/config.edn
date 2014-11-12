@@ -22,6 +22,9 @@
  
  ;; Google account password used for making remote api calls
  :password "passW0rD"
+
+ ;; Default logging level - :trace :debug :info :warn :error :fatal :report (timbre's logging levels)
+ :log-level :info
  
  ;; List of instances to be excluded from the stats report
  :dev-instances ["akvoflowsandbox.appspot.com" "watermappingmonitoring-hrd.appspot.com"
