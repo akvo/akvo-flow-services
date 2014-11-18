@@ -41,6 +41,12 @@
   ([size]
     (FetchOptions$Builder/withChunkSize size)))
 
+(defn get-fetch-options-cursor
+  "Returns the fetch options for a PreparedQuery"
+  [size cursor]
+  (if cursor
+    (.cursor (FetchOptions$Builder/withLimit size) cursor)
+    (FetchOptions$Builder/withLimit size)))
 
 (defn get-ds
   "Returns an instance of a DatastoreService"

@@ -14,6 +14,7 @@
                  [me.raynes/fs "1.4.6"]
                  [clj-aws-s3 "0.3.9" :exclusions [joda-time]]
                  [clj-http "1.0.0"]
+                 [org.clojure/java.jdbc "0.3.5"]
                  ; Java libraries
                  [jfree/jfreechart "1.0.13"]
                  [org.apache.poi/poi "3.8"]
@@ -21,6 +22,7 @@
                  [org.slf4j/slf4j-api "1.7.7"]
                  [org.slf4j/slf4j-simple "1.7.7"]
                  [com.google.gdata/core "1.47.1"]
+                 [org.xerial/sqlite-jdbc "3.7.2"]
                  ; Akvo FLOW dependencies
                  [exporterapplet "1.6.0"]
                  [org.json/json "20090211"]

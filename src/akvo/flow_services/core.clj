@@ -19,7 +19,9 @@
     [cheshire.core :as json]
     [compojure [handler :as handler] [route :as route]]
     [clojurewerkz.quartzite.scheduler :as quartzite-scheduler]
-    [akvo.flow-services [scheduler :as scheduler] [uploader :as uploader]
+    [akvo.flow-services [scheduler :as scheduler]
+     [uploader :as uploader]
+     [cascade :as cascade]
     [config :as config] [stats :as stats]])
   (:gen-class))
 
@@ -39,7 +41,14 @@
   (GET "/" [] "OK")
 
   (GET "/generate" [:as {params :params}]
-    (generate-report params))
+       (let [criteria (json/parse-string (:criteria params))]
+    (generate-report criteria)))
+
+  ; example of params: {:uploadUrl "https://flowaglimmerofhope.s3.amazonaws.com/" :cascadeResourceId "22164001" :version "1"}
+  (POST "/publish_cascade" [:as {params :params}]
+   (-> (response (json/generate-string (cascade/schedule-publish-cascade params)))
+       (content-type "text/javascript")
+       (charset "UTF-8")))
 
   (GET "/status" []
     (-> {:cache (keys @scheduler/cache)}
