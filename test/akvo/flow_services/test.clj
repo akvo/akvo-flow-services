@@ -40,8 +40,8 @@
     (add-sample)
 
     (is (= 3 (count @sched/cache)))
-    
+
     (sched/invalidate-cache {:baseURL "https://akvoflow-12.appspot.com"
                              :surveyIds [survey-id]})
-    
+
     (is (= 1 (count @sched/cache)))))

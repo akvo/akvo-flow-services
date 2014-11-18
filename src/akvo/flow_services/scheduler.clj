@@ -17,7 +17,7 @@
   (:import [org.quartz JobExecutionContext Scheduler ObjectAlreadyExistsException]
            java.io.File
            java.util.UUID)
-  (:require [clojure.string :as str :only (split join)]
+  (:require [clojure.string :as str]
             [clojurewerkz.quartzite [conversion :as conversion]
                                     [jobs :as jobs]
                                     [scheduler :as scheduler]

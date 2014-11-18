@@ -13,15 +13,17 @@
 ;  The full license text can also be seen at <http://www.gnu.org/licenses/agpl.html>.
 
 (ns akvo.flow-services.gae
-  (:import java.util.Date
+  (:require [taoensso.timbre :as timbre :refer (debugf error)])
+  (:import java.util.Date java.io.IOException
     [com.google.appengine.tools.remoteapi RemoteApiInstaller RemoteApiOptions]
     [com.google.appengine.api.datastore DatastoreServiceFactory Entity Query
      Query$FilterOperator Query$CompositeFilterOperator Query$FilterPredicate
      PreparedQuery FetchOptions FetchOptions$Builder KeyFactory Key]))
 
-(defn get-options 
+(defn get-options
   "Returns a RemoteApiOptions object"
   [server usr pwd]
+  (debugf "Creating RemoteApiOptions - server: %s - user: %s - password: %s" server usr pwd)
   (doto
     (RemoteApiOptions.)
     (.server server 443)
@@ -30,9 +32,12 @@
 (defn get-installer
   "Returns a RemoteApiInstaller object"
   [opts]
-  (doto
-    (RemoteApiInstaller.)
-    (.install opts)))
+  (try
+    (doto
+      (RemoteApiInstaller.)
+      (.install opts))
+    (catch IOException e
+      (error e "Error installing options"))))
 
 (defn get-fetch-options
   "Returns the fetch options for a PreparedQuery"
@@ -82,6 +87,7 @@
 (defn put!
   "Creates a new Entity using Remote API"
   [server usr pwd entity-name props]
+  (debugf "Creating new entity - entity-name: %s - props: %s" entity-name props)
   (let [opts (get-options server usr pwd)
         installer (get-installer opts)
         ds (get-ds)
