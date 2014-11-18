@@ -16,8 +16,7 @@
   (:import [com.google.appengine.api.datastore Entity Query] 
            [java.nio.file Paths Files])
   (:require [clojurewerkz.quartzite [conversion :as conversion]
-                                    [jobs :as jobs]
-                                    [scheduler :as q-scheduler]]
+                                    [jobs :as jobs]]
             [akvo.flow-services.config :as config]
             [akvo.flow-services.scheduler :as scheduler]
             [akvo.flow-services.gae :refer :all]
@@ -76,8 +75,7 @@
              (let [parentNodeId (.getProperty item "parentNodeId")
                    nodeId (-> item .getKey .getId)
                    name (.getProperty item "name")] 
-               (normalise-item nodeId parentNodeId name ids db-settings)
-               )) idLookup data))
+               (normalise-item nodeId parentNodeId name ids db-settings))) idLookup data))
 
 (defn- create-zip-file 
   "zips the temporary file and returns the zipped file name"
@@ -93,8 +91,7 @@
   (let [creds (select-keys (@config/configs bucket) [:access-key :secret-key])
         f (io/file fname)
         obj-key (str "surveys/" (:db-name db-settings) ".zip")]
-    (s3/put-object creds bucket obj-key f {} (s3/grant :all-users :read))
-    ))
+    (s3/put-object creds bucket obj-key f {} (s3/grant :all-users :read))))
 
 (defn- publish-cascade [uploadUrl cascadeResourceId version]
    (let [
