@@ -23,49 +23,30 @@
             [clojure.java.io :as io]
             [me.raynes.fs.compression :as fsc]
             [me.raynes.fs :as fs]
-            [clojure.java.jdbc :refer :all]
-            [aws.sdk.s3 :as s3]))
+            [clojure.java.jdbc :refer [db-do-commands create-table-ddl insert!]]
+            [aws.sdk.s3 :as s3]
+            [taoensso.timbre :as timbre :refer [error debugf]]))
 
 (def page-size 100)
 
-(defn- create-db 
-  [settings]
-  (try (db-do-commands settings
-    (create-table-ddl :nodes
-                      [:nodeId :integer]
-                      [:name :text]
-                      [:parentNodeId :integer]))
-       (catch Exception e (println e))))
+(defn- create-db
+  [db-spec]
+  (debugf "Creating db %s" db-spec)
+  (try
+    (db-do-commands db-spec
+      (create-table-ddl :nodes
+        [:id :integer "PRIMARY KEY"]
+        [:name :text]
+        [:parent :integer])
+      "CREATE UNIQUE INDEX node_idx ON nodes (name, parent)")
+       (catch Exception e
+         (error e "Error creating database"))))
 
-(defn- store-item
+(defn- store-node
   "write the item to the sqlite database"
-  [nodeId name parentNodeId db-settings]
-  (insert! db-settings :nodes {:nodeId nodeId, :name name, :parentNodeId parentNodeId}))
-
-(defn- normalise-item
- "Stores items with normalised ids. For example, this list:
- nodeId name	   parentNodeId
- 2323 	 item1   23212  =>  1  item1  2
- 1212 	 item2   0      =>  3  item2  0
- 6545 	 item3   2323   =>  4  item3  1
- 23212   item4	 23455  =>  2  item4	5
- The 0 nodeId is mapped to 0"
-  [nodeId parentNodeId name ids db-settings]
-  (let [index (ids :index)
-        newIndex (atom index)
-        ids-node (if (contains? ids nodeId)
-                   ids
-                   (do (swap! newIndex inc)
-                     (assoc ids nodeId @newIndex)))
-        ids-parentNode (if (contains? ids-node parentNodeId)
-                        ids-node
-                        (do (swap! newIndex inc)
-                          (assoc ids-node parentNodeId @newIndex)))
-        ids-index (assoc ids-parentNode :index @newIndex)] 
-    ; write item to datastore
-    (store-item (ids-index nodeId) name (ids-index parentNodeId) db-settings)    
-    ; return updated lookup table
-    ids-index))
+  [node db-spec]
+  (debugf "Storing node: %s" node)
+  (insert! db-spec :nodes node))
 
 (defn normalize-ids
   "Normalize the ids of the nodes to smaller values. e.g.
@@ -78,27 +59,16 @@
   [nodes]
   (:result
     (reduce
-     (fn [{:keys [idxs next-id result]} {:keys [id name parentId]}]
+     (fn [{:keys [idxs next-id result]} {:keys [id name parent]}]
        (let [new-id (get idxs id next-id)
              next-id (if (= new-id next-id) (inc next-id) next-id)
-             new-parent-id (get idxs parentId next-id)
+             new-parent-id (get idxs parent next-id)
              next-id (if (= new-parent-id next-id) (inc next-id) next-id)]
-         {:idxs (assoc idxs id new-id parentId new-parent-id)
+         {:idxs (assoc idxs id new-id parent new-parent-id)
           :next-id next-id
-          :result (conj result {:id new-id :name name :parentId new-parent-id})})) {:idxs {0 0}
-                                                                                    :next-id 1
-                                                                                    :result []} nodes)))
-
-
-(defn- process-data
-  "runs trough a list of data retrieved from GAE, and 
-   sends them off to be normalised and stored"
-  [data idLookup db-settings]
-   (reduce (fn [ids item] 
-             (let [parentNodeId (.getProperty item "parentNodeId")
-                   nodeId (-> item .getKey .getId)
-                   name (.getProperty item "name")] 
-               (normalise-item nodeId parentNodeId name ids db-settings))) idLookup data))
+          :result (conj result {:id new-id :name name :parent new-parent-id})})) {:idxs {0 0}
+                                                                                  :next-id 1
+                                                                                  :result []} nodes)))
 
 (defn- create-zip-file 
   "zips the temporary file and returns the zipped file name"
@@ -115,6 +85,13 @@
         f (io/file fname)
         obj-key (str "surveys/" (:db-name db-settings) ".zip")]
     (s3/put-object creds bucket obj-key f {} (s3/grant :all-users :read))))
+
+(defn get-db-spec
+  [path db-name]
+  {:classname "org.sqlite.JDBC"
+   :subprotocol "sqlite"
+   :subname  (str path "/" db-name)
+   :db-name  db-name})
 
 (defn- publish-cascade [uploadUrl cascadeResourceId version]
    (let [
@@ -186,7 +163,7 @@
                     (apply conj nodes (for [node entities]
                                         {:id (.. node (getKey) (getId))
                                          :name (.getProperty node "name")
-                                         :parentId (.getProperty node "parentNodeId")})))))]
+                                         :parent (.getProperty node "parentNodeId")})))))]
     (.uninstall installer)
     (if (seq data)
       (sort-by :id data))))
