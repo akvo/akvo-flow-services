@@ -26,7 +26,7 @@
             [clojure.java.jdbc :refer :all]
             [aws.sdk.s3 :as s3]))
 
-(def page-size 1000)
+(def page-size 100)
 
 (defn- create-db 
   [settings]
@@ -66,6 +66,29 @@
     (store-item (ids-index nodeId) name (ids-index parentNodeId) db-settings)    
     ; return updated lookup table
     ids-index))
+
+(defn normalize-ids
+  "Normalize the ids of the nodes to smaller values. e.g.
+  nodeId name	   parentNodeId
+  2323 	 item1   23212  =>  1  item1  2
+  1212 	 item2   0      =>  3  item2  0
+  6545 	 item3   2323   =>  4  item3  1
+  23212   item4	 23455  =>  2  item4  5
+  The 0 nodeId is mapped to 0"
+  [nodes]
+  (:result
+    (reduce
+     (fn [{:keys [idxs next-id result]} {:keys [id name parentId]}]
+       (let [new-id (get idxs id next-id)
+             next-id (if (= new-id next-id) (inc next-id) next-id)
+             new-parent-id (get idxs parentId next-id)
+             next-id (if (= new-parent-id next-id) (inc next-id) next-id)]
+         {:idxs (assoc idxs id new-id parentId new-parent-id)
+          :next-id next-id
+          :result (conj result {:id new-id :name name :parentId new-parent-id})})) {:idxs {0 0}
+                                                                                    :next-id 1
+                                                                                    :result []} nodes)))
+
 
 (defn- process-data
   "runs trough a list of data retrieved from GAE, and 
@@ -124,14 +147,14 @@
      (create-db db-settings)
      
      ; get batches from GAE using a cursor and process them
-     (loop [data (.asList pq (get-fetch-options-cursor page-size nil))
+     (loop [data (.asList pq (get-fetch-options page-size))
             ;; nodeId 0 is mapped to 0
             idLookup {:index 0, 0 0}]
        ; TODO if the first list is empty, we should fail and not build an empty database
        (let [cursor (.getCursor data)]
          (if (empty? data) 
            nil
-           (recur (.asList pq (get-fetch-options-cursor page-size cursor)) (process-data data idLookup db-settings)))))
+           (recur (.asList pq (get-fetch-options page-size cursor)) (process-data data idLookup db-settings)))))
      (.uninstall installer)
      
      ; TODO, check if the database construction was successful
@@ -139,6 +162,34 @@
      
      ; TODO delete temp files after successful upload
      ))
+
+(defn get-nodes
+  "Returns the nodes for a given cascadeResourceId.
+  A node just a map e.g. {:id 1 :name \"some name\" :parentId 0}"
+  [upload-url cascade-id]
+  (let [{:keys [username password]} @config/settings
+        cfg (@config/configs (config/get-bucket-name upload-url))
+        opts (get-options (:domain cfg) username password)
+        installer (get-installer opts)
+        ds (get-ds)
+        query (Query. "CascadeNode")
+        qf (.setFilter query (get-filter "cascadeResourceId" (Long/valueOf cascade-id)))
+        pq (.prepare ds qf)
+        data  (loop [entities (try
+                                (.asList pq (get-fetch-options page-size))
+                                (catch Exception _))
+                     nodes []]
+                (if (not (seq entities))
+                  nodes
+                  (recur (try (.asList pq (get-fetch-options page-size (.getCursor entities)))
+                           (catch Exception _))
+                    (apply conj nodes (for [node entities]
+                                        {:id (.. node (getKey) (getId))
+                                         :name (.getProperty node "name")
+                                         :parentId (.getProperty node "parentNodeId")})))))]
+    (.uninstall installer)
+    (if (seq data)
+      (sort-by :id data))))
 
 (jobs/defjob CascadeJob [job-data]
   (let [{:strs [uploadUrl cascadeResourceId version]} (conversion/from-job-data job-data)]
