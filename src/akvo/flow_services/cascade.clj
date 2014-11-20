@@ -15,7 +15,7 @@
 (ns akvo.flow-services.cascade
   (:import [com.google.appengine.api.datastore Entity Query] 
            [java.nio.file Paths Files]
-           [java.util.UUID])
+           java.util.UUID)
   (:require [clojurewerkz.quartzite [conversion :as conversion]
                                     [jobs :as jobs]]
             [akvo.flow-services.config :as config]
@@ -131,7 +131,7 @@
    (let [{:keys [username password]} @config/settings
         bucket (config/get-bucket-name uploadUrl)
         config (@config/configs bucket)
-        tmp-dir (fs/temp-dir (java.util.UUID/randomUUID))
+        tmp-dir (fs/temp-dir (UUID/randomUUID))
         db-name (format  "cascade-%s-v%s.sqlite" cascadeResourceId version)
         db-spec (get-db-spec (.getAbsolutePath tmp-dir) db-name)
         db (create-db db-spec)]
