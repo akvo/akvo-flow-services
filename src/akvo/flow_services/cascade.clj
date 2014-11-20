@@ -14,7 +14,8 @@
 
 (ns akvo.flow-services.cascade
   (:import [com.google.appengine.api.datastore Entity Query] 
-           [java.nio.file Paths Files])
+           [java.nio.file Paths Files]
+           [java.util.UUID])
   (:require [clojurewerkz.quartzite [conversion :as conversion]
                                     [jobs :as jobs]]
             [akvo.flow-services.config :as config]
@@ -25,7 +26,7 @@
             [me.raynes.fs :as fs]
             [clojure.java.jdbc :refer [db-do-commands create-table-ddl insert!]]
             [aws.sdk.s3 :as s3]
-            [taoensso.timbre :as timbre :refer [error debugf]]))
+            [taoensso.timbre :as timbre :refer [errorf debugf]]))
 
 (def page-size 100)
 
@@ -40,7 +41,7 @@
         [:parent :integer])
       "CREATE UNIQUE INDEX node_idx ON nodes (name, parent)")
        (catch Exception e
-         (error e "Error creating database"))))
+         (errorf e "Error creating database %s" db-spec))))
 
 (defn- store-node
   "write the item to the sqlite database"
@@ -72,19 +73,24 @@
 
 (defn- create-zip-file 
   "zips the temporary file and returns the zipped file name"
-  [db-settings]
-  (let [fname (:subname db-settings)
+  [db-spec]
+  (let [fname (:subname db-spec)
         fname-zip (str fname ".zip")]
-    (fsc/zip fname-zip [[(:db-name db-settings) (Files/readAllBytes (Paths/get (java.net.URI. (str "file://" fname))))]])
+    (debugf "Creating zip file: " fname-zip)
+    (fsc/zip fname-zip [[(:db-name db-spec) (Files/readAllBytes (Paths/get (java.net.URI. (str "file://" fname))))]])
     fname-zip))
 
 (defn- upload-to-s3 
   "Upload the zipped sqlite file to s3"
-  [fname bucket db-settings]
+  [fname bucket db-spec]
   (let [creds (select-keys (@config/configs bucket) [:access-key :secret-key])
         f (io/file fname)
-        obj-key (str "surveys/" (:db-name db-settings) ".zip")]
-    (s3/put-object creds bucket obj-key f {} (s3/grant :all-users :read))))
+        obj-key (str "surveys/" (:db-name db-spec) ".zip")]
+    (debugf "Uploading object: %s to bucket: %s" obj-key bucket)
+    (try
+      (s3/put-object creds bucket obj-key f {} (s3/grant :all-users :read))
+      (catch Exception e
+        (errorf e "Error uploading object: %s to bucket: %s" obj-key bucket)))))
 
 (defn get-db-spec
   [path db-name]
@@ -93,56 +99,9 @@
    :subname  (str path "/" db-name)
    :db-name  db-name})
 
-(defn- publish-cascade [uploadUrl cascadeResourceId version]
-   (let [
-        settings @config/settings
-        {:keys [username password tmp-path]} settings
-        ;{:keys [uploadUrl cascadeResourceId version]} params
-        bucket (config/get-bucket-name uploadUrl)
-        config (@config/configs bucket)
-        
-        ; sqlite database
-        tmp-dir-path  (str tmp-path "/" (java.util.UUID/randomUUID))
-        
-        ; create temp dir
-        tmp-dir (fs/mkdir tmp-dir-path)
-        db-name (str "cascade-" cascadeResourceId "-v" version ".sqlite")
-        db-settings {:classname "org.sqlite.JDBC"
-                     :subprotocol "sqlite"
-                     :subname  (str tmp-dir-path "/" db-name)
-                     :db-name  db-name}
-
-        ; GAE remote API
-        opts (get-options (:domain config) username password)
-        installer (get-installer opts)
-        ds (get-ds)
-        query (Query. "CascadeNode")
-        qf (.setFilter query (get-filter "cascadeResourceId" (Long/valueOf cascadeResourceId)))
-        pq (.prepare ds qf)]
-     
-     ; create sqlite database file
-     (create-db db-settings)
-     
-     ; get batches from GAE using a cursor and process them
-     (loop [data (.asList pq (get-fetch-options page-size))
-            ;; nodeId 0 is mapped to 0
-            idLookup {:index 0, 0 0}]
-       ; TODO if the first list is empty, we should fail and not build an empty database
-       (let [cursor (.getCursor data)]
-         (if (empty? data) 
-           nil
-           (recur (.asList pq (get-fetch-options page-size cursor)) (process-data data idLookup db-settings)))))
-     (.uninstall installer)
-     
-     ; TODO, check if the database construction was successful
-     (println (upload-to-s3 (create-zip-file db-settings) bucket db-settings))
-     
-     ; TODO delete temp files after successful upload
-     ))
-
 (defn get-nodes
   "Returns the nodes for a given cascadeResourceId.
-  A node just a map e.g. {:id 1 :name \"some name\" :parentId 0}"
+  A node just a map e.g. {:id 1 :name \"some name\" :parent 0}"
   [upload-url cascade-id]
   (let [{:keys [username password]} @config/settings
         cfg (@config/configs (config/get-bucket-name upload-url))
@@ -167,6 +126,22 @@
     (.uninstall installer)
     (if (seq data)
       (sort-by :id data))))
+
+(defn- publish-cascade [uploadUrl cascadeResourceId version]
+   (let [{:keys [username password]} @config/settings
+        bucket (config/get-bucket-name uploadUrl)
+        config (@config/configs bucket)
+        tmp-dir (fs/temp-dir (java.util.UUID/randomUUID))
+        db-name (format  "cascade-%s-v%s.sqlite" cascadeResourceId version)
+        db-spec (get-db-spec (.getAbsolutePath tmp-dir) db-name)
+        db (create-db db-spec)]
+     (if db
+       (when-let [nodes (normalize-ids (get-nodes uploadUrl cascadeResourceId))]
+         (doseq [n nodes]
+           (store-node n db-spec))
+         ;; recover this when we have more data on the size of db after vacuum
+         ;; (db-do-commands db-spec false "vacuum")
+         (upload-to-s3 (create-zip-file db-spec) bucket db-spec)))))
 
 (jobs/defjob CascadeJob [job-data]
   (let [{:strs [uploadUrl cascadeResourceId version]} (conversion/from-job-data job-data)]
