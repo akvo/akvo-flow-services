@@ -20,12 +20,12 @@
     [compojure [handler :as handler] [route :as route]]
     [clojurewerkz.quartzite.scheduler :as quartzite-scheduler]
     [akvo.flow-services [scheduler :as scheduler]
-     [uploader :as uploader]
-     [cascade :as cascade]
-    [config :as config] [stats :as stats]]
+                        [uploader :as uploader]
+                        [cascade :as cascade]
+                        [config :as config]
+                        [stats :as stats]]
     [clojure.tools.nrepl.server :as nrepl]
     [taoensso.timbre :as timbre])
-
   (:gen-class))
 
 (defn- generate-report [params]
