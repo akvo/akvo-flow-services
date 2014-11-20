@@ -148,4 +148,4 @@
    (publish-cascade uploadUrl cascadeResourceId version)))
 
 (defn schedule-publish-cascade [params]
-  (scheduler/schedule-job CascadeJob (str (:cascadeResourceId params)) params))
+  (scheduler/schedule-job CascadeJob (str "cascade" (hash params)) params))
