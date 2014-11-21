@@ -23,7 +23,7 @@
 (defn get-options
   "Returns a RemoteApiOptions object"
   [server usr pwd]
-  (debugf "Creating RemoteApiOptions - server: %s - user: %s - password: %s" server usr pwd)
+  (debugf "Creating RemoteApiOptions - server: %s - user: %s" server usr)
   (doto
     (RemoteApiOptions.)
     (.server server 443)
@@ -44,8 +44,9 @@
   ([]
     (FetchOptions$Builder/withDefaults))
   ([size]
-    (FetchOptions$Builder/withChunkSize size)))
-
+    (FetchOptions$Builder/withChunkSize size))
+  ([size cursor]
+    (.startCursor (FetchOptions$Builder/withLimit size) cursor)))
 
 (defn get-ds
   "Returns an instance of a DatastoreService"

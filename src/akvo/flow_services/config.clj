@@ -23,11 +23,11 @@
     [me.raynes.fs :as fs :only (find-files)]))
 
 
-(def configs (atom {}))
+(defonce configs (atom {}))
 
-(def instance-alias (atom {}))
+(defonce instance-alias (atom {}))
 
-(def settings (atom {}))
+(defonce settings (atom {}))
 
 (defn get-bucket-name
   "Extracts the bucket name from an upload domain url: https://akvoflow-1.s3.amazonaws.com => akvoflow-1"
