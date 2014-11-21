@@ -97,7 +97,7 @@
 
 (def app (handler/site endpoints))
 
-(def nrepl-srv (atom nil))
+(defonce nrepl-srv (atom nil))
 
 (defn -main [config-file]
   (when-let [cfg (config/set-settings! config-file)]
