@@ -23,7 +23,7 @@
 (defn get-options
   "Returns a RemoteApiOptions object"
   [server usr pwd]
-  (debugf "Creating RemoteApiOptions - server: %s - user: %s - password: %s" server usr pwd)
+  (debugf "Creating RemoteApiOptions - server: %s - user: %s" server usr)
   (doto
     (RemoteApiOptions.)
     (.server server 443)
