@@ -26,7 +26,7 @@
             [me.raynes.fs :as fs]
             [clojure.java.jdbc :refer [db-do-commands create-table-ddl insert!]]
             [aws.sdk.s3 :as s3]
-            [taoensso.timbre :as timbre :refer [errorf debugf]]))
+            [taoensso.timbre :as timbre :refer [errorf debugf infof]]))
 
 (def page-size 100)
 
@@ -144,11 +144,13 @@
            (store-node n db-spec))
          ;; recover this when we have more data on the size of db after vacuum
          ;; (db-do-commands db-spec false "vacuum")
-         (upload-to-s3 (create-zip-file db-spec) bucket db-spec)))))
+         (upload-to-s3 (create-zip-file db-spec) bucket db-spec)
+         (infof "Cascade resource published - uploadUrl: %s - resourceId: %s - version: %s" uploadUrl cascadeResourceId version)))))
 
 (jobs/defjob CascadeJob [job-data]
   (let [{:strs [uploadUrl cascadeResourceId version]} (conversion/from-job-data job-data)]
-   (publish-cascade uploadUrl cascadeResourceId version)))
+    (infof "Publishing cascade resource - uploadUrl: %s - resourceId: %s - version: %s" uploadUrl cascadeResourceId version)
+    (publish-cascade uploadUrl cascadeResourceId version)))
 
 (defn schedule-publish-cascade [params]
   (scheduler/schedule-job CascadeJob (str "cascade" (hash params)) params))
