@@ -47,11 +47,17 @@
        (let [criteria (json/parse-string (:criteria params))]
     (generate-report criteria)))
 
-  ; example of params: {:uploadUrl "https://flowaglimmerofhope.s3.amazonaws.com/" :cascadeResourceId "22164001" :version "1"}
-  (POST "/publish_cascade" [:as {params :params}]
-   (-> (response (json/generate-string (cascade/schedule-publish-cascade params)))
-       (content-type "text/javascript")
-       (charset "UTF-8")))
+  ; example of params: {"uploadUrl": "https://flowaglimmerofhope.s3.amazonaws.com/", "cascadeResourceId": "22164001", "version": "1"}
+  (POST "/publish_cascade" req
+    (-> req
+      :body
+      slurp
+      json/parse-string
+      cascade/schedule-publish-cascade
+      json/generate-string
+      response
+      (content-type "application/json")
+      (charset "UTF-8")))
 
   (GET "/status" []
     (-> {:cache (keys @scheduler/cache)}

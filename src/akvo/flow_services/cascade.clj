@@ -58,18 +58,19 @@
   23212   item4	 23455  =>  2  item4  5
   The 0 nodeId is mapped to 0"
   [nodes]
-  (:result
-    (reduce
-     (fn [{:keys [idxs next-id result]} {:keys [id name parent]}]
-       (let [new-id (get idxs id next-id)
-             next-id (if (= new-id next-id) (inc next-id) next-id)
-             new-parent-id (get idxs parent next-id)
-             next-id (if (= new-parent-id next-id) (inc next-id) next-id)]
-         {:idxs (assoc idxs id new-id parent new-parent-id)
-          :next-id next-id
-          :result (conj result {:id new-id :name name :parent new-parent-id})})) {:idxs {0 0}
-                                                                                  :next-id 1
-                                                                                  :result []} nodes)))
+  (let [f (fn [{:keys [idxs next-id result]} {:keys [id name parent]}]
+            (let [new-id (get idxs id next-id)
+                  next-id (if (= new-id next-id) (inc next-id) next-id)
+                  new-parent-id (get idxs parent next-id)
+                  next-id (if (= new-parent-id next-id) (inc next-id) next-id)]
+              {:idxs (assoc idxs id new-id parent new-parent-id)
+               :next-id next-id
+               :result (conj result {:id new-id :name name :parent new-parent-id})}))]
+    (:result
+      (reduce f {:idxs {0 0}
+                 :next-id 1
+                 :result []}
+              nodes))))
 
 (defn- create-zip-file 
   "zips the temporary file and returns the zipped file name"
@@ -113,19 +114,21 @@
         pq (.prepare ds qf)
         data  (loop [entities (try
                                 (.asList pq (get-fetch-options page-size))
-                                (catch Exception _))
+                                (catch Exception e
+                                  (errorf e "Error getting data from GAE: %s" (.getMessage e))))
                      nodes []]
                 (if (not (seq entities))
                   nodes
-                  (recur (try (.asList pq (get-fetch-options page-size (.getCursor entities)))
-                           (catch Exception _))
-                    (apply conj nodes (for [node entities]
-                                        {:id (.. node (getKey) (getId))
-                                         :name (.getProperty node "name")
-                                         :parent (.getProperty node "parentNodeId")})))))]
+                  (recur (try
+                           (.asList pq (get-fetch-options page-size (.getCursor entities)))
+                           (catch Exception e
+                             (errorf e "Error getting data from GAE: %s" (.getMessage e))))
+                    (into nodes (for [node entities]
+                                  {:id (.. node (getKey) (getId))
+                                   :name (.getProperty node "name")
+                                   :parent (.getProperty node "parentNodeId")})))))]
     (.uninstall installer)
-    (if (seq data)
-      (sort-by :id data))))
+    (sort-by :id data)))
 
 (defn- publish-cascade [uploadUrl cascadeResourceId version]
    (let [{:keys [username password]} @config/settings
@@ -136,7 +139,7 @@
         db-spec (get-db-spec (.getAbsolutePath tmp-dir) db-name)
         db (create-db db-spec)]
      (if db
-       (when-let [nodes (normalize-ids (get-nodes uploadUrl cascadeResourceId))]
+       (when-let [nodes (seq (normalize-ids (get-nodes uploadUrl cascadeResourceId)))]
          (doseq [n nodes]
            (store-node n db-spec))
          ;; recover this when we have more data on the size of db after vacuum
