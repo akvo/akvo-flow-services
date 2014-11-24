@@ -136,7 +136,7 @@
   "Validates a cascade CSV file based on number of levels and the presence of `codes` in the file
    Returns the first invalid row or nil if everything is corrent"
   [fpath levels codes?]
-  (let [l (if codes? (* levels 2))
+  (let [l (if codes? (* levels 2) levels)
         f (io/file fpath)]
     (if (and (.exists f) (.canRead f))
       (with-open [r (io/reader f)]
