@@ -25,6 +25,7 @@
             [me.raynes.fs.compression :as fsc]
             [me.raynes.fs :as fs]
             [clojure.java.jdbc :refer [db-do-commands create-table-ddl insert!]]
+            [clojure.data.csv :as csv]
             [aws.sdk.s3 :as s3]
             [taoensso.timbre :as timbre :refer [errorf debugf infof]]))
 
@@ -129,6 +130,19 @@
                                    :parent (.getProperty node "parentNodeId")})))))]
     (.uninstall installer)
     (sort-by :id data)))
+
+
+(defn validate-csv
+  "Validates a cascade CSV file based on number of levels and the presence of `codes` in the file
+   Returns the first invalid row or nil if everything is corrent"
+  [fpath levels codes?]
+  (let [l (if codes? (* levels 2))
+        f (io/file fpath)]
+    (if (and (.exists f) (.canRead f))
+      (with-open [r (io/reader f)]
+        (some #(if (not= (count %) l) %) (csv/read-csv r)))
+      [(format "File Not Found at %s" (.getAbsolutePath f))])))
+
 
 (defn- publish-cascade [uploadUrl cascadeResourceId version]
    (let [{:keys [username password]} @config/settings
