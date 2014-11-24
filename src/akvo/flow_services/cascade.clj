@@ -140,7 +140,7 @@
         f (io/file fpath)]
     (if (and (.exists f) (.canRead f))
       (with-open [r (io/reader f)]
-        (some #(if (not= (count %) l) %) (csv/read-csv r)))
+        (some #(if (not= (count (remove empty? %)) l) %) (csv/read-csv r)))
       [(format "File Not Found at %s" (.getAbsolutePath f))])))
 
 
