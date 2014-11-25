@@ -31,6 +31,13 @@
 
 (def page-size 100)
 
+(defn get-db-spec
+  [path db-name]
+  {:classname "org.sqlite.JDBC"
+   :subprotocol "sqlite"
+   :subname  (str path "/" db-name)
+   :db-name  db-name})
+
 (defn- create-db
   [db-spec]
   (debugf "Creating db %s" db-spec)
@@ -43,6 +50,29 @@
       "CREATE UNIQUE INDEX node_idx ON nodes (name, parent)")
        (catch Exception e
          (errorf e "Error creating database %s" db-spec))))
+
+(defn- create-tmp-data-db
+  [levels]
+  (let [spec (get-db-spec "/tmp" (str (UUID/randomUUID) ".db"))
+        schema (mapcat identity
+                 (for [n (range levels)]
+                   [[(keyword (format "code_%s text NOT NULL" n))] [(keyword (format "name_%s text NOT NULL" n))]]))
+        table-ddl (apply create-table-ddl :data schema)
+        idx-ddl (flatten
+                  (for [n (range levels)]
+                    [(format "CREATE INDEX data_code_%s on data (code_%s)" n n)]))
+        mapping-ddl (create-table-ddl :mapping
+                      [:level :number "NOT NULL"]
+                      [:code :text "NOT NULL"]
+                      [:keyid :number "NOT NULL"])
+        mapping-idx "CREATE UNIQUE INDEX mapping_idx on mapping (level, code)"]
+    (debugf "Table DDL: %s" table-ddl)
+    (try
+      (apply db-do-commands spec table-ddl idx-ddl)
+      (db-do-commands spec mapping-ddl mapping-idx)
+      spec
+      (catch Exception e
+        (errorf e "Error creating temp db - spec: %s - schema: %s" spec)))))
 
 (defn- store-node
   "write the item to the sqlite database"
@@ -94,13 +124,6 @@
       (catch Exception e
         (errorf e "Error uploading object: %s to bucket: %s" obj-key bucket)))))
 
-(defn get-db-spec
-  [path db-name]
-  {:classname "org.sqlite.JDBC"
-   :subprotocol "sqlite"
-   :subname  (str path "/" db-name)
-   :db-name  db-name})
-
 (defn get-nodes
   "Returns the nodes for a given cascadeResourceId.
   A node just a map e.g. {:id 1 :name \"some name\" :parent 0}"
@@ -142,6 +165,20 @@
       (with-open [r (io/reader f)]
         (some #(if (not= (count (remove empty? %)) l) %) (csv/read-csv r)))
       [(format "File Not Found at %s" (.getAbsolutePath f))])))
+
+(defn csv-to-db
+  "Creates a SQLite db and inserts the data from a CSV file.
+  An exception when inserting can be considered a validation error"
+  [fpath levels codes?]
+  (let [db (create-tmp-data-db levels)
+        columns (vec (flatten
+                       (for [n (range levels)]
+                         [(format "code_%s" n) (format "name_%s" n)])))]
+    (with-open [r (io/reader (io/file fpath))]
+      (debugf "Inserting CSV data into db")
+      (doseq [line (csv/read-csv r)]
+        (insert! db :data columns line)))
+    db))
 
 
 (defn- publish-cascade [uploadUrl cascadeResourceId version]
