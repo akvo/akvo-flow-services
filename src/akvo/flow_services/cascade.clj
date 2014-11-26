@@ -15,7 +15,7 @@
 (ns akvo.flow-services.cascade
   (:import [com.google.appengine.api.datastore Entity Query] 
            [java.nio.file Paths Files]
-           java.util.UUID)
+           [java.util UUID Date])
   (:require [clojurewerkz.quartzite [conversion :as conversion]
                                     [jobs :as jobs]]
             [akvo.flow-services.config :as config]
@@ -24,7 +24,7 @@
             [clojure.java.io :as io]
             [me.raynes.fs.compression :as fsc]
             [me.raynes.fs :as fs]
-            [clojure.java.jdbc :refer [db-do-commands create-table-ddl insert!]]
+            [clojure.java.jdbc :refer [db-do-commands create-table-ddl insert! query]]
             [clojure.data.csv :as csv]
             [aws.sdk.s3 :as s3]
             [taoensso.timbre :as timbre :refer [errorf debugf infof]]))
@@ -54,25 +54,23 @@
 (defn- create-tmp-data-db
   [levels]
   (let [spec (get-db-spec "/tmp" (str (UUID/randomUUID) ".db"))
-        schema (mapcat identity
-                 (for [n (range levels)]
-                   [[(keyword (format "code_%s text NOT NULL" n))] [(keyword (format "name_%s text NOT NULL" n))]]))
-        table-ddl (apply create-table-ddl :data schema)
-        idx-ddl (flatten
+        schema (conj
+                 (mapcat identity
                   (for [n (range levels)]
-                    [(format "CREATE INDEX data_code_%s on data (code_%s)" n n)]))
+                    [[(keyword (format "code_%s text NOT NULL" n))] [(keyword (format "name_%s text NOT NULL" n))]]))
+                 [:id :integer "PRIMARY KEY"])
+        table-ddl (apply create-table-ddl :data schema)
         mapping-ddl (create-table-ddl :mapping
-                      [:level :number "NOT NULL"]
-                      [:code :text "NOT NULL"]
+                      [:path :text "NOT NULL"]
                       [:keyid :number "NOT NULL"])
-        mapping-idx "CREATE UNIQUE INDEX mapping_idx on mapping (level, code)"]
+        mapping-idx "CREATE UNIQUE INDEX mapping_idx on mapping (path, keyid)"]
     (debugf "Table DDL: %s" table-ddl)
     (try
-      (apply db-do-commands spec table-ddl idx-ddl)
+      (db-do-commands spec table-ddl)
       (db-do-commands spec mapping-ddl mapping-idx)
       spec
       (catch Exception e
-        (errorf e "Error creating temp db - spec: %s - schema: %s" spec)))))
+        (errorf e "Error creating temp db - spec: %s - schema: %s" spec schema)))))
 
 (defn- store-node
   "write the item to the sqlite database"
@@ -180,6 +178,105 @@
         (insert! db :data columns line)))
     db))
 
+(defn create-node
+  [code name parent-id resource-id]
+  (let [node (Entity. "CascadeNode")
+        ts (Date.)]
+    (doto node
+      (.setProperty "code" code)
+      (.setProperty "name" name)
+      (.setProperty "lastUpdateDateTime" ts)
+      (.setProperty "createdDateTime" ts)
+      (.setProperty "parentNodeId" parent-id)
+      (.setProperty "cascadeResourceId" resource-id))
+    node))
+
+(defn- get-path
+  [level as]
+  (format "%s as %s"
+    (clojure.string/join "||'|'||" (for [n (range (inc level))]
+                                     (format "code_%s" n))) as))
+
+(defn- get-limit-offset
+  [limit offset]
+  (format "LIMIT %s OFFSET %s" limit offset))
+
+(defn- get-data-sql
+  [level & [limit offset]]
+  (let [sql (if (> level 0)
+            (format "SELECT DISTINCT %s, %s, code_%s as code, name_%s as name FROM data ORDER BY id %s"
+              (get-path (dec level) "parent")
+              (get-path level "path")
+              level
+              level
+              (if (and limit offset)
+                (get-limit-offset limit offset)
+                ""))
+            (format "SELECT DISTINCT '0' as parent, code_0 as path, code_0 as code, name_0 as name FROM data ORDER BY id %s"
+              (if (and limit offset)
+                (get-limit-offset limit offset)
+                "")))]
+    (debugf "data sql: %s" sql)
+    sql))
+
+(defn- get-count-sql
+  [level]
+  (let [sql (format "SELECT count(*) as count FROM (%s)" (get-data-sql level))]
+    (debugf "count sql: %s" sql)
+    sql))
+
+(defn create-nodes
+  [db srv usr pwd levels limit]
+  (let [installer (get-installer (get-options srv usr pwd))
+        ds (get-ds)
+        sql-limit 100]
+    (loop [level 0
+           offset 0
+           level-count (:count (first (query db (get-count-sql level))))]
+      (if (and (> level-count 0) (< level levels))
+        (let [data-sql (get-data-sql level sql-limit offset)
+              data (query db data-sql)
+              inc-offset? (= (count data) sql-limit)
+              inc-level? (not inc-offset?)
+              new-level (if inc-level?
+                          (inc level)
+                          level)
+              new-offset (if inc-level?
+                           0
+                           (if inc-offset?
+                             (+ offset sql-limit)
+                             offset))
+              new-count (if inc-level?
+                          (if (< new-level levels)
+                            (:count (first (query db (get-count-sql (inc level))))) 0)
+                          level-count)
+              entities (reduce (fn [result item]
+                                 (let [code (:code item)
+                                       name (:name item)
+                                       parent-id (if (> level 0)
+                                                   (:keyid (first (query db (format "SELECT keyid FROM mapping WHERE path = '%s'" (:parent item)))))
+                                                   0)]
+                                   (conj result (create-node code name parent-id 0))))
+                         []
+                         data)
+              key-ids (.put ds entities)
+              mappings (apply merge (map (fn [node ds-id]
+                                           {(:path node) (.getId ds-id)})
+                                      data
+                                      key-ids))]
+          (try
+            (doseq [m (keys mappings)]
+              (debugf "inserting mapping: path %s -> %s" m (get mappings m))
+              (insert! db :mapping {:path m :keyid (get mappings m)}))
+            (catch Exception e
+              (errorf "%s" data-sql)
+              (errorf "%s" data)
+              (errorf "%s" entities)
+              (errorf "%s" key-ids)
+              (throw e)))
+          (recur new-level
+            new-offset
+            new-count))))))
 
 (defn- publish-cascade [uploadUrl cascadeResourceId version]
    (let [{:keys [username password]} @config/settings
