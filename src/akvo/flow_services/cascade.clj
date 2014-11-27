@@ -26,10 +26,13 @@
             [me.raynes.fs :as fs]
             [clojure.java.jdbc :refer [db-do-commands create-table-ddl insert! query]]
             [clojure.data.csv :as csv]
+            [clojure.string :as str]
             [aws.sdk.s3 :as s3]
             [taoensso.timbre :as timbre :refer [errorf debugf infof]]))
 
-(def page-size 100)
+;; Each node is roughly ~1KB (depending on the code & name values)
+;; We have a maximum of 1MB per request
+(def page-size 800)
 
 (defn get-db-spec
   [path db-name]
@@ -61,13 +64,12 @@
                  [:id :integer "PRIMARY KEY"])
         table-ddl (apply create-table-ddl :data schema)
         mapping-ddl (create-table-ddl :mapping
-                      [:path :text "NOT NULL"]
-                      [:keyid :number "NOT NULL"])
-        mapping-idx "CREATE UNIQUE INDEX mapping_idx on mapping (path, keyid)"]
+                      [:path :text "PRIMARY KEY" "NOT NULL"]
+                      [:keyid :number "NOT NULL"])]
     (debugf "Table DDL: %s" table-ddl)
     (try
       (db-do-commands spec table-ddl)
-      (db-do-commands spec mapping-ddl mapping-idx)
+      (db-do-commands spec mapping-ddl)
       spec
       (catch Exception e
         (errorf e "Error creating temp db - spec: %s - schema: %s" spec schema)))))
@@ -164,20 +166,6 @@
         (some #(if (not= (count (remove empty? %)) l) %) (csv/read-csv r)))
       [(format "File Not Found at %s" (.getAbsolutePath f))])))
 
-(defn csv-to-db
-  "Creates a SQLite db and inserts the data from a CSV file.
-  An exception when inserting can be considered a validation error"
-  [fpath levels codes?]
-  (let [db (create-tmp-data-db levels)
-        columns (vec (flatten
-                       (for [n (range levels)]
-                         [(format "code_%s" n) (format "name_%s" n)])))]
-    (with-open [r (io/reader (io/file fpath))]
-      (debugf "Inserting CSV data into db")
-      (doseq [line (csv/read-csv r)]
-        (insert! db :data columns line)))
-    db))
-
 (defn create-node
   [code name parent-id resource-id]
   (let [node (Entity. "CascadeNode")
@@ -194,8 +182,8 @@
 (defn- get-path
   [level as]
   (format "%s as %s"
-    (clojure.string/join "||'|'||" (for [n (range (inc level))]
-                                     (format "code_%s" n))) as))
+    (str/join "||'|'||" (for [n (range (inc level))]
+                          (format "code_%s" n))) as))
 
 (defn- get-limit-offset
   [limit offset]
@@ -219,22 +207,60 @@
     (debugf "data sql: %s" sql)
     sql))
 
+(defn- get-nodes-sql
+  [level & [limit offset]]
+  (format "SELECT parent, path, code, name FROM nodes_%s ORDER BY id %s" level (if (and limit offset) (get-limit-offset limit offset) "")))
+
 (defn- get-count-sql
   [level]
-  (let [sql (format "SELECT count(*) as count FROM (%s)" (get-data-sql level))]
+  (let [sql (format "SELECT count(*) as count FROM (%s)" (get-nodes-sql level))]
     (debugf "count sql: %s" sql)
     sql))
 
+(defn csv-to-db
+  "Creates a SQLite db and inserts the data from a CSV file.
+  An exception when inserting can be considered a validation error"
+  [fpath levels codes?]
+  (let [db (create-tmp-data-db levels)
+        columns (vec (flatten
+                       (for [n (range levels)]
+                         [(format "code_%s" n) (format "name_%s" n)])))]
+    (with-open [r (io/reader (io/file fpath))]
+      (debugf "Inserting CSV data into db")
+      (doseq [line (csv/read-csv r)]
+        (insert! db :data columns line)))
+    (doseq [level (range levels)]
+      (let [table-ddl (create-table-ddl (keyword (str "nodes_" level))
+                        [:id :integer "PRIMARY KEY"]
+                        [:parent :text "NOT NULL"]
+                        [:path :text "NOT NULL"]
+                        [:code :text "NOT NULL"]
+                        [:name :text "NOT NULL"])
+            insert-sql (format "INSERT INTO nodes_%s(parent, path, code, name) %s" level (get-data-sql level))]
+        (debugf "table ddl: %s" table-ddl)
+        (debugf "table ddl: %s" insert-sql)
+        (db-do-commands db table-ddl)
+        (db-do-commands db insert-sql)))
+    db))
+
+(defn- get-keyid
+  [db path]
+  (:keyid (first (query db (format "SELECT keyid FROM mapping WHERE path = '%s'" path)))))
+
 (defn create-nodes
-  [db srv usr pwd levels limit]
-  (let [installer (get-installer (get-options srv usr pwd))
+  [upload-url cascade-id csv-path levels codes?]
+  (let [{:keys [username password]} @config/settings
+        cfg (@config/configs (config/get-bucket-name upload-url))
+        opts (get-options (:domain cfg) username password)
+        installer (get-installer opts)
+        db (csv-to-db csv-path levels codes?)
         ds (get-ds)
-        sql-limit 100]
+        sql-limit page-size]
     (loop [level 0
            offset 0
            level-count (:count (first (query db (get-count-sql level))))]
       (if (and (> level-count 0) (< level levels))
-        (let [data-sql (get-data-sql level sql-limit offset)
+        (let [data-sql (get-nodes-sql level sql-limit offset)
               data (query db data-sql)
               inc-offset? (= (count data) sql-limit)
               inc-level? (not inc-offset?)
@@ -250,29 +276,30 @@
                           (if (< new-level levels)
                             (:count (first (query db (get-count-sql (inc level))))) 0)
                           level-count)
-              entities (reduce (fn [result item]
-                                 (let [code (:code item)
-                                       name (:name item)
-                                       parent-id (if (> level 0)
-                                                   (:keyid (first (query db (format "SELECT keyid FROM mapping WHERE path = '%s'" (:parent item)))))
-                                                   0)]
-                                   (conj result (create-node code name parent-id 0))))
-                         []
-                         data)
+              entities (:result
+                         (reduce (fn [{:keys [cache result]} {:keys [code name parent path]}]
+                                  (let [parent-id (if (> level 0)
+                                                    (if-let [keyid (:cache parent)]
+                                                      keyid
+                                                      (get-keyid db parent))
+                                                    0)]
+                                    {:cache (assoc cache parent parent-id)
+                                     :result (conj result (create-node code name parent-id cascade-id))}))
+                                 {:cache {}
+                                  :result []}
+                                 data))
               key-ids (.put ds entities)
-              mappings (apply merge (map (fn [node ds-id]
-                                           {(:path node) (.getId ds-id)})
-                                      data
-                                      key-ids))]
+              mappings (map (fn [node ds-id]
+                              {:path (:path node)
+                               :keyid (.getId ds-id)})
+                            data
+                            key-ids)]
           (try
-            (doseq [m (keys mappings)]
-              (debugf "inserting mapping: path %s -> %s" m (get mappings m))
-              (insert! db :mapping {:path m :keyid (get mappings m)}))
+            (apply insert! db :mapping mappings)
+            (debugf "Created %s nodes" (count mappings))
             (catch Exception e
-              (errorf "%s" data-sql)
-              (errorf "%s" data)
-              (errorf "%s" entities)
-              (errorf "%s" key-ids)
+              (errorf e "data sql: %s" data-sql)
+              (errorf e "mappings %" (pr-str mappings))
               (throw e)))
           (recur new-level
             new-offset
