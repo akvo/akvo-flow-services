@@ -236,10 +236,11 @@
                         [:path :text "NOT NULL"]
                         [:code :text "NOT NULL"]
                         [:name :text "NOT NULL"])
+            idx-ddl (format "CREATE UNIQUE INDEX unique_path_%s on nodes_%s (path)" level level)
             insert-sql (format "INSERT INTO nodes_%s(parent, path, code, name) %s" level (get-data-sql level))]
         (debugf "table ddl: %s" table-ddl)
         (debugf "table ddl: %s" insert-sql)
-        (db-do-commands db table-ddl)
+        (db-do-commands db table-ddl idx-ddl)
         (db-do-commands db insert-sql)))
     db))
 
@@ -299,7 +300,7 @@
             (debugf "Created %s nodes" (count mappings))
             (catch Exception e
               (errorf e "data sql: %s" data-sql)
-              (errorf e "mappings %" (pr-str mappings))
+              (errorf e "mappings: %s" (pr-str mappings))
               (throw e)))
           (recur new-level
             new-offset
