@@ -44,8 +44,10 @@
   (GET "/" [] "OK")
 
   (GET "/generate" [:as {params :params}]
-       (let [criteria (json/parse-string (:criteria params))]
-    (generate-report criteria)))
+    (let [criteria (json/parse-string (:criteria params))]
+      (if (or (nil? criteria) (= "null" criteria))
+        {:status 400 :headers {} :body "Bad Request"}
+        (generate-report criteria))))
 
   ; example of params: {"uploadUrl": "https://flowaglimmerofhope.s3.amazonaws.com/", "cascadeResourceId": "22164001", "version": "1"}
   (POST "/publish_cascade" req
@@ -69,23 +71,31 @@
   (POST "/invalidate" [:as {params :params}]
     (invalidate-cache params))
 
+  (OPTIONS "/upload" [:as {params :params}]
+    (header (response "OK") "Access-Control-Allow-Origin" "*"))
+
   (POST "/upload" [:as {params :params}]
-    (if (contains? params :file)
+    (if (:file params)
       (-> params
         uploader/save-chunk
         response
-        (header "Access-Control-Allow-Origin" "*"))
-      (-> params
-        scheduler/process-and-upload
-        :status
-        response
-        (header "Access-Control-Allow-Origin" "*"))))
+        (header "Access-Control-Allow-Origin" "*")
+        (header "Content-Type" "text/plain"))
+      (if (:complete params)
+        (let [processor (if (:cascadeResourceId params)
+                          (fn [p]
+                            {:status "OK"})
+                          scheduler/process-and-upload)]
+          (-> params
+            processor
+            :status
+            response
+            (header "Access-Control-Allow-Origin" "*")
+            (header "Content-Type" "text/plain")))
+        {:status 400, :headers {}, :body "Bad Request"})))
 
   (POST "/reload" [params]
     (config/reload (:config-folder @config/settings)))
-
-  (OPTIONS "/upload" [:as {params :params}]
-    (header (response "OK") "Access-Control-Allow-Origin" "*"))
 
   (route/resources "/")
 
