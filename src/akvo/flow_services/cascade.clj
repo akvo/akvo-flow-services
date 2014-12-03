@@ -21,6 +21,7 @@
             [akvo.flow-services.config :as config]
             [akvo.flow-services.scheduler :as scheduler]
             [akvo.flow-services.gae :refer :all]
+            [akvo.flow-services.uploader :refer [combine add-message]]
             [clojure.java.io :as io]
             [me.raynes.fs.compression :as fsc]
             [me.raynes.fs :as fs]
@@ -171,12 +172,12 @@
   (let [node (Entity. "CascadeNode")
         ts (Date.)]
     (doto node
-      (.setProperty "code" code)
-      (.setProperty "name" name)
+      (.setProperty "code" (str code))
+      (.setProperty "name" (str name))
       (.setProperty "lastUpdateDateTime" ts)
       (.setProperty "createdDateTime" ts)
-      (.setProperty "parentNodeId" parent-id)
-      (.setProperty "cascadeResourceId" resource-id))
+      (.setProperty "parentNodeId" (Long/valueOf parent-id))
+      (.setProperty "cascadeResourceId" (Long/valueOf resource-id)))
     node))
 
 (defn- get-path
@@ -328,5 +329,23 @@
     (infof "Publishing cascade resource - uploadUrl: %s - resourceId: %s - version: %s" uploadUrl cascadeResourceId version)
     (publish-cascade uploadUrl cascadeResourceId version)))
 
+(jobs/defjob UploadCascadeJob [job-data]
+  (let [{:strs [uploadDomain cascadeResourceId numLevels uniqueIdentifier filename]} (conversion/from-job-data job-data)
+        levels (read-string numLevels)
+        base (format "%s/%s" (:base-path @config/settings) "uploads")
+        fpath (format "%s/%s" base uniqueIdentifier)
+        csv-path (format "%s/%s" fpath filename)
+        _ (combine fpath filename)
+        errors (validate-csv csv-path levels true)]
+    (if errors
+      (errorf "%s" errors) ;;FIXME
+      (try
+        (create-nodes uploadDomain cascadeResourceId csv-path levels true)
+        (catch Exception e
+          (errorf e (format "Error uploading CSV: %s" (.getMessage e))))))))
+
 (defn schedule-publish-cascade [params]
   (scheduler/schedule-job CascadeJob (str "cascade" (hash params)) params))
+
+(defn schedule-upload-cascade [params]
+  (scheduler/schedule-job UploadCascadeJob (str "upload-cascade" (hash params)) params))

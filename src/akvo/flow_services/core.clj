@@ -83,8 +83,7 @@
         (header "Content-Type" "text/plain"))
       (if (:complete params)
         (let [processor (if (:cascadeResourceId params)
-                          (fn [p]
-                            {:status "OK"})
+                          cascade/schedule-upload-cascade
                           scheduler/process-and-upload)]
           (-> params
             processor

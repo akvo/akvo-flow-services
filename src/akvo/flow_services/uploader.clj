@@ -55,7 +55,7 @@
 (defn- get-parts [path]
   (sort part-no-comp (filter fs/file? (fs/find-files path #".*\.\d+$"))))
 
-(defn- combine [directory filename]
+(defn combine [directory filename]
   (let [f (io/file (format "%s/%s" directory filename))
         parts (get-parts directory)]
     (if (seq parts)
@@ -99,7 +99,7 @@
       (s3/put-object creds bucket-name obj-key f {} (s3/grant :all-users :read))
       (s3/put-object creds bucket-name obj-key f))))
 
-(defn- add-message [bucket-name action obj-id content]
+(defn add-message [bucket-name action obj-id content]
   (let [settings @config/settings
         config (@config/configs bucket-name)
         msg {"actionAbout" action
