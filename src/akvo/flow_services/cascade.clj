@@ -229,7 +229,7 @@
     (with-open [r (io/reader (io/file fpath))]
       (debugf "Inserting CSV data into db")
       (doseq [line (csv/read-csv r)]
-        (insert! db :data columns line)))
+        (insert! db :data columns (if codes? line (interleave line line)))))
     (doseq [level (range levels)]
       (let [table-ddl (create-table-ddl (keyword (str "nodes_" level))
                         [:id :integer "PRIMARY KEY"]
@@ -330,17 +330,18 @@
     (publish-cascade uploadUrl cascadeResourceId version)))
 
 (jobs/defjob UploadCascadeJob [job-data]
-  (let [{:strs [uploadDomain cascadeResourceId numLevels uniqueIdentifier filename]} (conversion/from-job-data job-data)
+  (let [{:strs [uploadDomain cascadeResourceId numLevels uniqueIdentifier filename includeCodes]} (conversion/from-job-data job-data)
         levels (read-string numLevels)
+        codes? (read-string includeCodes)
         base (format "%s/%s" (:base-path @config/settings) "uploads")
         fpath (format "%s/%s" base uniqueIdentifier)
         csv-path (format "%s/%s" fpath filename)
         _ (combine fpath filename)
-        errors (validate-csv csv-path levels true)]
+        errors (validate-csv csv-path levels codes?)]
     (if errors
       (errorf "%s" errors) ;;FIXME
       (try
-        (create-nodes uploadDomain cascadeResourceId csv-path levels true)
+        (create-nodes uploadDomain cascadeResourceId csv-path levels codes?)
         (catch Exception e
           (errorf e (format "Error uploading CSV: %s" (.getMessage e))))))))
 
