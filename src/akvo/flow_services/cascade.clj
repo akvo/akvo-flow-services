@@ -176,8 +176,8 @@
       (.setProperty "name" (str name))
       (.setProperty "lastUpdateDateTime" ts)
       (.setProperty "createdDateTime" ts)
-      (.setProperty "parentNodeId" (Long/valueOf parent-id))
-      (.setProperty "cascadeResourceId" (Long/valueOf resource-id)))
+      (.setProperty "parentNodeId" (Long/valueOf (str parent-id)))
+      (.setProperty "cascadeResourceId" (Long/valueOf (str resource-id))))
     node))
 
 (defn- get-path
