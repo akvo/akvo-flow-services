@@ -177,7 +177,7 @@
                   fzip (io/file fname)]]
       (fsc/zip fzip ["data.txt" (str/join "\n" (data k))])
       (upload fzip bucket-name)
-      (future (notify-gae server {"action" "submit" "fileName" (.getNae fzip)})))
+      (future (notify-gae server {"action" "submit" "fileName" (.getName fzip)})))
     (doseq [f (get-images path)]
       (upload f bucket-name))
     (add-message bucket-name "bulkUpload" nil (format "File: %s processed" filename))))
