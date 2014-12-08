@@ -350,17 +350,19 @@
         fpath (format "%s/%s" base uniqueIdentifier)
         csv-path (format "%s/%s" fpath filename)
         _ (combine fpath filename)
-        errors (validate-csv csv-path levels codes?)]
+        errors (validate-csv csv-path levels codes?)
+        bucket-name (config/get-bucket-name uploadDomain)]
     (if errors
       (do
         (errorf "CSV Validation failed %s" (first errors))
-        (add-message (config/get-bucket-name uploadDomain) "cascadeImport" nil (format "Failed to validate csv file: %s" (first errors))))
+        (add-message bucket-name "cascadeImport" nil (format "Failed to validate csv file: %s" (first errors))))
 
       (try
         (create-nodes uploadDomain cascadeResourceId csv-path levels codes?)
+        (add-message bucket-name "cascadeImport" nil (format "Successfully imported csv file %s" filename))
         (catch Exception e
           (errorf e (format "Error uploading CSV: %s" (.getMessage e)))
-          (add-message (config/get-bucket-name uploadDomain) "cascadeImport" nil (format "Failed to import csv file %s" filename)))))))
+          (add-message bucket-name "cascadeImport" nil (format "Failed to import csv file %s" filename)))))))
 
 (defn schedule-publish-cascade [params]
   (scheduler/schedule-job CascadeJob (str "cascade" (hash params)) params))
