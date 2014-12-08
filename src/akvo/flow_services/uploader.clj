@@ -15,7 +15,8 @@
 (ns akvo.flow-services.uploader
   (:import java.io.File
            org.waterforpeople.mapping.dataexport.RawDataSpreadsheetImporter
-           java.util.zip.ZipFile)
+           java.util.zip.ZipFile
+           java.net.URLEncoder)
   (:require [clojure.java.io :as io]
             [clojure.string :as str]
             [me.raynes.fs :as fs]
@@ -140,22 +141,29 @@
   [path]
   (filter-files (fs/find-files path #".*\.(jpg|JPG|jpeg|JPEG)$")))
 
-(defn notify-gae [server filename]
+(defn query-string
+  [params]
+  (->> params
+       (map (fn [[k v]]
+              (str (name k) "=" (java.net.URLEncoder/encode (str v) "UTF-8"))))
+       (str/join "&")))
+
+(defn notify-gae [server params]
   (let [max-retries 10
         sleep-time 60000
         success? (loop [attempts 1]
                    (when (<= attempts max-retries)
                      (or (try
-                           (infof "Notifying %s about uploaded file %s (Attempt #%s)" server filename attempts)
-                           (http/get (format "https://%s/processor?action=submit&fileName=%s" server filename))
+                           (infof "Notifying %s (Attempt #%s)" server  attempts)
+                           (http/get (format "https://%s/processor?%s" server (query-string params)))
                            (catch Exception e
                              (infof "Failed to notify %s. Retry in %s msecs" server sleep-time)))
                          (do
                            (Thread/sleep sleep-time)
                            (recur (inc attempts))))))]
     (if success?
-      (infof "Successfully notified %s about uploaded file %s" server filename)
-      (errorf "Failed to notify %s about uploaded file %s after %s attempts" server filename max-retries))))
+      (infof "Successfully notified %s" server)
+      (errorf "Failed to notify %s after %s attempts" server max-retries))))
 
 (defn- bulk-survey
   [path bucket-name filename]
@@ -169,7 +177,7 @@
                   fzip (io/file fname)]]
       (fsc/zip fzip ["data.txt" (str/join "\n" (data k))])
       (upload fzip bucket-name)
-      (future (notify-gae server (.getName fzip))))
+      (future (notify-gae server {"action" "submit" "fileName" (.getNae fzip)})))
     (doseq [f (get-images path)]
       (upload f bucket-name))
     (add-message bucket-name "bulkUpload" nil (format "File: %s processed" filename))))

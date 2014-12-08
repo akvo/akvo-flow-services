@@ -21,7 +21,7 @@
             [akvo.flow-services.config :as config]
             [akvo.flow-services.scheduler :as scheduler]
             [akvo.flow-services.gae :refer :all]
-            [akvo.flow-services.uploader :refer [combine add-message]]
+            [akvo.flow-services.uploader :refer [combine add-message notify-gae]]
             [clojure.java.io :as io]
             [me.raynes.fs.compression :as fsc]
             [me.raynes.fs :as fs]
@@ -123,7 +123,8 @@
     (try
       (s3/put-object creds bucket obj-key f {} (s3/grant :all-users :read))
       (catch Exception e
-        (errorf e "Error uploading object: %s to bucket: %s" obj-key bucket)))))
+        (errorf e "Error uploading object: %s to bucket: %s" obj-key bucket)
+        (throw e)))))
 
 (defn get-nodes
   "Returns the nodes for a given cascadeResourceId.
@@ -320,12 +321,26 @@
          ;; recover this when we have more data on the size of db after vacuum
          ;; (db-do-commands db-spec false "vacuum")
          (upload-to-s3 (create-zip-file db-spec) bucket db-spec)
-         (infof "Cascade resource published - uploadUrl: %s - resourceId: %s - version: %s" uploadUrl cascadeResourceId version)))))
+         (infof "Cascade resource published - uploadUrl: %s - resourceId: %s - version: %s" uploadUrl cascadeResourceId version))
+       (throw (ex-info "Could not create db" {"uploadUrl" uploadUrl
+                                              "cascadeResourceId" cascadeResourceId
+                                              "version" version})))))
 
 (jobs/defjob CascadeJob [job-data]
-  (let [{:strs [uploadUrl cascadeResourceId version]} (conversion/from-job-data job-data)]
+  (let [{:strs [uploadUrl cascadeResourceId version]} (conversion/from-job-data job-data)
+        domain (:domain (config/get-bucket-name uploadUrl))]
     (infof "Publishing cascade resource - uploadUrl: %s - resourceId: %s - version: %s" uploadUrl cascadeResourceId version)
-    (publish-cascade uploadUrl cascadeResourceId version)))
+    (try
+      (publish-cascade uploadUrl cascadeResourceId version)
+      (future (notify-gae domain {"action" "cascade"
+                                  "cascadeResourceId" cascadeResourceId
+                                  "status" "published"}))
+      (catch Exception e
+        (errorf "Publishing cascade failed - uploadUrl: %s - resourceId: %s - version: %s - reason: %s"
+                uploadUrl cascadeResourceId version (.getMessage e))
+        (future (notify-gae domain {"action" "cascade"
+                                    "cascadeResourceId" cascadeResourceId
+                                    "status" "error"}))))))
 
 (jobs/defjob UploadCascadeJob [job-data]
   (let [{:strs [uploadDomain cascadeResourceId numLevels uniqueIdentifier filename includeCodes]} (conversion/from-job-data job-data)
