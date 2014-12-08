@@ -89,7 +89,9 @@
         entity (Entity. entity-name)
         ts (Date.)]
     (doseq [k (keys props)]
-      (.setProperty entity k (props k)))
+      (.setProperty entity (name k) (props k)))
     (.setProperty entity "createdDateTime" ts)
     (.setProperty entity "lastUpdateDateTime" ts)
-    (.put ds entity)))
+    (let [k (.put ds entity)]
+      (.uninstall installer)
+      k)))
