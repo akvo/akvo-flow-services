@@ -13,7 +13,7 @@
 ;  The full license text can also be seen at <http://www.gnu.org/licenses/agpl.html>.
 
 (ns akvo.flow-services.cascade
-  (:import [com.google.appengine.api.datastore Entity Query] 
+  (:import [com.google.appengine.api.datastore Entity Query]
            [java.nio.file Paths Files]
            [java.util UUID Date])
   (:require [clojurewerkz.quartzite [conversion :as conversion]
@@ -59,7 +59,7 @@
   [levels]
   (let [spec (get-db-spec "/tmp" (str (UUID/randomUUID) ".db"))
         schema (conj
-                 (mapcat identity
+                 (apply concat
                   (for [n (range levels)]
                     [[(keyword (format "code_%s text NOT NULL" n))] [(keyword (format "name_%s text NOT NULL" n))]]))
                  [:id :integer "PRIMARY KEY"])
@@ -104,7 +104,7 @@
                  :result []}
               nodes))))
 
-(defn- create-zip-file 
+(defn- create-zip-file
   "zips the temporary file and returns the zipped file name"
   [db-spec]
   (let [fname (:subname db-spec)
@@ -113,7 +113,7 @@
     (fsc/zip fname-zip [[(:db-name db-spec) (Files/readAllBytes (Paths/get (java.net.URI. (str "file://" fname))))]])
     fname-zip))
 
-(defn- upload-to-s3 
+(defn- upload-to-s3
   "Upload the zipped sqlite file to s3"
   [fname bucket db-spec]
   (let [creds (select-keys (@config/configs bucket) [:access-key :secret-key])
@@ -188,29 +188,27 @@
 
 (defn- get-limit-offset
   [limit offset]
-  (format "LIMIT %s OFFSET %s" limit offset))
+  (if (and limit offset)
+    (format "LIMIT %s OFFSET %s" limit offset)
+    ""))
 
 (defn- get-data-sql
   [level & [limit offset]]
   (let [sql (if (> level 0)
-            (format "SELECT DISTINCT %s, %s, code_%s as code, name_%s as name FROM data ORDER BY id %s"
-              (get-path (dec level) "parent")
-              (get-path level "path")
-              level
-              level
-              (if (and limit offset)
-                (get-limit-offset limit offset)
-                ""))
-            (format "SELECT DISTINCT '0' as parent, code_0 as path, code_0 as code, name_0 as name FROM data ORDER BY id %s"
-              (if (and limit offset)
-                (get-limit-offset limit offset)
-                "")))]
+              (format "SELECT DISTINCT %s, %s, code_%s as code, name_%s as name FROM data ORDER BY id %s"
+                      (get-path (dec level) "parent")
+                      (get-path level "path")
+                      level
+                      level
+                      (get-limit-offset limit offset))
+              (format "SELECT DISTINCT '0' as parent, code_0 as path, code_0 as code, name_0 as name FROM data ORDER BY id %s"
+                      (get-limit-offset limit offset)))]
     (debugf "data sql: %s" sql)
     sql))
 
 (defn- get-nodes-sql
   [level & [limit offset]]
-  (format "SELECT parent, path, code, name FROM nodes_%s ORDER BY id %s" level (if (and limit offset) (get-limit-offset limit offset) "")))
+  (format "SELECT parent, path, code, name FROM nodes_%s ORDER BY id %s" level (get-limit-offset limit offset)))
 
 (defn- get-count-sql
   [level]
@@ -261,7 +259,7 @@
     (loop [level 0
            offset 0
            level-count (:count (first (query db (get-count-sql level))))]
-      (if (and (> level-count 0) (< level levels))
+      (if (and (pos? level-count) (< level levels))
         (let [data-sql (get-nodes-sql level sql-limit offset)
               data (query db data-sql)
               inc-offset? (= (count data) sql-limit)
@@ -331,19 +329,23 @@
 
 (jobs/defjob UploadCascadeJob [job-data]
   (let [{:strs [uploadDomain cascadeResourceId numLevels uniqueIdentifier filename includeCodes]} (conversion/from-job-data job-data)
-        levels (read-string numLevels)
-        codes? (read-string includeCodes)
+        levels (Long/parseLong numLevels)
+        codes? (Boolean/valueOf includeCodes)
         base (format "%s/%s" (:base-path @config/settings) "uploads")
         fpath (format "%s/%s" base uniqueIdentifier)
         csv-path (format "%s/%s" fpath filename)
         _ (combine fpath filename)
         errors (validate-csv csv-path levels codes?)]
     (if errors
-      (errorf "%s" errors) ;;FIXME
+      (do
+        (errorf "CSV Validation failed %s" (first errors))
+        (add-message (config/get-bucket-name uploadDomain) "cascadeImport" nil (format "Failed to validate csv file: %s" (first errors))))
+
       (try
         (create-nodes uploadDomain cascadeResourceId csv-path levels codes?)
         (catch Exception e
-          (errorf e (format "Error uploading CSV: %s" (.getMessage e))))))))
+          (errorf e (format "Error uploading CSV: %s" (.getMessage e)))
+          (add-message (config/get-bucket-name uploadDomain) "cascadeImport" nil (format "Failed to import csv file %s" filename)))))))
 
 (defn schedule-publish-cascade [params]
   (scheduler/schedule-job CascadeJob (str "cascade" (hash params)) params))
