@@ -14,16 +14,18 @@
 
 (ns akvo.flow-services.log
   (:require [taoensso.timbre :as timbre])
-  (:import [org.apache.log4j LogManager Level]))
+  (:import [org.apache.log4j Logger Level]))
 
 (defn set-debug
   "Sets timbre and log4j logging level to DEBUG"
   []
   (timbre/set-level! :debug)
-  (.setLevel (LogManager/getRootLogger) Level/DEBUG))
+  (.setLevel (Logger/getLogger "com.gallatinsystems") Level/DEBUG)
+  (.setLevel (Logger/getLogger "org.waterforpeople") Level/DEBUG))
 
 (defn set-info
   "Sets timbre and log4j logging level to INFO"
   []
   (timbre/set-level! :info)
-  (.setLevel (LogManager/getRootLogger) Level/INFO))
+  (.setLevel (Logger/getLogger "com.gallatinsystems") Level/INFO)
+  (.setLevel (Logger/getLogger "org.waterforpeople") Level/INFO))
