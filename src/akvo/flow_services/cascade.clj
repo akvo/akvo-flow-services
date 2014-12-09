@@ -329,7 +329,8 @@
 
 (jobs/defjob CascadeJob [job-data]
   (let [{:strs [uploadUrl cascadeResourceId version]} (conversion/from-job-data job-data)
-        domain (:domain (config/get-bucket-name uploadUrl))]
+        cfg (@config/configs (config/get-bucket-name uploadUrl))
+        domain (:domain cfg)]
     (infof "Publishing cascade resource - uploadUrl: %s - resourceId: %s - version: %s" uploadUrl cascadeResourceId version)
     (try
       (publish-cascade uploadUrl cascadeResourceId version)
