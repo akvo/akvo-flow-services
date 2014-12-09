@@ -13,7 +13,7 @@
 ;  The full license text can also be seen at <http://www.gnu.org/licenses/agpl.html>.
 
 (ns akvo.flow-services.gae
-  (:require [taoensso.timbre :as timbre :refer (debugf error)])
+  (:require [taoensso.timbre :as timbre :refer (info debugf error)])
   (:import java.util.Date java.io.IOException
     [com.google.appengine.tools.remoteapi RemoteApiInstaller RemoteApiOptions]
     [com.google.appengine.api.datastore DatastoreServiceFactory Entity Query
@@ -36,6 +36,8 @@
     (doto
       (RemoteApiInstaller.)
       (.install opts))
+    (catch IllegalStateException e
+      (info (.getMessage e)))
     (catch IOException e
       (error e "Error installing options"))))
 

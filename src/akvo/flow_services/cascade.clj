@@ -304,7 +304,8 @@
               (throw e)))
           (recur new-level
             new-offset
-            new-count))))))
+            new-count))))
+    (.uninstall installer)))
 
 (defn- publish-cascade [uploadUrl cascadeResourceId version]
    (let [{:keys [username password]} @config/settings
