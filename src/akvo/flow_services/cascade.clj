@@ -248,6 +248,27 @@
   [db path]
   (:keyid (first (query db (format "SELECT keyid FROM mapping WHERE path = '%s'" path)))))
 
+(defn- delete-nodes
+  "Deletes the CascadeNode entities for a given resource id"
+  [upload-url cascade-id]
+  (let [{:keys [username password]} @config/settings
+        cfg (@config/configs (config/get-bucket-name upload-url))
+        opts (get-options (:domain cfg) username password)
+        installer (get-installer opts)
+        ds (get-ds)
+        filter (get-filter "cascadeResourceId" (Long/valueOf (str cascade-id)))
+        q (-> "CascadeNode"
+            (Query.)
+            (.setFilter filter)
+            (.setKeysOnly))
+        get-nodes (fn []
+                    (.asList (.prepare ds q) (get-fetch-options page-size)))
+        (loop [nodes (get-nodes)]
+          (when (seq nodes)
+            (.delete ds (map #(.getKey %) nodes))
+            (recur (get-nodes))))]
+    (.uninstall installer)))
+
 (defn create-nodes
   [upload-url cascade-id csv-path levels codes?]
   (let [{:keys [username password]} @config/settings
@@ -360,6 +381,7 @@
         (add-message bucket-name "cascadeImport" nil (format "Failed to validate csv file: %s" (first errors))))
 
       (try
+        (delete-nodes uploadDomain cascadeResourceId)
         (create-nodes uploadDomain cascadeResourceId csv-path levels codes?)
         (add-message bucket-name "cascadeImport" nil (format "Successfully imported csv file %s" filename))
         (catch Exception e
