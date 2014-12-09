@@ -262,11 +262,11 @@
             (.setFilter filter)
             (.setKeysOnly))
         get-nodes (fn []
-                    (.asList (.prepare ds q) (get-fetch-options page-size)))
-        (loop [nodes (get-nodes)]
+                    (.asList (.prepare ds q) (get-fetch-options page-size)))]
+    (loop [nodes (get-nodes)]
           (when (seq nodes)
             (.delete ds (map #(.getKey %) nodes))
-            (recur (get-nodes))))]
+            (recur (get-nodes))))
     (.uninstall installer)))
 
 (defn create-nodes
