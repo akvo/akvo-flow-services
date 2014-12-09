@@ -345,8 +345,8 @@
         num (Integer/valueOf (str num-levels))]
     (if entity
       (do
-        (.setProperty "numLevels" entity num)
-        (.setProperty "levelNames" entity (for [n (range 1 (inc num))]
+        (.setProperty entity "numLevels" num)
+        (.setProperty entity "levelNames" (for [n (range 1 (inc num))]
                                             (format "Level %s" n)))
         (.put ds entity))
       (errorf "No CascadeResource found with id: %s" cascade-id))
