@@ -328,6 +328,30 @@
             new-count))))
     (.uninstall installer)))
 
+(defn- update-number-levels
+  [upload-url cascade-id num-levels]
+  (let [{:keys [username password]} @config/settings
+        cfg (@config/configs (config/get-bucket-name upload-url))
+        opts (get-options (:domain cfg) username password)
+        installer (get-installer opts)
+        ds (get-ds)
+        key (get-key "CascadeResource" (Long/valueOf (str cascade-id)))
+        filter (get-filter Entity/KEY_RESERVED_PROPERTY key)
+        q (.setFilter (Query. "CascadeResource") filter)
+        entity (try
+                 (.asSingleEntity (.prepare ds q))
+                 (catch Exception e
+                   (errorf e "Error updating number of levels - cascadeResourceId: %s" cascade-id)))
+        num (Integer/valueOf (str num-levels))]
+    (if entity
+      (do
+        (.setProperty "numLevels" entity num)
+        (.setProperty "levelNames" entity (for [n (range 1 (inc num))]
+                                            (format "Level %s" n)))
+        (.put ds entity))
+      (errorf "No CascadeResource found with id: %s" cascade-id))
+    (.uninstall installer)))
+
 (defn- publish-cascade [uploadUrl cascadeResourceId version]
    (let [{:keys [username password]} @config/settings
         bucket (config/get-bucket-name uploadUrl)
@@ -383,6 +407,7 @@
       (try
         (delete-nodes uploadDomain cascadeResourceId)
         (create-nodes uploadDomain cascadeResourceId csv-path levels codes?)
+        (update-number-levels uploadDomain cascadeResourceId numLevels)
         (add-message bucket-name "cascadeImport" nil (format "Successfully imported csv file %s" filename))
         (catch Exception e
           (errorf e (format "Error uploading CSV: %s" (.getMessage e)))
