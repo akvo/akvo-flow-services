@@ -28,10 +28,8 @@
     [taoensso.timbre :as timbre])
   (:gen-class))
 
-(defn- generate-report [params]
-  (let [criteria (json/parse-string (:criteria params)) ; TODO: validation
-        callback (:callback params)
-        resp (scheduler/generate-report criteria)]
+(defn- generate-report [criteria callback]
+  (let [resp (scheduler/generate-report criteria)]
     (-> (response (format "%s(%s);" callback (json/generate-string resp)))
         (content-type "text/javascript")
         (charset "UTF-8"))))
@@ -44,10 +42,11 @@
   (GET "/" [] "OK")
 
   (GET "/generate" [:as {params :params}]
-    (let [criteria (json/parse-string (:criteria params))]
+    (let [criteria (json/parse-string (:criteria params))  ;; TODO: validation
+          callback (:callback params)]
       (if (or (nil? criteria) (= "null" criteria))
         {:status 400 :headers {} :body "Bad Request"}
-        (generate-report criteria))))
+        (generate-report criteria callback))))
 
   ; example of params: {"uploadUrl": "https://flowaglimmerofhope.s3.amazonaws.com/", "cascadeResourceId": "22164001", "version": "1"}
   (POST "/publish_cascade" req
