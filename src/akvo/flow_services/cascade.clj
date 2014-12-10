@@ -252,7 +252,7 @@
 
 (defn- get-keyid
   [db path]
-  (:keyid (first (query db (format "SELECT keyid FROM mapping WHERE path = '%s'" path)))))
+  (:keyid (first (query db ["SELECT keyid FROM mapping WHERE path = ?" path]))))
 
 (defn- delete-nodes
   "Deletes the CascadeNode entities for a given resource id"
