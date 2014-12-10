@@ -165,7 +165,13 @@
         f (io/file fpath)]
     (if (and (.exists f) (.canRead f))
       (with-open [r (io/reader f)]
-        (some #(if (not= (count (remove empty? %)) l) %) (csv/read-csv r)))
+        (->> (csv/read-csv r)
+             (map-indexed (fn [idx row]
+                            {:line (inc idx)
+                             :row row}))
+             (some (fn [{:keys [line row]}]
+                     (if (not= (count (remove empty? row)) l)
+                       [(format "Line: %s, Row: %s" line (str/join ", " row))])))))
       [(format "File Not Found at %s" (.getAbsolutePath f))])))
 
 (defn create-node
