@@ -68,7 +68,7 @@
     (triggers/with-identity (triggers/key id))
     (triggers/start-now)))
 
-(defn- schedule-job [job-type id params]
+(defn schedule-job [job-type id params]
   (let [job (get-job job-type id params)
         trigger (get-trigger id)]
     (try
