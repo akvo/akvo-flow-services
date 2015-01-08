@@ -16,11 +16,11 @@
   (:import java.io.File
     [com.google.apphosting.utils.config AppEngineWebXml AppEngineWebXmlReader AppEngineConfigException])
   (:require [clojure.java.io :as io]
-    [clojure.string :as str :only (split)]
+    [clojure.string :as str]
     [clojure.java.shell :as shell]
-    [clojure.edn :as edn :only (read-string)]
+    [clojure.edn :as edn]
     [clojure.walk :refer (stringify-keys)]
-    [me.raynes.fs :as fs :only (find-files)]))
+    [me.raynes.fs :as fs]))
 
 
 (defonce configs (atom {}))
