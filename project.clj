@@ -21,6 +21,8 @@
                  [jfree/jfreechart "1.0.13"]
                  [org.apache.poi/poi "3.8"]
                  [org.apache.poi/poi-ooxml "3.8"]
+                 [org.apache.tika/tika-core "1.6"]
+                 [org.apache.tika/tika-parsers "1.6"]
                  [org.slf4j/slf4j-api "1.7.7"]
                  [org.slf4j/slf4j-simple "1.7.7"]
                  [com.google.gdata/core "1.47.1"]
