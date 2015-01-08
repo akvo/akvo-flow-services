@@ -80,7 +80,7 @@
         response
         (header "Access-Control-Allow-Origin" "*")
         (header "Content-Type" "text/plain"))
-      (if (:complete params)
+      (if (:complete params)              ;; 1.8.x
         (let [processor (if (:cascadeResourceId params)
                           cascade/schedule-upload-cascade
                           scheduler/process-and-upload)]
@@ -90,7 +90,12 @@
             response
             (header "Access-Control-Allow-Origin" "*")
             (header "Content-Type" "text/plain")))
-        {:status 400, :headers {}, :body "Bad Request"})))
+        (-> params                        ;; 1.7.x
+          (scheduler/process-and-upload)
+          :status
+          response
+          (header "Access-Control-Allow-Origin" "*")
+          (header "Content-Type" "text/plain")))))
 
   (POST "/reload" [params]
     (config/reload (:config-folder @config/settings)))
