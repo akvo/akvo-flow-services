@@ -22,6 +22,7 @@
             [akvo.flow-services.scheduler :as scheduler]
             [akvo.flow-services.gae :refer :all]
             [akvo.flow-services.uploader :refer [combine add-message notify-gae]]
+            [akvo.flow-services.text-file-utils :as text-file-utils]
             [clojure.java.io :as io]
             [me.raynes.fs.compression :as fsc]
             [me.raynes.fs :as fs]
@@ -403,7 +404,9 @@
         fpath (format "%s/%s" base uniqueIdentifier)
         csv-path (format "%s/%s" fpath filename)
         _ (combine fpath filename)
-        errors (validate-csv csv-path levels codes?)
+        cleaned-csv-path (format "%s/cleaned_%s" fpath filename)
+        _ (text-file-utils/clean csv-path cleaned-csv-path)
+        errors (validate-csv cleaned-csv-path levels codes?)
         bucket-name (config/get-bucket-name uploadDomain)]
     (if errors
       (do
@@ -412,7 +415,7 @@
 
       (try
         (delete-nodes uploadDomain cascadeResourceId)
-        (create-nodes uploadDomain cascadeResourceId csv-path levels codes?)
+        (create-nodes uploadDomain cascadeResourceId cleaned-csv-path levels codes?)
         (update-number-levels uploadDomain cascadeResourceId numLevels)
         (add-message bucket-name "cascadeImport" nil (format "Successfully imported csv file %s" filename))
         (catch Exception e
