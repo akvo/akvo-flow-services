@@ -18,13 +18,11 @@
   (:import [org.apache.tika Tika]
            [java.io FileWriter]))
 
-(def tika (Tika.))
-
 (defn clean
   "Clean from-file by ensuring UTF-8 encoding and normalized line endings. Write the result to to-file"
   [from-file to-file]
   (with-open [input-stream (io/input-stream (io/file from-file))
-              reader (io/reader (.parse tika input-stream))
+              reader (io/reader (.parse (Tika.) input-stream))
               file-writer (FileWriter. to-file)]
     ;; line-seq handles \r, \r\n and \n
     (doseq [line (line-seq reader)]
