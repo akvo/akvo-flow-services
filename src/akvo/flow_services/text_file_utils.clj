@@ -25,6 +25,7 @@
               reader (io/reader (.parse (Tika.) input-stream))
               file-writer (FileWriter. to-file)]
     ;; line-seq handles \r, \r\n and \n
-    (doseq [line (line-seq reader)]
+    (doseq [line (line-seq reader)
+            :when (not (empty? line))]
       (.write file-writer line)
       (.write file-writer "\n"))))
