@@ -389,7 +389,7 @@
                                   "cascadeResourceId" cascadeResourceId
                                   "status" "published"}))
       (catch Exception e
-        (errorf "Publishing cascade failed - uploadUrl: %s - resourceId: %s - version: %s - reason: %s"
+        (errorf e "Publishing cascade failed - uploadUrl: %s - resourceId: %s - version: %s - reason: %s"
                 uploadUrl cascadeResourceId version (.getMessage e))
         (future (notify-gae domain {"action" "cascade"
                                     "cascadeResourceId" cascadeResourceId
