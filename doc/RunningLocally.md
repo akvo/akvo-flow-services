@@ -2,7 +2,7 @@
 
 This document describes how to set up [akvo-flow-services](https://github.com/akvo/akvo-flow-services) and [akvo-flow](https://github.com/akvo/akvo-flow/) so you can use akvo-flow-services in a completely local setting.
 
-1. Follow the [installation notes](InstallationNotes.md)
+1. Follow the [installation notes](InstallationNotes.md) carefully and make sure that you have exportapplet.jar installed correctly in your local maven repository.
 2. Copy `config/config.edn` to a temporary `.edn` file (and keep it out of source control)
    1. `:config-folder` should point to a checked out `akvo-flow-server-config` repo
    2. `:username` should be `"reports@akvoflow.org"`
