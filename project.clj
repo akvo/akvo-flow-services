@@ -28,7 +28,7 @@
                  [com.google.gdata/core "1.47.1"]
                  [org.xerial/sqlite-jdbc "3.7.2"]
                  ; Akvo FLOW dependencies
-                 [exporterapplet "1.6.0"]
+                 [exporterapplet "1.8.1"]
                  [org.json/json "20090211"]
                  [log4j/log4j "1.2.16"]
                  ; Configuration and Stats
