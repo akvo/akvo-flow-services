@@ -9,4 +9,4 @@
                         :to emails
                         ;; Not all are reports, some are forms
                         :subject "Report ready for download"
-                        :message (format report-message file-path)}))
+                        :body (format report-message file-path)}))
