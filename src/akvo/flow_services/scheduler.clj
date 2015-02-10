@@ -82,7 +82,7 @@
     (try
       (scheduler/maybe-schedule job trigger)
       (catch ObjectAlreadyExistsException _))
-    (swap! in-flight-reports update-in [id] (fnil conj #{}) (get params "email"))
+    (swap! in-flight-reports update-in [id] (fnil conj #{}) (get-in params ["opts" "email"]))
     {:status "OK"
      :message "PROCESSING"}))
 
