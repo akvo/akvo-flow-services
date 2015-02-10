@@ -18,6 +18,7 @@
            java.io.File
            java.util.UUID)
   (:require [clojure.string :as str]
+            [taoensso.timbre :as timbre :refer (infof warnf)]
             [clojurewerkz.quartzite [conversion :as conversion]
                                     [jobs :as jobs]
                                     [scheduler :as scheduler]
@@ -50,7 +51,7 @@
                           :surveyId surveyId
                           :baseURL (config/get-domain baseURL)} path}))
     (if (= path "INVALID_PATH")
-      (do) ;; TODO Something went wrong with report generation. Log error. Send generation failed email?
+      (warnf "Could not generate report %s for surveyId %s" id surveyId)
       (email/send-report-ready (get @in-flight-reports id) path))
     (swap! in-flight-reports dissoc id)
     (scheduler/delete-job (jobs/key id))))
