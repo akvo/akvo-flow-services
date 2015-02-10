@@ -43,6 +43,9 @@
   [type base-url id options]
   (let [exporter (.getExporter (SurveyDataImportExportFactory.) type)
         file (get-file type base-url id)
+        options (assoc options
+                       "maxDataReportRows"
+                       (:max-data-report-rows @config/settings))
         criteria (-> "uploadUrl"
                    options
                    config/get-bucket-name

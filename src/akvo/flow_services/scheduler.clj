@@ -22,11 +22,14 @@
                                     [jobs :as jobs]
                                     [scheduler :as scheduler]
                                     [triggers :as triggers]]
-            [akvo.flow-services.config :as config])
+            [akvo.flow-services.config :as config]
+            [akvo.flow-services.email :as email])
   (:use [akvo.flow-services.exporter :only (export-report)]
         [akvo.flow-services.uploader :only (bulk-upload)]))
 
 (def cache (ref {}))
+
+(def in-flight-reports (atom {}))
 
 (defn- valid-report? [report-path]
   (boolean
@@ -46,6 +49,10 @@
       (alter cache conj {{:id id
                           :surveyId surveyId
                           :baseURL (config/get-domain baseURL)} path}))
+    (if (= path "INVALID_PATH")
+      (do) ;; TODO Something went wrong with report generation. Log error. Send generation failed email?
+      (email/send-report-ready (get @in-flight-reports id) path))
+    (swap! in-flight-reports dissoc id)
     (scheduler/delete-job (jobs/key id))))
 
 
@@ -74,6 +81,7 @@
     (try
       (scheduler/maybe-schedule job trigger)
       (catch ObjectAlreadyExistsException _))
+    (swap! in-flight-reports update-in [id] (fnil conj #{}) (get params "email"))
     {:status "OK"
      :message "PROCESSING"}))
 
