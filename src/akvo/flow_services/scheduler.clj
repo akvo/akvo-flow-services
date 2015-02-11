@@ -53,6 +53,7 @@
     (if (= path "INVALID_PATH")
       (warnf "Could not generate report %s for surveyId %s" id surveyId)
       (email/send-report-ready (get @in-flight-reports id)
+                               (get opts "locale" "en")
                                (format "%s/report/%s"
                                        (get opts "flowServices")
                                        path)))
