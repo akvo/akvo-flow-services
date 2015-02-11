@@ -14,13 +14,16 @@
 
 (ns akvo.flow-services.email
   (:require [akvo.flow-services.translate :refer (t>)]
+            [akvo.flow-services.config :as config]
             [postal.core :as postal]
             [taoensso.timbre :as timbre :refer (infof)]))
 
 (defn send-report-ready [emails locale url]
   (infof "Notifying %s about %s" emails url)
-  (postal/send-message {:from "reports@akvoflow.org"
-                        :to emails
-                        ;; Not all are reports, some are forms
-                        :subject (t> locale "_report_header")
-                        :body (t> locale "_report_body" url)}))
+  (let [settings @config/settings]
+    (postal/send-message (:notification settings)
+                         {:from  (:notification-from settings)
+                          :to emails
+                          :subject (t> locale "_report_header")
+                          :body (t> locale "_report_body" url)
+                          :Reply-To (:notification-reply-to settings)})))

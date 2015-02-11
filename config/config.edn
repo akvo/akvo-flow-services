@@ -33,6 +33,15 @@
                  "flowdemoenvironment-hrd.appspot.com" "akvoflow-beta1.appspot.com"
                  "akvoflow-beta2.appspot.com"]
 
+
+ :notification {:host "mail.akvo.org"
+                :user "noreply@akvoflow.org"
+                :pass "..."
+                :ssl true}
+
+ :notification-from "noreply@akvoflow.org"
+ :notification-reply-to "reports@akvoflow.org"
+
  ;; Maximum number of rows generated for raw data reports. Nil means no limit.
  :max-data-report-rows nil
 }
