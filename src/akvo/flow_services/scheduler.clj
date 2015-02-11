@@ -50,14 +50,15 @@
       (alter cache conj {{:id id
                           :surveyId surveyId
                           :baseURL (config/get-domain baseURL)} path}))
-    (if (= path "INVALID_PATH")
-      (warnf "Could not generate report %s for surveyId %s" id surveyId)
-      (email/send-report-ready (get @in-flight-reports id)
-                               (get opts "locale" "en")
-                               (format "%s/report/%s"
-                                       (get opts "flowServices")
-                                       path)))
-    (swap! in-flight-reports dissoc id)
+    (when (get opts "email")
+      (if (= path "INVALID_PATH")
+        (warnf "Could not generate report %s for surveyId %s" id surveyId)
+        (email/send-report-ready (get @in-flight-reports id)
+                                 (get opts "locale" "en")
+                                 (format "%s/report/%s"
+                                         (get opts "flowServices")
+                                         path)))
+      (swap! in-flight-reports dissoc id))
     (scheduler/delete-job (jobs/key id))))
 
 
@@ -86,7 +87,8 @@
     (try
       (scheduler/maybe-schedule job trigger)
       (catch ObjectAlreadyExistsException _))
-    (swap! in-flight-reports update-in [id] (fnil conj #{}) (get-in params ["opts" "email"]))
+    (when-let [email (get-in params ["opts" "email"])]
+      (swap! in-flight-reports update-in [id] (fnil conj #{}) email))
     {:status "OK"
      :message "PROCESSING"}))
 
