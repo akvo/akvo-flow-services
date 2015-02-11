@@ -21,9 +21,9 @@
   (let [ui-props (Properties.)
         en-props (Properties.)
         es-props (Properties.)]
-    (with-open [ui-reader (io/reader "resources/ui-strings.properties")
-                en-reader (io/reader "resources/en.properties")
-                es-reader (io/reader "resources/es.properties")]
+    (with-open [ui-reader (-> "ui-strings.properties" io/resource io/reader)
+                en-reader (-> "en.properties" io/resource io/reader)
+                es-reader (-> "es.properties" io/resource io/reader)]
       (.load ui-props ui-reader)
       (.load en-props en-reader)
       (.load es-props es-reader))
@@ -56,14 +56,14 @@
 
 (defn read-ui-strings []
   (let [props (Properties.)]
-    (with-open [r (io/reader "resources/ui-strings.properties")]
+    (with-open [r (-> "ui-strings.properties" io/resource io/reader)]
       (.load props r)
       (into {} props))))
 
 (defn write-locale-properties [locale ui-strings]
-  (let [file (format "resources/%s.properties" locale)
+  (let [resource (io/resource (format "%s.properties" locale))
         props (Properties.)]
-    (with-open [reader (io/reader file)]
+    (with-open [reader (io/reader resource)]
       (.load props reader)
       ;; Update keys found in ui-strings.properties
       ;; non-english locales will be initialized with ""
@@ -78,7 +78,7 @@
         (doseq [key extra-keys]
           (.remove props key))))
     ;; Save the updated <locale>.properties file
-    (with-open [writer (io/writer file)]
+    (with-open [writer (io/writer resource)]
       (.store props writer nil))))
 
 (comment
