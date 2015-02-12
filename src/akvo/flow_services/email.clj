@@ -22,7 +22,7 @@
   (infof "Notifying %s about %s" emails url)
   (let [settings @config/settings]
     (postal/send-message (:notification settings)
-                         {:from  (:notification-from settings)
+                         {:from (:notification-from settings)
                           :to emails
                           :subject (t> locale "_report_header")
                           :body (t> locale "_report_body" url)

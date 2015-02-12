@@ -46,14 +46,6 @@
     (assert s (str "No translation string for key " key))
     (apply format s args)))
 
-(comment
-  (t> "en" "_report_header")
-  (t> "en" "_report_body" "foo")
-
-  (t> "es" "_report_header")
-  (t> "es" "_report_body" "foobar")
-  )
-
 (defn read-ui-strings []
   (let [props (Properties.)]
     (with-open [r (-> "ui-strings.properties" io/resource io/reader)]
@@ -80,7 +72,3 @@
     ;; Save the updated <locale>.properties file
     (with-open [writer (io/writer resource)]
       (.store props writer nil))))
-
-(comment
-  (write-locale-properties "es" (read-ui-strings))
-  )
