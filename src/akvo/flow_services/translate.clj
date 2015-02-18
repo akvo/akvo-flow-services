@@ -21,12 +21,12 @@
   (let [ui-props (Properties.)
         en-props (Properties.)
         es-props (Properties.)]
-    (with-open [ui-reader (-> "ui-strings.properties" io/resource io/reader)
-                en-reader (-> "en.properties" io/resource io/reader)
-                es-reader (-> "es.properties" io/resource io/reader)]
-      (.load ui-props ui-reader)
-      (.load en-props en-reader)
-      (.load es-props es-reader))
+    (with-open [ui-input-stream (-> "ui-strings.properties" io/resource io/input-stream)
+                en-input-stream (-> "en.properties" io/resource io/input-stream)
+                es-input-stream (-> "es.properties" io/resource io/input-stream)]
+      (.load ui-props ui-input-stream)
+      (.load en-props en-input-stream)
+      (.load es-props es-input-stream))
     (let [ui-map (into {} ui-props)
           en-map (into {} en-props)
           es-map (into {} es-props)]
@@ -48,15 +48,15 @@
 
 (defn read-ui-strings []
   (let [props (Properties.)]
-    (with-open [r (-> "ui-strings.properties" io/resource io/reader)]
-      (.load props r)
+    (with-open [input-stream (-> "ui-strings.properties" io/resource io/input-stream)]
+      (.load props input-stream)
       (into {} props))))
 
 (defn write-locale-properties [locale ui-strings]
   (let [resource (io/resource (format "%s.properties" locale))
         props (Properties.)]
-    (with-open [reader (io/reader resource)]
-      (.load props reader)
+    (with-open [input-stream (io/input-stream resource)]
+      (.load props input-stream)
       ;; Update keys found in ui-strings.properties
       ;; non-english locales will be initialized with ""
       (doseq [[key value] ui-strings]
