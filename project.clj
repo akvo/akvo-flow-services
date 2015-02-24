@@ -1,4 +1,4 @@
-(defproject flow-services "0.8.6"
+(defproject flow-services "0.9.3"
   :description "HTTP layer to applets functionality"
   :url "https://github.com/akvo/akvo-flow-services"
   :license {:name "GNU Affero General Public License"
@@ -16,15 +16,20 @@
                  [me.raynes/fs "1.4.6"]
                  [clj-aws-s3 "0.3.9" :exclusions [joda-time]]
                  [clj-http "1.0.0"]
+                 [org.clojure/java.jdbc "0.3.5"]
+                 [com.draines/postal "1.11.3"]
                  ; Java libraries
                  [jfree/jfreechart "1.0.13"]
                  [org.apache.poi/poi "3.8"]
                  [org.apache.poi/poi-ooxml "3.8"]
+                 [org.apache.tika/tika-core "1.6"]
+                 [org.apache.tika/tika-parsers "1.6"]
                  [org.slf4j/slf4j-api "1.7.7"]
                  [org.slf4j/slf4j-simple "1.7.7"]
                  [com.google.gdata/core "1.47.1"]
+                 [org.xerial/sqlite-jdbc "3.7.2"]
                  ; Akvo FLOW dependencies
-                 [exporterapplet "1.6.0"]
+                 [exporterapplet "1.8.2"]
                  [org.json/json "20090211"]
                  [log4j/log4j "1.2.16"]
                  ; Configuration and Stats

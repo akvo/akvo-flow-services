@@ -19,16 +19,17 @@
     [cheshire.core :as json]
     [compojure [handler :as handler] [route :as route]]
     [clojurewerkz.quartzite.scheduler :as quartzite-scheduler]
-    [akvo.flow-services [scheduler :as scheduler] [uploader :as uploader]
-    [config :as config] [stats :as stats]]
+    [akvo.flow-services [scheduler :as scheduler]
+                        [uploader :as uploader]
+                        [cascade :as cascade]
+                        [config :as config]
+                        [stats :as stats]]
     [clojure.tools.nrepl.server :as nrepl]
     [taoensso.timbre :as timbre])
   (:gen-class))
 
-(defn- generate-report [params]
-  (let [criteria (json/parse-string (:criteria params)) ; TODO: validation
-        callback (:callback params)
-        resp (scheduler/generate-report criteria)]
+(defn- generate-report [criteria callback]
+  (let [resp (scheduler/generate-report criteria)]
     (-> (response (format "%s(%s);" callback (json/generate-string resp)))
         (content-type "text/javascript")
         (charset "UTF-8"))))
@@ -41,7 +42,23 @@
   (GET "/" [] "OK")
 
   (GET "/generate" [:as {params :params}]
-    (generate-report params))
+    (let [criteria (json/parse-string (:criteria params))  ;; TODO: validation
+          callback (:callback params)]
+      (if (or (nil? criteria) (= "null" criteria))
+        {:status 400 :headers {} :body "Bad Request"}
+        (generate-report criteria callback))))
+
+  ; example of params: {"uploadUrl": "https://flowaglimmerofhope.s3.amazonaws.com/", "cascadeResourceId": "22164001", "version": "1"}
+  (POST "/publish_cascade" req
+    (-> req
+      :body
+      slurp
+      json/parse-string
+      cascade/schedule-publish-cascade
+      json/generate-string
+      response
+      (content-type "application/json")
+      (charset "UTF-8")))
 
   (GET "/status" []
     (-> {:cache (keys @scheduler/cache)}
@@ -53,23 +70,35 @@
   (POST "/invalidate" [:as {params :params}]
     (invalidate-cache params))
 
+  (OPTIONS "/upload" [:as {params :params}]
+    (header (response "OK") "Access-Control-Allow-Origin" "*"))
+
   (POST "/upload" [:as {params :params}]
-    (if (contains? params :file)
+    (if (:file params)
       (-> params
         uploader/save-chunk
         response
-        (header "Access-Control-Allow-Origin" "*"))
-      (-> params
-        scheduler/process-and-upload
-        :status
-        response
-        (header "Access-Control-Allow-Origin" "*"))))
+        (header "Access-Control-Allow-Origin" "*")
+        (header "Content-Type" "text/plain"))
+      (if (:complete params)              ;; 1.8.x
+        (let [processor (if (:cascadeResourceId params)
+                          cascade/schedule-upload-cascade
+                          scheduler/process-and-upload)]
+          (-> params
+            processor
+            :status
+            response
+            (header "Access-Control-Allow-Origin" "*")
+            (header "Content-Type" "text/plain")))
+        (-> params                        ;; 1.7.x
+          (scheduler/process-and-upload)
+          :status
+          response
+          (header "Access-Control-Allow-Origin" "*")
+          (header "Content-Type" "text/plain")))))
 
   (POST "/reload" [params]
     (config/reload (:config-folder @config/settings)))
-
-  (OPTIONS "/upload" [:as {params :params}]
-    (header (response "OK") "Access-Control-Allow-Origin" "*"))
 
   (route/resources "/")
 
@@ -81,7 +110,7 @@
 
 (def app (handler/site endpoints))
 
-(def nrepl-srv (atom nil))
+(defonce nrepl-srv (atom nil))
 
 (defn -main [config-file]
   (when-let [cfg (config/set-settings! config-file)]

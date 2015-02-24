@@ -16,18 +16,18 @@
   (:import java.io.File
     [com.google.apphosting.utils.config AppEngineWebXml AppEngineWebXmlReader AppEngineConfigException])
   (:require [clojure.java.io :as io]
-    [clojure.string :as str :only (split)]
+    [clojure.string :as str]
     [clojure.java.shell :as shell]
-    [clojure.edn :as edn :only (read-string)]
+    [clojure.edn :as edn]
     [clojure.walk :refer (stringify-keys)]
-    [me.raynes.fs :as fs :only (find-files)]))
+    [me.raynes.fs :as fs]))
 
 
-(def configs (atom {}))
+(defonce configs (atom {}))
 
-(def instance-alias (atom {}))
+(defonce instance-alias (atom {}))
 
-(def settings (atom {}))
+(defonce settings (atom {}))
 
 (defn get-bucket-name
   "Extracts the bucket name from an upload domain url: https://akvoflow-1.s3.amazonaws.com => akvoflow-1"

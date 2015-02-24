@@ -20,11 +20,11 @@
                                     [triggers :as triggers]
                                     [scheduler :as scheduler]]
             [clojurewerkz.quartzite.schedule.daily-interval :as interval]
-            [akvo.flow-services.config :as config :only (settings instance-alias)]
+            [akvo.flow-services.config :as config]
             [akvo.flow-services.gae :refer :all]
-            [clojure.data.csv :as csv :only (write-csv)]
+            [clojure.data.csv :as csv]
             [clojure.java.io :as io]
-            [clojure.string :as str :only (split)]
+            [clojure.string :as str]
             [clojure.set :refer (difference)]))
 
 

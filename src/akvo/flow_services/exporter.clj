@@ -1,4 +1,4 @@
-;  Copyright (C) 2013 Stichting Akvo (Akvo Foundation)
+;  Copyright (C) 2013-2015 Stichting Akvo (Akvo Foundation)
 ;
 ;  This file is part of Akvo FLOW.
 ;
@@ -43,6 +43,9 @@
   [type base-url id options]
   (let [exporter (.getExporter (SurveyDataImportExportFactory.) type)
         file (get-file type base-url id)
+        options (assoc options
+                       "maxDataReportRows"
+                       (:max-data-report-rows @config/settings))
         criteria (-> "uploadUrl"
                    options
                    config/get-bucket-name

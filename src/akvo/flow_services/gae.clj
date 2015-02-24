@@ -13,7 +13,7 @@
 ;  The full license text can also be seen at <http://www.gnu.org/licenses/agpl.html>.
 
 (ns akvo.flow-services.gae
-  (:require [taoensso.timbre :as timbre :refer (debugf error)])
+  (:require [taoensso.timbre :as timbre :refer (info debugf error)])
   (:import java.util.Date java.io.IOException
     [com.google.appengine.tools.remoteapi RemoteApiInstaller RemoteApiOptions]
     [com.google.appengine.api.datastore DatastoreServiceFactory Entity Query
@@ -23,7 +23,7 @@
 (defn get-options
   "Returns a RemoteApiOptions object"
   [server usr pwd]
-  (debugf "Creating RemoteApiOptions - server: %s - user: %s - password: %s" server usr pwd)
+  (debugf "Creating RemoteApiOptions - server: %s - user: %s" server usr)
   (doto
     (RemoteApiOptions.)
     (.server server 443)
@@ -36,6 +36,8 @@
     (doto
       (RemoteApiInstaller.)
       (.install opts))
+    (catch IllegalStateException e
+      (info (.getMessage e)))
     (catch IOException e
       (error e "Error installing options"))))
 
@@ -44,8 +46,9 @@
   ([]
     (FetchOptions$Builder/withDefaults))
   ([size]
-    (FetchOptions$Builder/withChunkSize size)))
-
+    (FetchOptions$Builder/withChunkSize size))
+  ([size cursor]
+    (.startCursor (FetchOptions$Builder/withLimit size) cursor)))
 
 (defn get-ds
   "Returns an instance of a DatastoreService"
@@ -88,7 +91,9 @@
         entity (Entity. entity-name)
         ts (Date.)]
     (doseq [k (keys props)]
-      (.setProperty entity k (props k)))
+      (.setProperty entity (name k) (props k)))
     (.setProperty entity "createdDateTime" ts)
     (.setProperty entity "lastUpdateDateTime" ts)
-    (.put ds entity)))
+    (let [k (.put ds entity)]
+      (.uninstall installer)
+      k)))
