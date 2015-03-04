@@ -107,7 +107,7 @@
         (doseq [k (keys @cache) :when (and (= (:surveyId k) (str sid))
                                            (or (= (:baseURL k) baseURL)
                                                (= (:baseURL k) alias)))]
-          (prn "Invalidating: " k) ;; TODO better logging
+          (infof "Invalidating: %s" k)
           (alter cache dissoc k))))
     "OK"))
 

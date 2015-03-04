@@ -1,4 +1,4 @@
-;  Copyright (C) 2013-2014 Stichting Akvo (Akvo Foundation)
+;  Copyright (C) 2013-2015 Stichting Akvo (Akvo Foundation)
 ;
 ;  This file is part of Akvo FLOW.
 ;
@@ -154,7 +154,7 @@
         success? (loop [attempts 1]
                    (when (<= attempts max-retries)
                      (or (try
-                           (infof "Notifying %s (Attempt #%s)" server  attempts)
+                           (debugf "Notifying %s (Attempt #%s)" server  attempts)
                            (http/get (format "https://%s/processor?%s" server (query-string params)))
                            (catch Exception e
                              (infof "Failed to notify %s. Retry in %s msecs" server sleep-time)))
