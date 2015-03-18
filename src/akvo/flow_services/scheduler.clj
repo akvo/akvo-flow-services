@@ -1,4 +1,4 @@
-;  Copyright (C) 2013-2014 Stichting Akvo (Akvo Foundation)
+;  Copyright (C) 2013-2015 Stichting Akvo (Akvo Foundation)
 ;
 ;  This file is part of Akvo FLOW.
 ;
@@ -18,15 +18,19 @@
            java.io.File
            java.util.UUID)
   (:require [clojure.string :as str]
+            [taoensso.timbre :as timbre :refer (infof warnf)]
             [clojurewerkz.quartzite [conversion :as conversion]
                                     [jobs :as jobs]
                                     [scheduler :as scheduler]
                                     [triggers :as triggers]]
-            [akvo.flow-services.config :as config])
+            [akvo.flow-services.config :as config]
+            [akvo.flow-services.email :as email])
   (:use [akvo.flow-services.exporter :only (export-report)]
         [akvo.flow-services.uploader :only (bulk-upload)]))
 
 (def cache (ref {}))
+
+(def in-flight-reports (atom {}))
 
 (defn- valid-report? [report-path]
   (boolean
@@ -46,6 +50,15 @@
       (alter cache conj {{:id id
                           :surveyId surveyId
                           :baseURL (config/get-domain baseURL)} path}))
+    (when (get opts "email")
+      (if (= path "INVALID_PATH")
+        (warnf "Could not generate report %s for surveyId %s" id surveyId)
+        (email/send-report-ready (get @in-flight-reports id)
+                                 (get opts "locale" "en")
+                                 (format "%s/report/%s"
+                                         (get opts "flowServices")
+                                         path)))
+      (swap! in-flight-reports dissoc id))
     (scheduler/delete-job (jobs/key id))))
 
 
@@ -74,6 +87,8 @@
     (try
       (scheduler/maybe-schedule job trigger)
       (catch ObjectAlreadyExistsException _))
+    (when-let [email (get-in params ["opts" "email"])]
+      (swap! in-flight-reports update-in [id] (fnil conj #{}) email))
     {:status "OK"
      :message "PROCESSING"}))
 
@@ -92,7 +107,7 @@
         (doseq [k (keys @cache) :when (and (= (:surveyId k) (str sid))
                                            (or (= (:baseURL k) baseURL)
                                                (= (:baseURL k) alias)))]
-          (prn "Invalidating: " k) ;; TODO better logging
+          (infof "Invalidating: %s" k)
           (alter cache dissoc k))))
     "OK"))
 
