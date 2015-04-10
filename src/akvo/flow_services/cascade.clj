@@ -419,7 +419,7 @@
   [csv-path expected-column-count]
   {:pre [(string? csv-path)
          (integer? expected-column-count)]
-   :post [(contains? % supported-separators)]}
+   :post [(contains? supported-separators %)]}
   (let [separator (->> supported-separators
                        (map #(csv-column-count csv-path %))
                        (some (fn [{:keys [separator count]}]
