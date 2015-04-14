@@ -170,8 +170,14 @@
                             {:line (inc idx)
                              :row row}))
              (some (fn [{:keys [line row]}]
-                     (if (not= (count (remove empty? row)) expected-column-count)
-                       [(format "Line: %s, Row: %s" line (str/join separator row))])))))
+                     (cond
+                       (not= (count row) expected-column-count)
+                       [(format "Wrong number of columns %s on line %s, Row: %s"
+                                (count row) line (str/join separator row))]
+
+                       (some #(-> % .trim .isEmpty) row)
+                       [(format "Empty cascade node on line %s. Row: %s"
+                                line (str/join separator row))])))))
       [(format "File Not Found at %s" (.getAbsolutePath f))])))
 
 (defn create-node
