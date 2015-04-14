@@ -1,4 +1,4 @@
-;  Copyright (C) 2014 Stichting Akvo (Akvo Foundation)
+;  Copyright (C) 2014-2015 Stichting Akvo (Akvo Foundation)
 ;
 ;  This file is part of Akvo FLOW.
 ;
@@ -161,18 +161,17 @@
 (defn validate-csv
   "Validates a cascade CSV file based on number of levels and the presence of `codes` in the file
    Returns the first invalid row or nil if everything is corrent"
-  [fpath levels codes?]
-  (let [l (if codes? (* levels 2) levels)
-        f (io/file fpath)]
+  [fpath expected-column-count separator]
+  (let [f (io/file fpath)]
     (if (and (.exists f) (.canRead f))
       (with-open [r (io/reader f)]
-        (->> (csv/read-csv r)
+        (->> (csv/read-csv r :separator separator)
              (map-indexed (fn [idx row]
                             {:line (inc idx)
                              :row row}))
              (some (fn [{:keys [line row]}]
-                     (if (not= (count (remove empty? row)) l)
-                       [(format "Line: %s, Row: %s" line (str/join ", " row))])))))
+                     (if (not= (count (remove empty? row)) expected-column-count)
+                       [(format "Line: %s, Row: %s" line (str/join separator row))])))))
       [(format "File Not Found at %s" (.getAbsolutePath f))])))
 
 (defn create-node
@@ -227,14 +226,14 @@
 (defn csv-to-db
   "Creates a SQLite db and inserts the data from a CSV file.
   An exception when inserting can be considered a validation error"
-  [fpath levels codes?]
+  [fpath levels codes? separator]
   (let [db (create-tmp-data-db levels)
         columns (vec (flatten
                        (for [n (range levels)]
                          [(format "code_%s" n) (format "name_%s" n)])))]
     (with-open [r (io/reader (io/file fpath))]
       (debugf "Inserting CSV data into db")
-      (doseq [line (csv/read-csv r)]
+      (doseq [line (csv/read-csv r :separator separator)]
         (insert! db :data columns (if codes? line (interleave line line)))))
     (doseq [level (range levels)]
       (let [table-ddl (create-table-ddl (keyword (str "nodes_" level))
@@ -277,12 +276,12 @@
     (.uninstall installer)))
 
 (defn create-nodes
-  [upload-url cascade-id csv-path levels codes?]
+  [upload-url cascade-id csv-path levels codes? separator]
   (let [{:keys [username password]} @config/settings
         cfg (@config/configs (config/get-bucket-name upload-url))
         opts (get-options (:domain cfg) username password)
         installer (get-installer opts)
-        db (csv-to-db csv-path levels codes?)
+        db (csv-to-db csv-path levels codes? separator)
         ds (get-ds)
         sql-limit page-size]
     (loop [level 0
@@ -396,6 +395,38 @@
                                     "cascadeResourceId" cascadeResourceId
                                     "status" "error"}))))))
 
+(defn csv-column-count
+  "Given a file-path, try to deduce the number of columns the csv file contains using a specific separator.
+   Returns both the separator and the count. The count is negative if the column count varies."
+  [csv-path separator]
+  {:pre [(string? csv-path)
+         (char? separator)]}
+  (let [col-counts (with-open [r (io/reader csv-path)]
+                     (->> (csv/read-csv r :separator separator)
+                          (take 10)
+                          (mapv count)))]
+    (if (and (not (empty? col-counts))
+             (apply = col-counts))
+      {:separator separator
+       :count (first col-counts)}
+      {:separator separator
+       :count -1})))
+
+(def supported-separators #{\, \; \tab})
+
+(defn find-csv-separator
+  "Attempt do deduce the separator used for the csv file at file-path"
+  [csv-path expected-column-count]
+  {:pre [(string? csv-path)
+         (integer? expected-column-count)]
+   :post [(contains? supported-separators %)]}
+  (let [separator (->> supported-separators
+                       (map #(csv-column-count csv-path %))
+                       (some (fn [{:keys [separator count]}]
+                               (when (= count expected-column-count)
+                                 separator))))]
+    (or separator \,)))
+
 (jobs/defjob UploadCascadeJob [job-data]
   (let [{:strs [uploadDomain cascadeResourceId numLevels uniqueIdentifier filename includeCodes]} (conversion/from-job-data job-data)
         levels (Long/parseLong numLevels)
@@ -406,7 +437,9 @@
         _ (combine fpath filename)
         cleaned-csv-path (format "%s/cleaned_%s" fpath filename)
         _ (text-file-utils/clean csv-path cleaned-csv-path)
-        errors (validate-csv cleaned-csv-path levels codes?)
+        expected-column-count (if codes? (* 2 levels) levels)
+        separator (find-csv-separator cleaned-csv-path expected-column-count)
+        errors (validate-csv cleaned-csv-path expected-column-count separator)
         bucket-name (config/get-bucket-name uploadDomain)]
     (if errors
       (do
@@ -415,7 +448,7 @@
 
       (try
         (delete-nodes uploadDomain cascadeResourceId)
-        (create-nodes uploadDomain cascadeResourceId cleaned-csv-path levels codes?)
+        (create-nodes uploadDomain cascadeResourceId cleaned-csv-path levels codes? separator)
         (update-number-levels uploadDomain cascadeResourceId numLevels)
         (add-message bucket-name "cascadeImport" nil (format "Successfully imported csv file %s" filename))
         (catch Exception e
