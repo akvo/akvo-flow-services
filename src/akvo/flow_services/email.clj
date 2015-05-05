@@ -14,7 +14,7 @@
 
 (ns akvo.flow-services.email
   (:require [akvo.flow-services.translate :refer (t>)]
-            [akvo.flow-services.config :as config]
+            [akvo.commons.config :as config]
             [postal.core :as postal]
             [taoensso.timbre :as timbre :refer (infof)]))
 
