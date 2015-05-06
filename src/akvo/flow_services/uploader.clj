@@ -133,6 +133,15 @@
     (remove #(.contains (.getAbsolutePath %) "__MACOSX"))
     (remove #(.contains (.getName %) "wfpGenerated"))))
 
+(defn data-format?
+  "Determine whether the zip file contains JSON or TSV data"
+  [f]
+  (with-open [zf (ZipFile. f)]
+    (cond
+      (.getEntry zf "data.json") :json
+      (.getEntry zf "data.txt") :tsv
+      :else nil)))
+
 (defn- get-zip-files
   [path]
   (filter-files (fs/find-files path #".*\.zip$")))
@@ -168,14 +177,17 @@
 (defn- bulk-survey
   [path bucket-name filename]
   (infof "Bulk upload - path: %s - bucket: %s - file: " path bucket-name filename)
-  (let [data (group-by #(nth (str/split % #"\t") 11) ;; 12th column contains the UUID
-               (remove nil?
-                 (distinct (mapcat get-data (get-zip-files path)))))
+  (let [files (group-by data-format? (get-zip-files path))
+        tsv-data (group-by #(nth (str/split % #"\t") 11) ;; 12th column contains the UUID
+                           (remove nil? (distinct (mapcat get-data (:tsv files)))))
         server (:domain (@config/configs bucket-name))]
-    (doseq [k (keys data)
+    (doseq [file (:json files)]
+      (upload file bucket-name)
+      (future (notify-gae server {"action" "submit" "fileName" (.getName file)})))
+    (doseq [k (keys tsv-data)
             :let [fname (format "/tmp/%s.zip" k)
                   fzip (io/file fname)]]
-      (fsc/zip fzip ["data.txt" (str/join "\n" (data k))])
+      (fsc/zip fzip ["data.txt" (str/join "\n" (tsv-data k))])
       (upload fzip bucket-name)
       (future (notify-gae server {"action" "submit" "fileName" (.getName fzip)})))
     (doseq [f (get-images path)]
