@@ -133,7 +133,7 @@
     (remove #(.contains (.getAbsolutePath %) "__MACOSX"))
     (remove #(.contains (.getName %) "wfpGenerated"))))
 
-(defn data-format?
+(defn get-format
   "Determine whether the zip file contains JSON or TSV data"
   [f]
   (with-open [zf (ZipFile. f)]
@@ -177,7 +177,7 @@
 (defn- bulk-survey
   [path bucket-name filename]
   (infof "Bulk upload - path: %s - bucket: %s - file: " path bucket-name filename)
-  (let [files (group-by data-format? (get-zip-files path))
+  (let [files (group-by get-format (get-zip-files path))
         tsv-data (group-by #(nth (str/split % #"\t") 11) ;; 12th column contains the UUID
                            (remove nil? (distinct (mapcat get-data (:tsv files)))))
         server (:domain (@config/configs bucket-name))]
