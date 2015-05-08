@@ -15,7 +15,7 @@
 (ns akvo.flow-services.exporter
   (:require [clojure.java.io :as io]
     [clojure.walk :refer (stringify-keys)]
-    [akvo.flow-services.config :as config]
+    [akvo.commons.config :as config]
     [taoensso.timbre :as timbre :refer (infof)])
   (:import java.io.File
     java.util.UUID

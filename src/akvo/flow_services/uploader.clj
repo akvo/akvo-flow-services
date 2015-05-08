@@ -23,8 +23,8 @@
             [me.raynes.fs.compression :as fsc]
             [aws.sdk.s3 :as s3]
             [clj-http.client :as http]
-            [akvo.flow-services.config :as config]
-            [akvo.flow-services.gae :as gae]
+            [akvo.commons.config :as config]
+            [akvo.commons.gae :as gae]
             [taoensso.timbre :as timbre :refer (debugf infof errorf)]))
 
 
@@ -93,7 +93,7 @@
     (str prefix fname)))
 
 (defn- upload [f bucket-name]
-  (let [creds (select-keys (@config/configs bucket-name) [:access-key :secret-key])
+  (let [creds (select-keys (config/find-config bucket-name) [:access-key :secret-key])
         obj-key (get-key f)]
     (debugf "Uploading file: %s - bucket: %s" f bucket-name)
     (if (.startsWith obj-key "images/")
@@ -102,11 +102,15 @@
 
 (defn add-message [bucket-name action obj-id content]
   (let [settings @config/settings
-        config (@config/configs bucket-name)
+        config (config/find-config bucket-name)
         msg {"actionAbout" action
              "objectId" (if obj-id (Long/parseLong obj-id))
              "shortMessage" content}]
-    (gae/put! (:domain config) (:username settings) (:password settings) "Message" msg)))
+    (gae/with-datastore [ds {:server (:domain config)
+                             :email (:username settings)
+                             :password (:password settings)
+                             :port 443}]
+      (gae/put! ds "Message" msg))))
 
 (defn- raw-data
   [f base-url bucket-name surveyId]
@@ -171,7 +175,7 @@
   (let [data (group-by #(nth (str/split % #"\t") 11) ;; 12th column contains the UUID
                (remove nil?
                  (distinct (mapcat get-data (get-zip-files path)))))
-        server (:domain (@config/configs bucket-name))]
+        server (:domain (config/find-config bucket-name))]
     (doseq [k (keys data)
             :let [fname (format "/tmp/%s.zip" k)
                   fzip (io/file fname)]]
