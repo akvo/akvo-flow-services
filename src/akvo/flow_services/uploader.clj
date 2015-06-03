@@ -167,7 +167,6 @@
         success? (loop [attempts 1]
                    (when (<= attempts max-retries)
                      (or (try
-                           (Thread/sleep 1000); Throttle GAE notifications
                            (debugf "Notifying %s (Attempt #%s)" server  attempts)
                            (http/get (format "https://%s/processor?%s" server (query-string params)))
                            (catch Exception e
@@ -188,13 +187,13 @@
         server (:domain (config/find-config bucket-name))]
     (doseq [file (:json files)]
       (upload file bucket-name)
-      (notify-gae server {"action" "submit" "fileName" (.getName file)}))
+      (future (notify-gae server {"action" "submit" "fileName" (.getName file)})))
     (doseq [k (keys tsv-data)
             :let [fname (format "/tmp/%s.zip" k)
                   fzip (io/file fname)]]
       (fsc/zip fzip ["data.txt" (str/join "\n" (tsv-data k))])
       (upload fzip bucket-name)
-      (notify-gae server {"action" "submit" "fileName" (.getName fzip)}))
+      (future (notify-gae server {"action" "submit" "fileName" (.getName fzip)})))
     (doseq [f (get-images path)]
       (upload f bucket-name))
     (add-message bucket-name "bulkUpload" nil (format "File: %s processed" filename))))
