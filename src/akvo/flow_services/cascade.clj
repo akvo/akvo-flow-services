@@ -50,6 +50,7 @@
     (db-do-commands db-spec
       (create-table-ddl :nodes
         [:id :integer "PRIMARY KEY"]
+        [:code :text]
         [:name :text]
         [:parent :integer])
       "CREATE UNIQUE INDEX node_idx ON nodes (name, parent)")
@@ -91,14 +92,14 @@
   23212   item4	 23455  =>  2  item4  5
   The 0 nodeId is mapped to 0"
   [nodes]
-  (let [f (fn [{:keys [idxs next-id result]} {:keys [id name parent]}]
+  (let [f (fn [{:keys [idxs next-id result]} {:keys [id code name parent]}]
             (let [new-id (get idxs id next-id)
                   next-id (if (= new-id next-id) (inc next-id) next-id)
                   new-parent-id (get idxs parent next-id)
                   next-id (if (= new-parent-id next-id) (inc next-id) next-id)]
               {:idxs (assoc idxs id new-id parent new-parent-id)
                :next-id next-id
-               :result (conj result {:id new-id :name name :parent new-parent-id})}))]
+               :result (conj result {:id new-id :code code :name name :parent new-parent-id})}))]
     (:result
       (reduce f {:idxs {0 0}
                  :next-id 1
@@ -156,6 +157,7 @@
                                (errorf e "Error getting data from GAE: %s" (.getMessage e))))
                            (into nodes (for [node entities]
                                          {:id (.. node (getKey) (getId))
+                                          :code (.getProperty node "code")
                                           :name (.getProperty node "name")
                                           :parent (.getProperty node "parentNodeId")})))))]
       (sort-by :id data))))
