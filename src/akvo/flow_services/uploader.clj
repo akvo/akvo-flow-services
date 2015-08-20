@@ -16,9 +16,12 @@
   (:import java.io.File
            org.waterforpeople.mapping.dataexport.RawDataSpreadsheetImporter
            java.util.zip.ZipFile
-           java.net.URLEncoder)
+           java.net.URLEncoder
+           [org.apache.poi.ss.usermodel Cell Row Sheet]
+           [com.google.appengine.api.datastore Entity Query])
   (:require [clojure.java.io :as io]
             [clojure.string :as str]
+            [clojure.set :as set]
             [me.raynes.fs :as fs]
             [me.raynes.fs.compression :as fsc]
             [aws.sdk.s3 :as s3]
@@ -112,10 +115,57 @@
                              :port 443}]
       (gae/put! ds "Message" msg))))
 
+(defn- retrieve-question-ids [bucket-name surveyId]
+  (let [settings @config/settings
+        config (config/find-config bucket-name)]
+    (gae/with-datastore [ds {:server (:domain config)
+                             :email (:username settings)
+                             :password (:password settings)
+                             :port 443}]
+      (let [query (Query. "Question")
+            qf (.setKeysOnly (.setFilter query (gae/get-filter "surveyId" (Long/valueOf surveyId))))
+            pq (.prepare ds qf)]
+        (try
+          (.asList pq (gae/get-fetch-options))
+          (catch Exception e
+            (errorf e "Error retrieving questions for survey %s from GAE: %s" surveyId (.getMessage e))))))))
+
+(defn- get-datastore-ids [bucket-name surveyId]
+  (for [question (retrieve-question-ids bucket-name surveyId)]
+    (.getId (.getKey question))))
+
+(defn- get-file-ids [sheet]
+  (->> (.getRow sheet 0)
+       (map (fn [cell] (second (re-find #"(\d+)|" (.getStringCellValue cell)))))
+       (filter some?)
+       (map #(Long/parseLong %))))
+
+(defn- validate-question-ids
+  "validate whether file was uploaded against a wrong survey
+   based on question ids it contains. Assume that if none of
+   the ids in the file can be matched with any in the survey, then
+   file has been uploaded against the wrong survey.  If only some
+   are not matched, none matched ids possibly indicate deleted questions"
+  [f importer bucket-name surveyId]
+  (let [datastore-ids (into #{} (get-datastore-ids bucket-name surveyId))
+        file-ids (into #{} (get-file-ids (.getDataSheet importer f)))
+        invalid-ids (set/difference file-ids datastore-ids)
+        file-name (.getName f)]
+    (when
+      (and (not (empty? invalid-ids))(= invalid-ids file-ids))
+      {-2 (format "The uploaded file '%s' does not match the selected survey" file-name)})))
+
+(defn- validate-raw-data [f importer bucket-name surveyId]
+  (let [invalid-question-errors (validate-question-ids f importer bucket-name surveyId)
+        invalid-header-errors (when (empty? invalid-question-errors)(.validate importer f))]
+    (if (not (empty? invalid-question-errors))
+      invalid-question-errors
+      (when (not (empty? invalid-header-errors)) invalid-header-errors))))
+
 (defn- raw-data
   [f base-url bucket-name surveyId]
   (let [importer (RawDataSpreadsheetImporter.)
-        errors (.validate importer f)]
+        errors (validate-raw-data f importer bucket-name surveyId)]
     (if (not (empty? errors))
       (errorf "Errors in raw data upload - baseURL: %s - file: %s - surveyId: %s - errors: %s" base-url f surveyId errors))
     (if (empty? errors)
