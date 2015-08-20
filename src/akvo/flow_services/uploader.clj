@@ -17,9 +17,7 @@
            org.waterforpeople.mapping.dataexport.RawDataSpreadsheetImporter
            java.util.zip.ZipFile
            java.net.URLEncoder
-           org.apache.poi.ss.usermodel.Cell
-           org.apache.poi.ss.usermodel.Row
-           org.apache.poi.ss.usermodel.Sheet
+           [org.apache.poi.ss.usermodel Cell Row Sheet]
            [com.google.appengine.api.datastore Entity Query])
   (:require [clojure.java.io :as io]
             [clojure.string :as str]
@@ -117,7 +115,7 @@
                              :port 443}]
       (gae/put! ds "Message" msg))))
 
-(defn- retrieve-questions [bucket-name surveyId]
+(defn- retrieve-question-ids [bucket-name surveyId]
   (let [settings @config/settings
         config (config/find-config bucket-name)]
     (gae/with-datastore [ds {:server (:domain config)
@@ -125,29 +123,30 @@
                              :password (:password settings)
                              :port 443}]
       (let [query (Query. "Question")
-          qf (.setKeysOnly (.setFilter query (gae/get-filter "surveyId" (Long/valueOf surveyId))))
-          pq (.prepare ds qf)]
+            qf (.setKeysOnly (.setFilter query (gae/get-filter "surveyId" (Long/valueOf surveyId))))
+            pq (.prepare ds qf)]
         (try
           (.asList pq (gae/get-fetch-options))
           (catch Exception e
             (errorf e "Error retrieving questions for survey %s from GAE: %s" surveyId (.getMessage e))))))))
 
 (defn- get-datastore-ids [bucket-name surveyId]
-  (for [question (retrieve-questions bucket-name surveyId)]
+  (for [question (retrieve-question-ids bucket-name surveyId)]
     (.getId (.getKey question))))
 
 (defn- get-file-ids [sheet]
-  (map (fn [idstr] (Long. idstr))
-       (filter (fn [idstr] (not (nil? idstr)))
-                 (map (fn [cell] (nth (re-find #"(\d+)|" (.getStringCellValue cell)) 1))
-                      (.getRow sheet 0)))))
+  (->> (.getRow sheet 0)
+       (map (fn [cell] (second (re-find #"(\d+)|" (.getStringCellValue cell)))))
+       (filter some?)
+       (map #(Long/parseLong %))))
 
-(defn- validate-question-ids [f importer bucket-name surveyId]
+(defn- validate-question-ids
   "validate whether file was uploaded against a wrong survey
    based on question ids it contains. Assume that if none of
    the ids in the file can be matched with any in the survey, then
    file has been uploaded against the wrong survey.  If only some
    are not matched, none matched ids possibly indicate deleted questions"
+  [f importer bucket-name surveyId]
   (let [datastore-ids (into #{} (get-datastore-ids bucket-name surveyId))
         file-ids (into #{} (get-file-ids (.getDataSheet importer f)))
         invalid-ids (set/difference file-ids datastore-ids)
