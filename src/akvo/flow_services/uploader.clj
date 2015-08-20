@@ -153,6 +153,7 @@
         file-name (.getName f)]
     (when
       (and (not (empty? invalid-ids))(= invalid-ids file-ids))
+      ;; the -2 below is due to convention use RawDataSpreadsheetImporter.validate()
       {-2 (format "The uploaded file '%s' does not match the selected survey" file-name)})))
 
 (defn- validate-raw-data [f importer bucket-name surveyId]
