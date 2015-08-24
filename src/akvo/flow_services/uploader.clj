@@ -172,7 +172,7 @@
     (if (empty? errors)
       (.executeImport importer f base-url (config/get-criteria bucket-name surveyId))
       (add-message bucket-name "importData" surveyId
-                   (format "Invalid RAW DATA file: %s - Errors: %s" (.getName f) (str/join (vals errors) ","))))))
+                   (format "Invalid RAW DATA file: %s - Errors: %s" (.getName f) (str/join ", " (vals errors)))))))
 
 (defn- get-data [f]
   (try
