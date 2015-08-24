@@ -108,7 +108,11 @@
         config (config/find-config bucket-name)
         msg {"actionAbout" action
              "objectId" (if obj-id (Long/parseLong obj-id))
-             "shortMessage" content}]
+             ;; Return only first 500 xters of message due to GAE String limitation
+             "shortMessage" (if
+                              (nil? content)
+                              ""
+                              (subs content 0 (min 499 (count content))))}]
     (gae/with-datastore [ds {:server (:domain config)
                              :email (:username settings)
                              :password (:password settings)
@@ -172,7 +176,7 @@
     (if (empty? errors)
       (.executeImport importer f base-url (config/get-criteria bucket-name surveyId))
       (add-message bucket-name "importData" surveyId
-                   (format "Invalid RAW DATA file: %s - Errors: %s" (.getName f) (str/join (vals errors) ","))))))
+                   (format "Invalid RAW DATA file: %s - Errors: %s" (.getName f) (str/join ", " (vals errors)))))))
 
 (defn- get-data [f]
   (try
