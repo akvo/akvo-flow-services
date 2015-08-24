@@ -108,7 +108,8 @@
         config (config/find-config bucket-name)
         msg {"actionAbout" action
              "objectId" (if obj-id (Long/parseLong obj-id))
-             "shortMessage" content}]
+             ;; Return only first 500 xters of message due to GAE String limitation
+             "shortMessage" (subs content 0 (min 499 (.length content)))}]
     (gae/with-datastore [ds {:server (:domain config)
                              :email (:username settings)
                              :password (:password settings)
