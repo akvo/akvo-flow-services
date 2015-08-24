@@ -109,7 +109,10 @@
         msg {"actionAbout" action
              "objectId" (if obj-id (Long/parseLong obj-id))
              ;; Return only first 500 xters of message due to GAE String limitation
-             "shortMessage" (subs content 0 (min 499 (.length content)))}]
+             "shortMessage" (if
+                              (nil? content)
+                              ""
+                              (subs content 0 (min 499 (count content))))}]
     (gae/with-datastore [ds {:server (:domain config)
                              :email (:username settings)
                              :password (:password settings)
