@@ -109,8 +109,7 @@
         msg {"actionAbout" action
              "objectId" (if obj-id (Long/parseLong obj-id))
              ;; Return only first 500 xters of message due to GAE String limitation
-             "shortMessage" (if
-                              (nil? content)
+             "shortMessage" (if (nil? content)
                               ""
                               (subs content 0 (min 499 (count content))))}]
     (gae/with-datastore [ds {:server (:domain config)
@@ -235,7 +234,7 @@
 
 (defn- bulk-survey
   [path bucket-name filename]
-  (infof "Bulk upload - path: %s - bucket: %s - file: " path bucket-name filename)
+  (infof "Bulk upload - path: %s - bucket: %s - file: %s" path bucket-name filename)
   (let [files (group-by get-format (get-zip-files path))
         tsv-data (group-by #(nth (str/split % #"\t") 11) ;; 12th column contains the UUID
                            (remove nil? (distinct (mapcat get-data (:tsv files)))))
