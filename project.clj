@@ -1,4 +1,4 @@
-(defproject flow-services "0.9.5"
+(defproject flow-services "0.9.7"
   :description "HTTP layer to applets functionality"
   :url "https://github.com/akvo/akvo-flow-services"
   :license {:name "GNU Affero General Public License"
@@ -7,6 +7,7 @@
   :dependencies [[org.clojure/clojure "1.6.0"]
                  [org.clojure/data.csv "0.1.2"]
                  [org.clojure/tools.nrepl "0.2.5"]
+                 [org.akvo/commons "0.2.0"]
                  [com.taoensso/timbre "3.3.1"]
                  [cheshire "5.3.1"]
                  [compojure "1.1.8"]
@@ -29,7 +30,7 @@
                  [com.google.gdata/core "1.47.1"]
                  [org.xerial/sqlite-jdbc "3.7.2"]
                  ; Akvo FLOW dependencies
-                 [exporterapplet "1.8.3"]
+                 [exporterapplet "1.9.0"]
                  [org.json/json "20090211"]
                  [log4j/log4j "1.2.16"]
                  ; Configuration and Stats

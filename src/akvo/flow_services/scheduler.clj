@@ -23,7 +23,7 @@
                                     [jobs :as jobs]
                                     [scheduler :as scheduler]
                                     [triggers :as triggers]]
-            [akvo.flow-services.config :as config]
+            [akvo.commons.config :as config]
             [akvo.flow-services.email :as email])
   (:use [akvo.flow-services.exporter :only (export-report)]
         [akvo.flow-services.uploader :only (bulk-upload)]))

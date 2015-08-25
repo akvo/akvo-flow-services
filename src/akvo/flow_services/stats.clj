@@ -1,4 +1,4 @@
-;  Copyright (C) 2013-2014 Stichting Akvo (Akvo Foundation)
+;  Copyright (C) 2013-2015 Stichting Akvo (Akvo Foundation)
 ;
 ;  This file is part of Akvo FLOW.
 ;
@@ -20,28 +20,35 @@
                                     [triggers :as triggers]
                                     [scheduler :as scheduler]]
             [clojurewerkz.quartzite.schedule.daily-interval :as interval]
-            [akvo.flow-services.config :as config]
-            [akvo.flow-services.gae :refer :all]
+            [akvo.commons.config :as config]
+            [akvo.commons.gae :as gae]
             [clojure.data.csv :as csv]
             [clojure.java.io :as io]
             [clojure.string :as str]
-            [clojure.set :refer (difference)]))
+            [clojure.set :refer (difference)]
+            [taoensso.timbre :as timbre :refer (errorf)]))
 
+(defn datastore-spec [server usr pwd]
+  {:server server
+   :email usr
+   :password pwd
+   :port 443})
 
 (defn get-stats
   "Returns a list of stats for the given instance"
   [server usr pwd kinds]
-  (let [opts (get-options server usr pwd)
-        installer (get-installer opts)
-        ds (get-ds)
-        qt (Query. "__Stat_Total__")
-        total (.asSingleEntity (.prepare ds qt))
-        stats (if total ;; total can be nil on a new unused instance
-                (let [ts (.getProperty total "timestamp")
-                      qk (.setFilter (Query. "__Stat_Kind__") (get-filter "timestamp" ts))]
-                  (.asList (.prepare ds qk) (get-fetch-options))))]
-    (.uninstall installer)
-    (filter #(kinds (.getProperty % "kind_name")) stats)))
+  (try
+    (gae/with-datastore [ds (datastore-spec server usr pwd)]
+     (let [qt (Query. "__Stat_Total__")
+           total (.asSingleEntity (.prepare ds qt))
+           stats (if total ;; total can be nil on a new unused instance
+                   (let [ts (.getProperty total "timestamp")
+                         qk (.setFilter (Query. "__Stat_Kind__")
+                                        (gae/get-filter "timestamp" ts))]
+                     (.asList (.prepare ds qk) (gae/get-fetch-options))))]
+       (filter #(kinds (.getProperty % "kind_name")) stats)))
+    (catch Exception e
+      (errorf e "Error trying to get data for %s" server))))
 
 (defn calc-stats [kinds stats]
   (let [entities (reduce #(assoc %1 (.getProperty %2 "kind_name") (.getProperty %2 "count")) {} stats)]
@@ -62,7 +69,8 @@
 
 (defn get-all-data [server-list username password kinds]
   (for [server server-list
-        :let [stats (get-stats server username password kinds)]]
+        :let [stats (get-stats server username password kinds)]
+        :when stats]
     (conj (calc-stats kinds stats) server)))
 
 (jobs/defjob StatsJob [job-data]
