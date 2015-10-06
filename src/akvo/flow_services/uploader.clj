@@ -189,7 +189,8 @@
   [fcoll]
   (->> fcoll
     (remove #(.contains (.getAbsolutePath %) "__MACOSX"))
-    (remove #(.contains (.getName %) "wfpGenerated"))))
+    (remove #(.contains (.getName %) "wfpGenerated"))
+    (remove #(zero? (.length %)))))
 
 (defn get-format
   "Determine whether the zip file contains JSON or TSV data"
