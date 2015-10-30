@@ -47,10 +47,10 @@
                        "maxDataReportRows"
                        (:max-data-report-rows @config/settings))
         criteria (-> "uploadUrl"
-                   options
-                   config/get-bucket-name
-                   (config/get-criteria id)
-                   stringify-keys)]
+                     options
+                     config/get-bucket-name
+                     (config/get-criteria id)
+                     stringify-keys)]
     (infof "Exporting report baseURL: %s - criteria: %s - options: %s" base-url criteria options)
     (.export exporter criteria file base-url options)
     file))

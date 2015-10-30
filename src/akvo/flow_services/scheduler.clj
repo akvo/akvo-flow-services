@@ -24,7 +24,8 @@
                                     [scheduler :as scheduler]
                                     [triggers :as triggers]]
             [akvo.commons.config :as config]
-            [akvo.flow-services.email :as email])
+            [akvo.flow-services.email :as email]
+            [akvo.flow-services.geoshape-export :as geoshape])
   (:use [akvo.flow-services.exporter :only (export-report)]
         [akvo.flow-services.uploader :only (bulk-upload)]))
 
@@ -43,12 +44,15 @@
     "INVALID_PATH"))
 
 (jobs/defjob ExportJob [job-data]
-  (let [{:strs [baseURL exportType surveyId opts id]} (conversion/from-job-data job-data)
-        report (export-report exportType baseURL surveyId opts)
+  (let [{:strs [baseURL exportType surveyId opts id questionId]} (conversion/from-job-data job-data)
+        report (if (= exportType "GEOSHAPE")
+                 (geoshape/export baseURL surveyId questionId opts)
+                 (export-report exportType baseURL surveyId opts))
         path (get-path report)]
     (dosync
       (alter cache conj {{:id id
                           :surveyId surveyId
+                          :questionId questionId
                           :baseURL (config/get-domain baseURL)} path}))
     (when (get opts "email")
       (if (= path "INVALID_PATH")
