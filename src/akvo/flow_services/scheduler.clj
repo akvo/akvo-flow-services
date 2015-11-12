@@ -44,9 +44,10 @@
     "INVALID_PATH"))
 
 (jobs/defjob ExportJob [job-data]
-  (let [{:strs [baseURL exportType surveyId opts id questionId]} (conversion/from-job-data job-data)
+  (let [{:strs [baseURL exportType surveyId opts id]} (conversion/from-job-data job-data)
+        questionId (get opts "questionId")
         report (if (= exportType "GEOSHAPE")
-                 (geoshape/export baseURL surveyId questionId opts)
+                 (geoshape/export baseURL surveyId questionId)
                  (export-report exportType baseURL surveyId opts))
         path (get-path report)]
     (dosync
