@@ -1,17 +1,18 @@
 (ns akvo.flow-services.geoshape-export
   (:require [clojure.java.io :as io]
+            [clojure.set :as set]
+            [clojure.string :as string]
             [akvo.commons.gae :as gae]
             [akvo.commons.gae.query :as query]
             [akvo.commons.config :as config]
-            [clojure.set :as set]
             [cheshire.core :as json])
   (:import [java.util UUID]
            [com.fasterxml.jackson.core JsonParseException]
            [com.google.appengine.api.datastore Entity]))
 
-(defn datastore-spec [upload-url]
+(defn datastore-spec [base-url]
   (let [{:keys [username password]} @config/settings
-        cfg (config/find-config (config/get-bucket-name upload-url))]
+        cfg (config/find-config (second (re-find #"https?://(.*?)\." base-url)))]
     {:server (:domain cfg)
      :email username
      :password password
@@ -68,7 +69,7 @@
 
 (defn export-file [base-url form-id geoshape-question-id]
   (let [base-path (:base-path @config/settings)
-        bucket-name (config/get-bucket-name base-url)
+        bucket-name (second (re-find #"https?://(.*?)\." base-url))
         dir (io/file base-path
                       "reports"
                       bucket-name
