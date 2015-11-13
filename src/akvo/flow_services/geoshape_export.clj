@@ -5,7 +5,8 @@
             [akvo.commons.gae :as gae]
             [akvo.commons.gae.query :as query]
             [akvo.commons.config :as config]
-            [cheshire.core :as json])
+            [cheshire.core :as json]
+            [taoensso.timbre :as timbre])
   (:import [java.util UUID]
            [com.fasterxml.jackson.core JsonParseException]
            [com.google.appengine.api.datastore Entity]))
@@ -79,8 +80,10 @@
     (io/file dir filename)))
 
 (defn export [base-url form-id geoshape-question-id]
+  (timbre/infof "Exporting geoshape base-url: %s - form-id: %s - geoshape-question-id: %s" base-url form-id geoshape-question-id)
   (gae/with-datastore [ds (datastore-spec base-url)]
-    (let [questions (reduce (fn [result {:keys [id text]}]
+    (let [form-id (Long/parseLong form-id)
+          questions (reduce (fn [result {:keys [id text]}]
                               (assoc result id text))
                             {}
                             (fetch-questions ds form-id))
@@ -95,5 +98,6 @@
                                                        responses)
           file (export-file base-url form-id geoshape-question-id)]
       (with-open [writer (io/writer file)]
-        (json/generate-stream feature-collection writer))
+        (json/generate-stream feature-collection writer)
+        (timbre/infof "Successfully exported geoshape to %s" file))
       file)))
