@@ -33,6 +33,7 @@
                  [exporterapplet "1.9.3"]
                  [org.json/json "20090211"]
                  [log4j/log4j "1.2.16"]
+                 [org.codehaus.jackson/jackson-mapper-asl "1.9.13"]
                  ; Configuration and Stats
                  [com.google.appengine/appengine-tools-sdk "1.9.18"]
                  [com.google.appengine/appengine-remote-api "1.9.18"]
