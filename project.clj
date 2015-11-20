@@ -1,13 +1,13 @@
-(defproject flow-services "0.9.10-SNAPSHOT"
+(defproject flow-services "0.9.10"
   :description "HTTP layer to applets functionality"
   :url "https://github.com/akvo/akvo-flow-services"
   :license {:name "GNU Affero General Public License"
             :url "https://www.gnu.org/licenses/agpl"}
   :min-lein-version "2.0.0"
-  :dependencies [[org.clojure/clojure "1.6.0"]
+  :dependencies [[org.clojure/clojure "1.7.0"]
                  [org.clojure/data.csv "0.1.2"]
                  [org.clojure/tools.nrepl "0.2.5"]
-                 [org.akvo/commons "0.2.0"]
+                 [org.akvo/commons "0.3.0"]
                  [com.taoensso/timbre "3.3.1"]
                  [cheshire "5.3.1"]
                  [compojure "1.1.8"]
