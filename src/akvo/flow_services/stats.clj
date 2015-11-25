@@ -30,7 +30,7 @@
 
 (defn datastore-spec [server]
   (let [host (first (str/split server #"\."))
-        cfg (@config/configs host)]
+        cfg (config/find-config host)]
     {:hostname server
      :service-account-id (:service-account-id cfg)
      :private-key-file (:private-key-file cfg)
