@@ -28,17 +28,19 @@
             [clojure.set :refer (difference)]
             [taoensso.timbre :as timbre :refer (errorf)]))
 
-(defn datastore-spec [server usr pwd]
-  {:server server
-   :email usr
-   :password pwd
-   :port 443})
+(defn datastore-spec [server]
+  (let [host (first (str/split server #"\."))
+        cfg (@config/configs host)]
+    {:hostname server
+     :service-account-id (:service-account-id cfg)
+     :private-key-file (:private-key-file cfg)
+     :port 443}))
 
 (defn get-stats
   "Returns a list of stats for the given instance"
-  [server usr pwd kinds]
+  [server kinds]
   (try
-    (gae/with-datastore [ds (datastore-spec server usr pwd)]
+    (gae/with-datastore [ds (datastore-spec server)]
      (let [qt (Query. "__Stat_Total__")
            total (.asSingleEntity (.prepare ds qt))
            stats (if total ;; total can be nil on a new unused instance
@@ -67,15 +69,15 @@
       (csv/write-csv out-file
                      (conj data kinds)))))
 
-(defn get-all-data [server-list username password kinds]
+(defn get-all-data [server-list kinds]
   (for [server server-list
-        :let [stats (get-stats server username password kinds)]
+        :let [stats (get-stats server kinds)]
         :when stats]
     (conj (calc-stats kinds stats) server)))
 
 (jobs/defjob StatsJob [job-data]
-  (let [{:strs [username password server-list kinds stats-path]} (conversion/from-job-data job-data)
-        all-data (get-all-data server-list username password kinds)]
+  (let [{:strs [server-list kinds stats-path]} (conversion/from-job-data job-data)
+        all-data (get-all-data server-list kinds)]
     (write-stats (conj (seq kinds) "Instance") all-data stats-path)))
 
 (defn schedule-stats-job
