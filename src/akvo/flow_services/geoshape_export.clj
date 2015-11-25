@@ -28,7 +28,7 @@
 (defn datastore-spec [base-url]
   (let [cfg (config/find-config (second (re-find #"https?://(.*?)\." base-url)))]
     {:hostname (:domain cfg)
-     :service-account-id (:username cfg)
+     :service-account-id (:service-account-id cfg)
      :private-key-file (:private-key-file cfg)
      :port 443}))
 
