@@ -1,4 +1,4 @@
-;  Copyright (C) 2013-2014 Stichting Akvo (Akvo Foundation)
+;  Copyright (C) 2013-2015 Stichting Akvo (Akvo Foundation)
 ;
 ;  This file is part of Akvo FLOW.
 ;
@@ -16,15 +16,18 @@
   (:import java.io.File
            org.waterforpeople.mapping.dataexport.RawDataSpreadsheetImporter
            java.util.zip.ZipFile
-           java.net.URLEncoder)
+           java.net.URLEncoder
+           [org.apache.poi.ss.usermodel Cell Row Sheet]
+           [com.google.appengine.api.datastore Entity Query])
   (:require [clojure.java.io :as io]
             [clojure.string :as str]
+            [clojure.set :as set]
             [me.raynes.fs :as fs]
             [me.raynes.fs.compression :as fsc]
             [aws.sdk.s3 :as s3]
             [clj-http.client :as http]
-            [akvo.flow-services.config :as config]
-            [akvo.flow-services.gae :as gae]
+            [akvo.commons.config :as config]
+            [akvo.commons.gae :as gae]
             [taoensso.timbre :as timbre :refer (debugf infof errorf)]))
 
 
@@ -93,7 +96,7 @@
     (str prefix fname)))
 
 (defn- upload [f bucket-name]
-  (let [creds (select-keys (@config/configs bucket-name) [:access-key :secret-key])
+  (let [creds (select-keys (config/find-config bucket-name) [:access-key :secret-key])
         obj-key (get-key f)]
     (debugf "Uploading file: %s - bucket: %s" f bucket-name)
     (if (.startsWith obj-key "images/")
@@ -102,22 +105,77 @@
 
 (defn add-message [bucket-name action obj-id content]
   (let [settings @config/settings
-        config (@config/configs bucket-name)
+        config (config/find-config bucket-name)
         msg {"actionAbout" action
              "objectId" (if obj-id (Long/parseLong obj-id))
-             "shortMessage" content}]
-    (gae/put! (:domain config) (:username settings) (:password settings) "Message" msg)))
+             ;; Return only first 500 xters of message due to GAE String limitation
+             "shortMessage" (if (nil? content)
+                              ""
+                              (subs content 0 (min 499 (count content))))}]
+    (gae/with-datastore [ds {:server (:domain config)
+                             :email (:username settings)
+                             :password (:password settings)
+                             :port 443}]
+      (gae/put! ds "Message" msg))))
+
+(defn- retrieve-question-ids [bucket-name surveyId]
+  (let [settings @config/settings
+        config (config/find-config bucket-name)]
+    (gae/with-datastore [ds {:server (:domain config)
+                             :email (:username settings)
+                             :password (:password settings)
+                             :port 443}]
+      (let [query (Query. "Question")
+            qf (.setKeysOnly (.setFilter query (gae/get-filter "surveyId" (Long/valueOf surveyId))))
+            pq (.prepare ds qf)]
+        (try
+          (.asList pq (gae/get-fetch-options))
+          (catch Exception e
+            (errorf e "Error retrieving questions for survey %s from GAE: %s" surveyId (.getMessage e))))))))
+
+(defn- get-datastore-ids [bucket-name surveyId]
+  (for [question (retrieve-question-ids bucket-name surveyId)]
+    (.getId (.getKey question))))
+
+(defn- get-file-ids [sheet]
+  (->> (.getRow sheet 0)
+       (map (fn [cell] (second (re-find #"(\d+)|" (.getStringCellValue cell)))))
+       (filter some?)
+       (map #(Long/parseLong %))))
+
+(defn- validate-question-ids
+  "validate whether file was uploaded against a wrong survey
+   based on question ids it contains. Assume that if none of
+   the ids in the file can be matched with any in the survey, then
+   file has been uploaded against the wrong survey.  If only some
+   are not matched, none matched ids possibly indicate deleted questions"
+  [f importer bucket-name surveyId]
+  (let [datastore-ids (into #{} (get-datastore-ids bucket-name surveyId))
+        file-ids (into #{} (get-file-ids (.getDataSheet importer f)))
+        invalid-ids (set/difference file-ids datastore-ids)
+        file-name (.getName f)]
+    (when
+      (and (not (empty? invalid-ids))(= invalid-ids file-ids))
+      ;; the -2 below is due to convention use RawDataSpreadsheetImporter.validate()
+      {-2 (format "The uploaded file '%s' does not match the selected survey" file-name)})))
+
+(defn- validate-raw-data [f importer bucket-name surveyId]
+  (let [invalid-question-errors (validate-question-ids f importer bucket-name surveyId)
+        invalid-header-errors (when (empty? invalid-question-errors)(.validate importer f))]
+    (if (not (empty? invalid-question-errors))
+      invalid-question-errors
+      (when (not (empty? invalid-header-errors)) invalid-header-errors))))
 
 (defn- raw-data
   [f base-url bucket-name surveyId]
   (let [importer (RawDataSpreadsheetImporter.)
-        errors (.validate importer f)]
+        errors (validate-raw-data f importer bucket-name surveyId)]
     (if (not (empty? errors))
       (errorf "Errors in raw data upload - baseURL: %s - file: %s - surveyId: %s - errors: %s" base-url f surveyId errors))
     (if (empty? errors)
       (.executeImport importer f base-url (config/get-criteria bucket-name surveyId))
       (add-message bucket-name "importData" surveyId
-                   (format "Invalid RAW DATA file: %s - Errors: %s" (.getName f) (str/join (vals errors) ","))))))
+                   (format "Invalid RAW DATA file: %s - Errors: %s" (.getName f) (str/join ", " (vals errors)))))))
 
 (defn- get-data [f]
   (try
@@ -131,7 +189,17 @@
   [fcoll]
   (->> fcoll
     (remove #(.contains (.getAbsolutePath %) "__MACOSX"))
-    (remove #(.contains (.getName %) "wfpGenerated"))))
+    (remove #(.contains (.getName %) "wfpGenerated"))
+    (remove #(zero? (.length %)))))
+
+(defn get-format
+  "Determine whether the zip file contains JSON or TSV data"
+  [f]
+  (with-open [zf (ZipFile. f)]
+    (cond
+      (.getEntry zf "data.json") :json
+      (.getEntry zf "data.txt") :tsv
+      :else nil)))
 
 (defn- get-zip-files
   [path]
@@ -154,7 +222,7 @@
         success? (loop [attempts 1]
                    (when (<= attempts max-retries)
                      (or (try
-                           (infof "Notifying %s (Attempt #%s)" server  attempts)
+                           (debugf "Notifying %s (Attempt #%s)" server  attempts)
                            (http/get (format "https://%s/processor?%s" server (query-string params)))
                            (catch Exception e
                              (infof "Failed to notify %s. Retry in %s msecs" server sleep-time)))
@@ -167,15 +235,18 @@
 
 (defn- bulk-survey
   [path bucket-name filename]
-  (infof "Bulk upload - path: %s - bucket: %s - file: " path bucket-name filename)
-  (let [data (group-by #(nth (str/split % #"\t") 11) ;; 12th column contains the UUID
-               (remove nil?
-                 (distinct (mapcat get-data (get-zip-files path)))))
-        server (:domain (@config/configs bucket-name))]
-    (doseq [k (keys data)
+  (infof "Bulk upload - path: %s - bucket: %s - file: %s" path bucket-name filename)
+  (let [files (group-by get-format (get-zip-files path))
+        tsv-data (group-by #(nth (str/split % #"\t") 11) ;; 12th column contains the UUID
+                           (remove nil? (distinct (mapcat get-data (:tsv files)))))
+        server (:domain (config/find-config bucket-name))]
+    (doseq [file (:json files)]
+      (upload file bucket-name)
+      (future (notify-gae server {"action" "submit" "fileName" (.getName file)})))
+    (doseq [k (keys tsv-data)
             :let [fname (format "/tmp/%s.zip" k)
                   fzip (io/file fname)]]
-      (fsc/zip fzip ["data.txt" (str/join "\n" (data k))])
+      (fsc/zip fzip ["data.txt" (str/join "\n" (tsv-data k))])
       (upload fzip bucket-name)
       (future (notify-gae server {"action" "submit" "fileName" (.getName fzip)})))
     (doseq [f (get-images path)]

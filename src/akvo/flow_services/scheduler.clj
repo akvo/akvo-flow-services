@@ -23,7 +23,7 @@
                                     [jobs :as jobs]
                                     [scheduler :as scheduler]
                                     [triggers :as triggers]]
-            [akvo.flow-services.config :as config]
+            [akvo.commons.config :as config]
             [akvo.flow-services.email :as email])
   (:use [akvo.flow-services.exporter :only (export-report)]
         [akvo.flow-services.uploader :only (bulk-upload)]))
@@ -107,7 +107,7 @@
         (doseq [k (keys @cache) :when (and (= (:surveyId k) (str sid))
                                            (or (= (:baseURL k) baseURL)
                                                (= (:baseURL k) alias)))]
-          (prn "Invalidating: " k) ;; TODO better logging
+          (infof "Invalidating: %s" k)
           (alter cache dissoc k))))
     "OK"))
 
