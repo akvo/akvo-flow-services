@@ -46,8 +46,9 @@
 (jobs/defjob ExportJob [job-data]
   (let [{:strs [baseURL exportType surveyId opts id]} (conversion/from-job-data job-data)
         questionId (get opts "questionId")
+        appId (get opts "appId")
         report (if (= exportType "GEOSHAPE")
-                 (geoshape/export baseURL surveyId questionId)
+                 (geoshape/export appId surveyId questionId)
                  (export-report exportType baseURL surveyId opts))
         path (get-path report)]
     (dosync
