@@ -25,8 +25,8 @@
            [com.fasterxml.jackson.core JsonParseException]
            [com.google.appengine.api.datastore Entity]))
 
-(defn datastore-spec [base-url]
-  (let [cfg (config/find-config (second (re-find #"https?://(.*?)\." base-url)))]
+(defn datastore-spec [app-id]
+  (let [cfg (config/find-config app-id)]
     {:hostname (:domain cfg)
      :service-account-id (:service-account-id cfg)
      :private-key-file (:private-key-file cfg)
@@ -81,20 +81,19 @@
       {:id (-> question .getKey .getId)
        :text (.getProperty question "text")})))
 
-(defn export-file [base-url form-id geoshape-question-id]
+(defn export-file [app-id form-id geoshape-question-id]
   (let [base-path (:base-path @config/settings)
-        bucket-name (second (re-find #"https?://(.*?)\." base-url))
         dir (io/file base-path
-                      "reports"
-                      bucket-name
-                      (str (UUID/randomUUID)))
+                     "reports"
+                     app-id
+                     (str (UUID/randomUUID)))
         filename (str "GEOSHAPE-" form-id "-" geoshape-question-id ".json")]
     (.mkdirs dir)
     (io/file dir filename)))
 
-(defn export [base-url form-id geoshape-question-id]
-  (timbre/infof "Exporting geoshape base-url: %s - form-id: %s - geoshape-question-id: %s" base-url form-id geoshape-question-id)
-  (gae/with-datastore [ds (datastore-spec base-url)]
+(defn export [app-id form-id geoshape-question-id]
+  (timbre/infof "Exporting geoshape app-id: %s - form-id: %s - geoshape-question-id: %s" app-id form-id geoshape-question-id)
+  (gae/with-datastore [ds (datastore-spec app-id)]
     (let [form-id (Long/parseLong form-id)
           questions (reduce (fn [result {:keys [id text]}]
                               (assoc result id text))
@@ -109,7 +108,7 @@
                                                        geoshape-question-id
                                                        questions
                                                        responses)
-          file (export-file base-url form-id geoshape-question-id)]
+          file (export-file app-id form-id geoshape-question-id)]
       (with-open [writer (io/writer file)]
         (json/generate-stream feature-collection writer)
         (timbre/infof "Successfully exported geoshape to %s" file))
