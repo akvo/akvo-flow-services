@@ -1,4 +1,4 @@
-(defproject flow-services "0.9.10"
+(defproject flow-services "0.9.11-SNAPSHOT"
   :description "HTTP layer to applets functionality"
   :url "https://github.com/akvo/akvo-flow-services"
   :license {:name "GNU Affero General Public License"

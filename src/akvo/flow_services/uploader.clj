@@ -104,26 +104,24 @@
       (s3/put-object creds bucket-name obj-key f))))
 
 (defn add-message [bucket-name action obj-id content]
-  (let [settings @config/settings
-        config (config/find-config bucket-name)
+  (let [config (config/find-config bucket-name)
         msg {"actionAbout" action
              "objectId" (if obj-id (Long/parseLong obj-id))
              ;; Return only first 500 xters of message due to GAE String limitation
              "shortMessage" (if (nil? content)
                               ""
                               (subs content 0 (min 499 (count content))))}]
-    (gae/with-datastore [ds {:server (:domain config)
-                             :email (:username settings)
-                             :password (:password settings)
+    (gae/with-datastore [ds {:hostname (:domain config)
+                             :service-account-id (:service-account-id config)
+                             :private-key-file (:private-key-file config)
                              :port 443}]
       (gae/put! ds "Message" msg))))
 
 (defn- retrieve-question-ids [bucket-name surveyId]
-  (let [settings @config/settings
-        config (config/find-config bucket-name)]
-    (gae/with-datastore [ds {:server (:domain config)
-                             :email (:username settings)
-                             :password (:password settings)
+  (let [config (config/find-config bucket-name)]
+    (gae/with-datastore [ds {:hostname (:domain config)
+                             :service-account-id (:service-account-id config)
+                             :private-key-file (:private-key-file config)
                              :port 443}]
       (let [query (Query. "Question")
             qf (.setKeysOnly (.setFilter query (gae/get-filter "surveyId" (Long/valueOf surveyId))))
