@@ -26,11 +26,10 @@
            [com.google.appengine.api.datastore Entity]))
 
 (defn datastore-spec [app-id]
-  (let [{:keys [username password]} @config/settings
-        cfg (config/find-config app-id)]
-    {:server (:domain cfg)
-     :email username
-     :password password
+  (let [cfg (config/find-config app-id)]
+    {:hostname (:domain cfg)
+     :service-account-id (:service-account-id cfg)
+     :private-key-file (:private-key-file cfg)
      :port 443}))
 
 (defn feature [question-id questions question-answers]

@@ -30,7 +30,7 @@
             [clojure.data.csv :as csv]
             [clojure.string :as str]
             [aws.sdk.s3 :as s3]
-            [taoensso.timbre :as timbre :refer [errorf debugf infof]]))
+            [taoensso.timbre :refer [errorf debugf infof]]))
 
 ;; Each node is roughly ~1KB (depending on the code & name values)
 ;; We have a maximum of 1MB per request
@@ -129,11 +129,10 @@
         (throw e)))))
 
 (defn datastore-spec [upload-url]
-  (let [{:keys [username password]} @config/settings
-        cfg (config/find-config (config/get-bucket-name upload-url))]
-    {:server (:domain cfg)
-     :email username
-     :password password
+  (let [cfg (config/find-config (config/get-bucket-name upload-url))]
+    {:hostname (:domain cfg)
+     :service-account-id (:service-account-id cfg)
+     :private-key-file (:private-key-file cfg)
      :port 443}))
 
 (defn get-nodes
