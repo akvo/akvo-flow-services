@@ -16,7 +16,10 @@
   (:require [clojure.java.io :as io]
     [clojure.walk :refer (stringify-keys)]
     [akvo.commons.config :as config]
-    [taoensso.timbre :as timbre :refer (infof)])
+    [taoensso.timbre :as timbre :refer (infof)]
+    [cheshire.core :as json]
+    [akvo.commons.gae :as gae]
+    [akvo.commons.gae.query :as query])
   (:import java.io.File
     java.util.UUID
     org.waterforpeople.mapping.dataexport.SurveyDataImportExportFactory))
@@ -54,3 +57,20 @@
     (infof "Exporting report baseURL: %s - criteria: %s - options: %s" base-url criteria options)
     (.export exporter criteria file base-url options)
     file))
+
+(defn retrieve-survey
+  [gae-app-id survey-id]
+  (let [settings @config/settings
+        config (config/find-config gae-app-id)]
+    (gae/with-datastore [ds {:hostname (:domain config)
+                         :service-account-id (:service-account-id config)
+                         :private-key-file (:private-key-file config)
+                         :port 443}]
+      (query/entity ds "SurveyGroup" survey-id))))
+
+(defn export-survey-definition
+  "Assemble the definition of a survey from its different components and export
+   the entire collection as JSON"
+  [gae-app-id survey-id]
+  (let [survey (retrieve-survey gae-app-id survey-id)]
+    survey))
