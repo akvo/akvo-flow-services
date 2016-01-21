@@ -61,11 +61,11 @@
 (defn retrieve-survey
   [gae-app-id survey-id]
   (let [settings @config/settings
-        config (config/find-config gae-app-id)]
-    (gae/with-datastore [ds {:hostname (:domain config)
-                         :service-account-id (:service-account-id config)
-                         :private-key-file (:private-key-file config)
-                         :port 443}]
+        {:keys [domain service-account-id private-key-file]} (config/find-config gae-app-id)]
+    (gae/with-datastore [ds {:hostname domain
+                             :service-account-id service-account-id
+                             :private-key-file private-key-file
+                             :port 443}]
       (query/entity ds "SurveyGroup" survey-id))))
 
 (defn export-survey-definition
