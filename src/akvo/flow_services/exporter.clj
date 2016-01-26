@@ -58,7 +58,22 @@
     (.export exporter criteria file base-url options)
     file))
 
+(def ignore-properties ["ancestorIds" "createUserId" "lastUpdateUserId"])
+
 (defn retrieve-survey
+  [ds survey-id]
+  (->> (.getProperties (query/entity ds "SurveyGroup" survey-id))
+       (conj {})
+       (remove #(contains? ignore-properties (first %)))))
+
+(defn assemble-survey-definition
+  "Assemble survey definition from components"
+  [ds survey-id]
+  (let [survey (retrieve-survey ds survey-id)]
+    survey))
+
+(defn export-survey-definition
+  "Export survey definition as a JSON string"
   [gae-app-id survey-id]
   (let [settings @config/settings
         {:keys [domain service-account-id private-key-file]} (config/find-config gae-app-id)]
@@ -66,11 +81,4 @@
                              :service-account-id service-account-id
                              :private-key-file private-key-file
                              :port 443}]
-      (query/entity ds "SurveyGroup" survey-id))))
-
-(defn export-survey-definition
-  "Assemble the definition of a survey from its different components and export
-   the entire collection as JSON"
-  [gae-app-id survey-id]
-  (let [survey (retrieve-survey gae-app-id survey-id)]
-    survey))
+        (json/generate-string (assemble-survey-definition ds survey-id)))))
