@@ -58,7 +58,19 @@
     (.export exporter criteria file base-url options)
     file))
 
-(def ignore-properties ["ancestorIds" "createUserId" "lastUpdateUserId"])
+(def ignore-properties #{"ancestorIds" "createUserId" "lastUpdateUserId"})
+
+(defn get-properties
+  "Convert an entity to a map and strip unneeded properties"
+  [entity]
+  (->> (.getProperties entity)
+       (conj {})
+       (remove #(contains? ignore-properties (first %)))))
+
+(defn retrieve-forms
+  [ds survey-id]
+  (map get-properties (query/result ds {:kind "Survey"
+                                        :filter (query/= "surveyGroupId" survey-id)})))
 
 (defn retrieve-survey
   [ds survey-id]
@@ -69,7 +81,8 @@
 (defn assemble-survey-definition
   "Assemble survey definition from components"
   [ds survey-id]
-  (let [survey (retrieve-survey ds survey-id)]
+  (let [survey (retrieve-survey ds survey-id)
+        forms (retrieve-forms ds survey-id)]
     survey))
 
 (defn export-survey-definition
