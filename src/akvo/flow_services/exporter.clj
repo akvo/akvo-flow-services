@@ -67,6 +67,12 @@
        (conj {})
        (remove #(contains? ignore-properties (first %)))))
 
+(defn retrieve-question-groups
+  [ds form-ids]
+  (when (not-empty form-ids)
+    (map get-properties (query/result ds {:kind "QuestionGroup"
+                                          :filter (query/in "surveyId" form-ids)}))))
+
 (defn retrieve-forms
   [ds survey-id]
   (map get-properties (query/result ds {:kind "Survey"
@@ -80,7 +86,9 @@
   "Assemble survey definition from components"
   [ds survey-id]
   (let [survey (retrieve-survey ds survey-id)
-        forms (retrieve-forms ds survey-id)]
+        forms (retrieve-forms ds survey-id)
+        form-ids (map #(get % "keyId") forms)
+        question-groups (retrieve-question-groups ds form-ids)]
     survey))
 
 (defn export-survey-definition
