@@ -74,9 +74,7 @@
 
 (defn retrieve-survey
   [ds survey-id]
-  (->> (.getProperties (query/entity ds "SurveyGroup" survey-id))
-       (conj {})
-       (remove #(contains? ignore-properties (first %)))))
+  (get-properties (query/entity ds "SurveyGroup" survey-id)))
 
 (defn assemble-survey-definition
   "Assemble survey definition from components"
