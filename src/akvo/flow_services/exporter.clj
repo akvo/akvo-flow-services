@@ -63,9 +63,11 @@
 (defn get-properties
   "Convert an entity to a map and strip unneeded properties"
   [entity]
-  (->> (.getProperties entity)
-       (conj {})
-       (remove #(contains? ignore-properties (first %)))))
+  (if (nil? entity)
+    {}
+    (->> (.getProperties entity)
+         (conj {})
+         (remove #(contains? ignore-properties (first %))))))
 
 (defn retrieve-question-groups
   [ds form-ids]
