@@ -65,9 +65,7 @@
   [entity]
   (if (nil? entity)
     {}
-    (->> (.getProperties entity)
-         (conj {})
-         (remove #(contains? ignore-properties (first %))))))
+    (conj { "keyId" (.getId (.getKey entity))} (.getProperties entity))))
 
 (defn retrieve-questions
   [ds qgroup-ids]
