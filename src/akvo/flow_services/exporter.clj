@@ -116,9 +116,9 @@
   [ds survey-id]
   (let [survey (retrieve-survey ds survey-id)
         forms (retrieve-forms ds survey-id)
-        form-ids (map #(get % "keyId") forms)
+        form-ids (map get-keyid forms)
         question-groups (retrieve-question-groups ds form-ids)
-        qgroup-ids (map #(get % "keyId") question-groups)
+        qgroup-ids (map get-keyid question-groups)
         questions (batch-retrieve-entities ds qgroup-ids retrieve-questions)
         question-ids (map get-keyid (filter #(= "OPTION" (get % "type")) questions))
         question-options (batch-retrieve-entities ds question-ids retrieve-question-options)]
