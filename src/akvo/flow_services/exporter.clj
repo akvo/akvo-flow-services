@@ -69,6 +69,20 @@
          (conj {})
          (remove #(contains? ignore-properties (first %))))))
 
+(defn retrieve-questions
+  [ds qgroup-ids]
+  (when (not-empty qgroup-ids)
+    (map get-properties (query/result ds {:kind "Question"
+                                          :filter (query/in "questionGroupId" qgroup-ids)}))))
+
+(defn batch-retrieve-questions
+  [ds qgroup-ids]
+  (let [first (take 30 qgroup-ids)
+        rest (nthnext qgroup-ids 30)]
+    (if (empty? rest)
+      (retrieve-questions ds first)
+      (conj [] (retrieve-questions ds first) (batch-retrieve-questions ds rest)))))
+
 (defn retrieve-question-groups
   [ds form-ids]
   (when (not-empty form-ids)
@@ -90,8 +104,10 @@
   (let [survey (retrieve-survey ds survey-id)
         forms (retrieve-forms ds survey-id)
         form-ids (map #(get % "keyId") forms)
-        question-groups (retrieve-question-groups ds form-ids)]
-    survey))
+        question-groups (retrieve-question-groups ds form-ids)
+        qgroup-ids (map #(get % "keyId") question-groups)
+        questions (batch-retrieve-questions ds qgroup-ids)]
+    form-ids))
 
 (defn export-survey-definition
   "Export survey definition as a JSON string"
