@@ -73,13 +73,13 @@
     (map get-properties (query/result ds {:kind "Question"
                                           :filter (query/in "questionGroupId" qgroup-ids)}))))
 
-(defn batch-retrieve-questions
-  [ds qgroup-ids]
-  (let [first (take 30 qgroup-ids)
-        rest (nthnext qgroup-ids 30)]
+(defn batch-retrieve-entities
+  [ds in-filter-list f]
+  (let [first (take 30 in-filter-list)
+        rest (nthnext in-filter-list 30)]
     (if (empty? rest)
-      (retrieve-questions ds first)
-      (conj [] (retrieve-questions ds first) (batch-retrieve-questions ds rest)))))
+      (f ds first)
+      (conj [] (f ds first) (batch-retrieve-entities ds rest f)))))
 
 (defn retrieve-question-groups
   [ds form-ids]
@@ -104,7 +104,7 @@
         form-ids (map #(get % "keyId") forms)
         question-groups (retrieve-question-groups ds form-ids)
         qgroup-ids (map #(get % "keyId") question-groups)
-        questions (batch-retrieve-questions ds qgroup-ids)]
+        questions (batch-retrieve-entities ds qgroup-ids retrieve-questions)]
     form-ids))
 
 (defn export-survey-definition
