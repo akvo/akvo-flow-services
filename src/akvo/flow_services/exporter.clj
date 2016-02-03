@@ -74,6 +74,12 @@
                                           :filter (query/in "questionGroupId" qgroup-ids)}))))
 
 (defn batch-retrieve-entities
+  "A function to batch retrieve entities from the datastore when
+   when using the IN query.  Takes the datatore reference, a list
+   of values that will be used for the IN queries and the function
+   to execute the query.  The function provided should accept two
+   parameters, the datastore reference and a collection of values
+   for the parameter which will be filtered for in the datastore"
   [ds in-filter-list f]
   (let [first (take 30 in-filter-list)
         rest (nthnext in-filter-list 30)]
