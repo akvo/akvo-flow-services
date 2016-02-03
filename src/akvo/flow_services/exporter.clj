@@ -67,6 +67,11 @@
     {}
     (conj { "keyId" (.getId (.getKey entity))} (.getProperties entity))))
 
+(defn retrieve-question-options
+  [ds question-ids]
+  (map get-properties (query/result ds {:kind "QuestionOption"
+                                        :filter (query/in "questionId" question-ids)})))
+
 (defn retrieve-questions
   [ds qgroup-ids]
   (when (not-empty qgroup-ids)
@@ -102,6 +107,10 @@
   [ds survey-id]
   (get-properties (query/entity ds "SurveyGroup" survey-id)))
 
+(defn get-keyid
+  [entity]
+    (get entity "keyId"))
+
 (defn assemble-survey-definition
   "Assemble survey definition from components"
   [ds survey-id]
@@ -110,7 +119,9 @@
         form-ids (map #(get % "keyId") forms)
         question-groups (retrieve-question-groups ds form-ids)
         qgroup-ids (map #(get % "keyId") question-groups)
-        questions (batch-retrieve-entities ds qgroup-ids retrieve-questions)]
+        questions (batch-retrieve-entities ds qgroup-ids retrieve-questions)
+        question-ids (map get-keyid (filter #(= "OPTION" (get % "type")) questions))
+        question-options (batch-retrieve-entities ds question-ids retrieve-question-options)]
     form-ids))
 
 (defn export-survey-definition
