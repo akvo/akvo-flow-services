@@ -69,8 +69,9 @@
 
 (defn retrieve-question-options
   [ds question-ids]
-  (map get-properties (query/result ds {:kind "QuestionOption"
-                                        :filter (query/in "questionId" question-ids)})))
+  (when (not-empty question-ids)
+    (map get-properties (query/result ds {:kind "QuestionOption"
+                                          :filter (query/in "questionId" question-ids)}))))
 
 (defn retrieve-questions
   [ds qgroup-ids]
