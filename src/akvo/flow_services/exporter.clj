@@ -87,11 +87,12 @@
    parameters, the datastore reference and a collection of values
    for the parameter which will be filtered for in the datastore"
   [ds in-filter-list f]
-  (let [first (take 30 in-filter-list)
-        rest (nthnext in-filter-list 30)]
-    (if (empty? rest)
-      (f ds first)
-      (conj [] (f ds first) (batch-retrieve-entities ds rest f)))))
+  (flatten
+    (let [first (take 30 in-filter-list)
+          rest (nthnext in-filter-list 30)]
+      (if (empty? rest)
+        (f ds first)
+        (conj [] (f ds first) (batch-retrieve-entities ds rest f))))))
 
 (defn retrieve-question-groups
   [ds form-ids]
