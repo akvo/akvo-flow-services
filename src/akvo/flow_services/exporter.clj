@@ -14,7 +14,7 @@
 
 (ns akvo.flow-services.exporter
   (:require [clojure.java.io :as io]
-    [clojure.walk :refer (stringify-keys)]
+    [clojure.walk :refer (stringify-keys keywordize-keys)]
     [akvo.commons.config :as config]
     [taoensso.timbre :as timbre :refer (infof)]
     [cheshire.core :as json]
@@ -65,7 +65,7 @@
   [entity]
   (if (nil? entity)
     {}
-    (conj { "keyId" (.getId (.getKey entity))} (.getProperties entity))))
+    (keywordize-keys (conj { "keyId" (.getId (.getKey entity))} (.getProperties entity)))))
 
 (defn retrieve-question-options
   [ds question-ids]
@@ -108,20 +108,16 @@
   [ds survey-id]
   (get-properties (query/entity ds "SurveyGroup" survey-id)))
 
-(defn get-keyid
-  [entity]
-    (get entity "keyId"))
-
 (defn assemble-survey-definition
   "Assemble survey definition from components"
   [ds survey-id]
   (let [survey (retrieve-survey ds survey-id)
         forms (retrieve-forms ds survey-id)
-        form-ids (map get-keyid forms)
+        form-ids (map :keyId forms)
         question-groups (retrieve-question-groups ds form-ids)
-        qgroup-ids (map get-keyid question-groups)
+        qgroup-ids (map :keyId question-groups)
         questions (batch-retrieve-entities ds qgroup-ids retrieve-questions)
-        question-ids (map get-keyid (filter #(= "OPTION" (get % "type")) questions))
+        question-ids (map :keyId (filter #(= "OPTION" (:type %)) questions))
         question-options (batch-retrieve-entities ds question-ids retrieve-question-options)]
     form-ids))
 
