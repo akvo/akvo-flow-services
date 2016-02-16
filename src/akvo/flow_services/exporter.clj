@@ -58,6 +58,28 @@
     (.export exporter criteria file base-url options)
     file))
 
+(defn map-by-keyid
+  "Map elements from a source collection, grouped together as lists to an element
+   in a destination collection.  The set of sub elements grouped as a single destination
+   collection element is determined by matching a property in the source collection to
+   the keyId element in the destination list
+   e.g list 1 [{:keyId 1 :name \"first\"}, {:keyId 2 \"second\"}]
+       list 2 [{:item 9 :parent 1}, {:item 87 :parent 2}, {:item 98 :parent 1}]
+       conjoined list [{:keyId 1
+                        :name \"first\"
+                        :children [{:item 1 :parent 1},
+                                   {:item 98 :parent 1}]
+                       },
+                       {:keyId 2
+                        :name \"second\"
+                        :children [{:item 87 :parent 2}]"
+  [to-key to-coll grouping-key from-coll]
+  (let [sorted-to-coll (sort-by :keyId to-coll)
+        sorted-key-ids (map :keyId sorted-to-coll)
+        sub-lists (map (group-by grouping-key from-coll) sorted-key-ids)
+        ]
+    (map #(assoc %1 to-key %2) sorted-to-coll sub-lists)))
+
 (def ignore-properties #{"ancestorIds" "createUserId" "lastUpdateUserId"})
 
 (defn get-properties
