@@ -80,6 +80,15 @@
         ]
     (map #(assoc %1 to-key %2) sorted-to-coll sub-lists)))
 
+(defn map-question-options
+  [questions options]
+  (map
+   (fn [question]
+     (if (and (not= (:type question) "OPTION") (nil? (:options question)))
+       (dissoc question :options)
+       question))
+   (map-by-keyid :options questions :questionId options)))
+
 (def ignore-properties #{"ancestorIds" "createUserId" "lastUpdateUserId"})
 
 (defn get-properties
