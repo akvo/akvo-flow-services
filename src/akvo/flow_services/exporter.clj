@@ -155,7 +155,9 @@
         questions (batch-retrieve-entities ds qgroup-ids retrieve-questions)
         question-ids (map :keyId (filter #(= "OPTION" (:type %)) questions))
         question-options (batch-retrieve-entities ds question-ids retrieve-question-options)]
-    form-ids))
+  (->> (map-question-options questions question-options)
+       (map-by-keyid :questions forms :surveyId)
+       (map-survey-forms survey))))
 
 (defn export-survey-definition
   "Export survey definition as a JSON string"
