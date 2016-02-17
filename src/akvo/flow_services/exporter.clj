@@ -162,6 +162,7 @@
 (defn export-survey-definition
   "Export survey definition as a JSON string"
   [gae-app-id survey-id]
+  {:pre [(> survey-id 0)]}
   (let [settings @config/settings
         {:keys [domain service-account-id private-key-file]} (config/find-config gae-app-id)]
     (gae/with-datastore [ds {:hostname domain
