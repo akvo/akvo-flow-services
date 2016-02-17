@@ -80,6 +80,10 @@
         ]
     (map #(assoc %1 to-key %2) sorted-to-coll sub-lists)))
 
+(defn map-survey-forms
+  [survey forms]
+  (first (map-by-keyid :forms (conj [] survey) :surveyGroupId forms)))
+
 (defn map-question-options
   [questions options]
   (map
