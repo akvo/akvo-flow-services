@@ -88,9 +88,9 @@
   [questions options]
   (map
    (fn [question]
-     (if (and (not= (:type question) "OPTION") (nil? (:options question)))
-       (dissoc question :options)
-       question))
+     (if (= (:type question) "OPTION")
+       question
+       (dissoc question :options)))
    (map-by-keyid :options questions :questionId options)))
 
 (def ignore-properties #{"ancestorIds" "createUserId" "lastUpdateUserId"})
