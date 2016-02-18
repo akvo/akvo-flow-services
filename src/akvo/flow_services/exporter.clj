@@ -82,7 +82,8 @@
 
 (defn map-survey-forms
   [survey forms]
-  (first (map-by-keyid :forms (conj [] survey) :surveyGroupId forms)))
+  (when (not-empty survey)
+    (first (map-by-keyid :forms (conj [] survey) :surveyGroupId forms))))
 
 (defn map-question-options
   [questions options]
