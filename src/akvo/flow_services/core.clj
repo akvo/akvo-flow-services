@@ -23,7 +23,8 @@
     [akvo.flow-services [scheduler :as scheduler]
                         [uploader :as uploader]
                         [cascade :as cascade]
-                        [stats :as stats]]
+                        [stats :as stats]
+                        [exporter :as exporter]]
     [clojure.tools.nrepl.server :as nrepl]
     [taoensso.timbre :as timbre])
   (:gen-class))
@@ -99,6 +100,9 @@
 
   (POST "/reload" [params]
     (config/reload (:config-folder @config/settings)))
+
+  (GET ["/survey/:bucket/:survey-id", :survey-id #"[0-9]+"] [bucket survey-id]
+       (exporter/export-survey-definition bucket (Long/valueOf survey-id)))
 
   (route/resources "/")
 
