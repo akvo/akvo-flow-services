@@ -125,7 +125,7 @@
                              :private-key-file (:private-key-file config)
                              :port 443}]
       (for [question (seq (query/result ds {:kind "Question"
-                                            :filter (query/= "surveyId" survey-id)
+                                            :filter (query/= "surveyId" (Long/valueOf survey-id))
                                             :keys-only true}))]
         (.getId (.getKey question))))))
 
