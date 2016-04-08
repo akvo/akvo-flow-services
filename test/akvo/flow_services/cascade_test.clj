@@ -6,19 +6,22 @@
 (def semicolon-sep-3-levels "resources/test/cascades/semicolon-sep-3-levels.csv")
 (def tab-sep-4-levels "resources/test/cascades/tab-sep-4-levels.csv")
 (def cascade-with-empty-nodes "resources/test/cascades/empty-nodes.csv")
+(def quoted-comma-separator "resources/test/cascades/quoted-comma-separator.csv")
 
 (deftest test-find-csv-separator
   (is (= \, (cascade/find-csv-separator comma-sep-2-levels 2)))
   (is (= \; (cascade/find-csv-separator semicolon-sep-3-levels 3)))
   (is (= \tab (cascade/find-csv-separator tab-sep-4-levels 4)))
   ;; Default to \,
-  (is (= \, (cascade/find-csv-separator tab-sep-4-levels 1))))
+  (is (= \, (cascade/find-csv-separator tab-sep-4-levels 1)))
+  (is (= \, (cascade/find-csv-separator quoted-comma-separator 2))))
 
 
 (deftest test-validate-csv
   (is (nil? (cascade/validate-csv comma-sep-2-levels 2 \,)))
   (is (nil? (cascade/validate-csv semicolon-sep-3-levels 3 \;)))
   (is (nil? (cascade/validate-csv tab-sep-4-levels 4 \tab)))
+  (is (nil? (cascade/validate-csv quoted-comma-separator 2 \,)))
   (is (= ["Wrong number of columns 2 on line 1, Row: a,b"]
          (cascade/validate-csv comma-sep-2-levels 3 \,)))
   (is (= ["Empty cascade node on line 2. Row: d, ,f"]
