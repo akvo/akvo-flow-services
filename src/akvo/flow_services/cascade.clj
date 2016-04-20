@@ -396,10 +396,13 @@
   [csv-path separator]
   {:pre [(string? csv-path)
          (char? separator)]}
-  (let [col-counts (with-open [r (io/reader csv-path)]
-                     (->> (csv/read-csv r :separator separator)
-                          (take 10)
-                          (mapv count)))]
+  (let [col-counts (try
+                     (with-open [r (io/reader csv-path)]
+                      (->> (csv/read-csv r :separator separator)
+                           (take 10)
+                           (mapv count)))
+                     (catch Exception _
+                       []))]
     (if (and (not (empty? col-counts))
              (apply = col-counts))
       {:separator separator
