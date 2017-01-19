@@ -6,7 +6,7 @@
  :http-port 3000
 
  ;; List of kinds interesting for stats
- :stats-kinds ["User" "Device" "SurveyInstance" "Survey"]
+ :stats-kinds ["User" "Device" "SurveyInstance" "Survey" "DeviceFiles"]
 
  ;; Base path for reports and uploads
  :base-path "/var/tmp/akvo/flow"
