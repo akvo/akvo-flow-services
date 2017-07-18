@@ -1,4 +1,4 @@
-(defproject flow-services "0.9.22"
+(defproject flow-services "0.9.23"
   :description "HTTP layer to applets functionality"
   :url "https://github.com/akvo/akvo-flow-services"
   :license {:name "GNU Affero General Public License"
@@ -30,7 +30,7 @@
                  [com.google.gdata/core "1.47.1"]
                  [org.xerial/sqlite-jdbc "3.7.2"]
                  ; Akvo FLOW dependencies
-                 [exporterapplet "1.9.19"]
+                 [exporterapplet "1.9.21"]
                  [org.json/json "20090211"]
                  [log4j/log4j "1.2.16"]
                  [org.codehaus.jackson/jackson-mapper-asl "1.9.13"]
