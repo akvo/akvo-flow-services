@@ -21,6 +21,7 @@
                  [com.draines/postal "1.11.3"]
                  ; Java libraries
                  [jfree/jfreechart "1.0.13"]
+                 [commons-lang/commons-lang "2.4"]
                  [org.apache.poi/poi "3.8"]
                  [org.apache.poi/poi-ooxml "3.8"]
                  [org.apache.tika/tika-core "1.6"]
