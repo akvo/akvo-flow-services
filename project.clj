@@ -7,7 +7,7 @@
   :dependencies [[org.clojure/clojure "1.7.0"]
                  [org.clojure/data.csv "0.1.3"]
                  [org.clojure/tools.nrepl "0.2.12"]
-                 [org.akvo/commons "0.4.0"]
+                 [org.akvo/commons "0.4.6"]
                  [com.taoensso/timbre "3.3.1"]
                  [cheshire "5.3.1"]
                  [compojure "1.1.8"]
