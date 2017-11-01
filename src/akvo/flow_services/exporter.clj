@@ -35,6 +35,11 @@
         bn (config/get-bucket-name base-url)]
     (format "%s/%s/%s/%s" base-path "reports" bn (UUID/randomUUID))))
 
+(defn- get-caddisfly-tests-file-url [options]
+  "Retrieve the URL for caddisfly tests file"
+  (let [bucket (get options "appId")]
+    (:caddisfly-tests-file-url (config/find-config bucket))))
+
 (defn- get-file [type base-url id]
   (let [path (get-path base-url)]
     (.mkdirs (io/file path))
@@ -48,7 +53,9 @@
         file (get-file type base-url id)
         options (assoc options
                        "maxDataReportRows"
-                       (:max-data-report-rows @config/settings))
+                       (:max-data-report-rows @config/settings)
+                       "caddisflyTestsFileUrl"
+                       (get-caddisfly-tests-file-url options))
         criteria (-> "uploadUrl"
                      options
                      config/get-bucket-name
