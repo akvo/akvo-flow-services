@@ -1,0 +1,46 @@
+{
+ :config-folder "/akvo-flow-server-config"
+
+ ;; port to run the HTTP service
+ :http-port 3000
+
+ ;; List of kinds interesting for stats
+ :stats-kinds ["User" "Device" "SurveyInstance" "Survey" "DeviceFiles"]
+
+ ;; Base path for reports and uploads
+ :base-path "/var/tmp/akvo/flow"
+
+ ;; Output directory where the statistics file will be written
+ :stats-path "/var/tmp/akvo/flow/reports/stats"
+
+ ;; Scheduling time for the daily stats job [HH mm ss]
+ :stats-schedule-time [01 00 00]
+
+ ;; Google account username used for making remote api calls (needs to be developer in all instances)
+ :username "usr@gmail.com"
+
+ ;; Google account password used for making remote api calls
+ :password "passW0rD"
+
+ ;; Default logging level - :trace :debug :info :warn :error :fatal :report (timbre's logging levels)
+ :log-level :info
+
+ ;; List of instances to be excluded from the stats report
+ :dev-instances ["akvoflowsandbox.appspot.com" "watermappingmonitoring-hrd.appspot.com"
+                 "flowaglimmerofhope-hrd.appspot.com" "akvoflow-uat1.appspot.com"
+                 "akvoflow-dev1.appspot.com" "akvoflow-dev2.appspot.com" "wfp-161.appspot.com"
+                 "flowdemoenvironment-hrd.appspot.com" "akvoflow-beta1.appspot.com"
+                 "akvoflow-beta2.appspot.com"]
+
+
+ :notification {:host "mail.akvo.org"
+                :user "noreply@akvoflow.org"
+                :pass "..."
+                :ssl true}
+
+ :notification-from "noreply@akvoflow.org"
+ :notification-reply-to "reports@akvoflow.org"
+
+ ;; Maximum number of rows generated for raw data reports. Nil means no limit.
+ :max-data-report-rows nil
+}
