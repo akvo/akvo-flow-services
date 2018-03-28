@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
 if [ ! -d "/akvo-flow-server-config/" ]; then
+    echo "Creating test git repo with Flow config"
     mkdir -p /server-config-repo
     cp -r flow-server-config /server-config-repo
     pushd /server-config-repo
