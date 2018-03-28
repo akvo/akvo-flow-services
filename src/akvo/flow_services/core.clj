@@ -121,7 +121,7 @@
     (config/reload (:config-folder cfg))
     (init)
     (stats/schedule-stats-job (:stats-schedule-time cfg))
-    (reset! nrepl-srv (nrepl/start-server :port 7888 :bind "0.0.0.0"))
+    (reset! nrepl-srv (nrepl/start-server :port 7888 :bind (:nrepl-bind cfg "localhost")))
     (timbre/set-level! (or (:log-level cfg) :info))
     (timbre/merge-config! timbre/example-config {:timestamp-pattern "yyyy-MM-dd HH:mm:ss,SSS"})
     (run-jetty #'app {:join? false :port (:http-port cfg)})))
