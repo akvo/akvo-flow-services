@@ -1,0 +1,16 @@
+version: "3"
+services:
+# keycloak:
+#   ports:
+#    - "8080:8080"
+ backend:
+   build:
+     context: .
+     dockerfile: dev/Dockerfile-dev
+   volumes:
+      - .:/app
+      - ~/.m2:/root/.m2
+      - ~/.lein:/root/.lein
+   ports:
+      - "7888:7888"
+      - "3000:3000"
