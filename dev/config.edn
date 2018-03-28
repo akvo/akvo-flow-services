@@ -43,4 +43,6 @@
 
  ;; Maximum number of rows generated for raw data reports. Nil means no limit.
  :max-data-report-rows nil
-}
+
+ :nrepl-bind            "0.0.0.0"
+ }
