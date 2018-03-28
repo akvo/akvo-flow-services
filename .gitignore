@@ -12,3 +12,5 @@ bin/*
 classes/*
 
 /bin/
+.idea
+*.iml
