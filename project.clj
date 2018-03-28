@@ -31,7 +31,7 @@
                  [com.google.gdata/core "1.47.1"]
                  [org.xerial/sqlite-jdbc "3.7.2"]
                  ; Akvo FLOW dependencies
-                 [exporterapplet "1.9.29"]
+                 [org.akvo.flow/akvo-flow "v1.9.29-52-g4bc8f24" :classifier "classes"]
                  [org.json/json "20090211"]
                  [log4j/log4j "1.2.16"]
                  [org.codehaus.jackson/jackson-mapper-asl "1.9.13"]
