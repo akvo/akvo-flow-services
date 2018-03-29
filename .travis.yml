@@ -1,0 +1,23 @@
+language: node_js
+sudo: required
+services:
+- docker
+cache:
+  directories:
+  - "${HOME}/.cache"
+  - "${HOME}/.m2"
+  - "${HOME}/google-cloud-sdk"
+before_install:
+- openssl aes-256-cbc -K $encrypted_12c8071d2874_key -iv $encrypted_12c8071d2874_iv
+  -in ci/gcloud-service-account.json.enc -out ci/gcloud-service-account.json -d
+- if [[ ! -f "${HOME}/google-cloud-sdk/bin/gcloud" ]]; then rm -rf "${HOME}/google-cloud-sdk";
+  curl https://sdk.cloud.google.com | bash > /dev/null; fi
+script:
+#- "./ci/test/build.sh && ./ci/test/deploy.sh"
+- "./ci/test/build.sh"
+after_failure:
+- docker-compose -p akvo-flow-ci -f docker-compose.yml -f docker-compose.ci.yml logs
+env:
+  global:
+  - PATH=${HOME}/google-cloud-sdk/bin:$PATH
+  - CLOUDSDK_CORE_DISABLE_PROMPTS=1
