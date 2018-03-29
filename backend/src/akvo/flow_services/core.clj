@@ -13,7 +13,7 @@
 ;  The full license text can also be seen at <http://www.gnu.org/licenses/agpl.html>.
 
 (ns akvo.flow-services.core
-  (:require [compojure.core :refer (defroutes GET POST OPTIONS)]
+  (:require [compojure.core :refer (defroutes GET POST OPTIONS routes)]
     [ring.util.response :refer (response charset content-type header)]
     [ring.adapter.jetty :refer (run-jetty)]
     [cheshire.core :as json]
@@ -107,8 +107,6 @@
   (GET ["/survey/:bucket/:survey-id", :survey-id #"[0-9]+"] [bucket survey-id]
        (exporter/export-survey-definition bucket (Long/valueOf survey-id)))
 
-  (route/files "/report/" {:root (:stats-path @config/settings)})
-
   (route/resources "/")
 
   (route/not-found "Page not found"))
@@ -116,8 +114,6 @@
 (defn init []
   (quartzite-scheduler/initialize)
   (quartzite-scheduler/start))
-
-(def app (handler/site endpoints))
 
 (defonce nrepl-srv (atom nil))
 
@@ -129,54 +125,9 @@
     (reset! nrepl-srv (nrepl/start-server :port 7888 :bind (:nrepl-bind cfg "localhost")))
     (timbre/set-level! (or (:log-level cfg) :info))
     (timbre/merge-config! timbre/example-config {:timestamp-pattern "yyyy-MM-dd HH:mm:ss,SSS"})
-    (run-jetty #'app {:join? false :port (:http-port cfg)})))
-
-(comment
-  (app {:ssl-client-cert    nil,
-        :cookies            {},
-        :remote-addr        "127.0.0.1",
-        :params             {},
-        :flash              nil,
-        :route-params       {},
-        :headers            {"connection"      "close",
-                             "accept-encoding" "gzip, deflate",
-                             "user-agent"      "Apache-HttpClient/4.3.5 (java 1.5)",
-                             "host"            "localhost:3000"},
-        :server-port        3000,
-        :content-length     nil,
-        :form-params        {},
-        :session/key        nil,
-        :query-params       {},
-        :content-type       nil,
-        :character-encoding nil,
-        :uri                "/report/2018-03-29.csv",
-        :server-name        "localhost",
-        :query-string       nil,
-        :multipart-params   {},
-        :scheme             :http,
-        :request-method     :get,
-        :session            {}})
-  (endpoints {:ssl-client-cert    nil,
-              :cookies            {},
-              :remote-addr        "127.0.0.1",
-              :params             {},
-              :flash              nil,
-              :route-params       {},
-              :headers            {"connection"      "close",
-                                   "accept-encoding" "gzip, deflate",
-                                   "user-agent"      "Apache-HttpClient/4.3.5 (java 1.5)",
-                                   "host"            "localhost:3000"},
-              :server-port        3000,
-              :content-length     nil,
-              :form-params        {},
-              :session/key        nil,
-              :query-params       {},
-              :content-type       nil,
-              :character-encoding nil,
-              :uri                "/report/2018-03-29.csv",
-              :server-name        "localhost",
-              :query-string       nil,
-              :multipart-params   {},
-              :scheme             :http,
-              :request-method     :get,
-              :session            {}}))
+    (run-jetty (handler/site (routes
+                               ;; This route is using the config, so we need to create it after the
+                               ;; config has been loaded
+                               (route/files "/report/" {:root (:stats-path @config/settings)})
+                               #'endpoints))
+               {:join? false :port (:http-port cfg)})))
