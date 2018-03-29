@@ -39,8 +39,11 @@
   (let [criteria (json/parse-string (:criteria params))] ; TODO: validation
     (response (scheduler/invalidate-cache criteria))))
 
+
+
 (defroutes ^:private endpoints
-  (GET "/" [] "OK")
+  (GET "/" []
+    "OK")
 
   (GET "/generate" [:as {params :params}]
     (let [criteria (json/parse-string (:criteria params))  ;; TODO: validation
@@ -127,3 +130,53 @@
     (timbre/set-level! (or (:log-level cfg) :info))
     (timbre/merge-config! timbre/example-config {:timestamp-pattern "yyyy-MM-dd HH:mm:ss,SSS"})
     (run-jetty #'app {:join? false :port (:http-port cfg)})))
+
+(comment
+  (app {:ssl-client-cert    nil,
+        :cookies            {},
+        :remote-addr        "127.0.0.1",
+        :params             {},
+        :flash              nil,
+        :route-params       {},
+        :headers            {"connection"      "close",
+                             "accept-encoding" "gzip, deflate",
+                             "user-agent"      "Apache-HttpClient/4.3.5 (java 1.5)",
+                             "host"            "localhost:3000"},
+        :server-port        3000,
+        :content-length     nil,
+        :form-params        {},
+        :session/key        nil,
+        :query-params       {},
+        :content-type       nil,
+        :character-encoding nil,
+        :uri                "/report/2018-03-29.csv",
+        :server-name        "localhost",
+        :query-string       nil,
+        :multipart-params   {},
+        :scheme             :http,
+        :request-method     :get,
+        :session            {}})
+  (endpoints {:ssl-client-cert    nil,
+              :cookies            {},
+              :remote-addr        "127.0.0.1",
+              :params             {},
+              :flash              nil,
+              :route-params       {},
+              :headers            {"connection"      "close",
+                                   "accept-encoding" "gzip, deflate",
+                                   "user-agent"      "Apache-HttpClient/4.3.5 (java 1.5)",
+                                   "host"            "localhost:3000"},
+              :server-port        3000,
+              :content-length     nil,
+              :form-params        {},
+              :session/key        nil,
+              :query-params       {},
+              :content-type       nil,
+              :character-encoding nil,
+              :uri                "/report/2018-03-29.csv",
+              :server-name        "localhost",
+              :query-string       nil,
+              :multipart-params   {},
+              :scheme             :http,
+              :request-method     :get,
+              :session            {}}))

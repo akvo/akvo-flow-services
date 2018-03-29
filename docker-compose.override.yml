@@ -8,8 +8,8 @@ services:
  backend:
    build:
      context: .
-     dockerfile: dev/Dockerfile-dev
+     dockerfile: backend/dev/Dockerfile-dev
    volumes:
-      - .:/app
+      - ./backend:/app
       - ~/.m2:/root/.m2
       - ~/.lein:/root/.lein
