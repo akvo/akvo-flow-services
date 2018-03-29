@@ -75,28 +75,32 @@
         :when stats]
     (conj (calc-stats kinds stats) server)))
 
-(jobs/defjob StatsJob [job-data]
-  (let [{:strs [server-list kinds stats-path]} (conversion/from-job-data job-data)
-        all-data (get-all-data server-list kinds)]
+(defn- stats-job [{:strs [server-list kinds stats-path]}]
+  (let [all-data (get-all-data server-list kinds)]
     (write-stats (conj (seq kinds) "Instance") all-data stats-path)))
+
+(jobs/defjob StatsJob [job-data]
+  (stats-job (conversion/from-job-data job-data)))
+
+(defn job-data [settings]
+  (let [{:keys [username password stats-path]} settings
+        all-instances (set (map #(last (str/split % #"https?://")) (keys @config/instance-alias)))
+        dev-instances (set (:dev-instances @config/settings))
+        server-list (difference all-instances dev-instances)
+        kinds (apply sorted-set (:stats-kinds settings))]
+    {"username"    username
+     "password"    password
+     "server-list" server-list
+     "stats-path"  stats-path
+     "kinds"       kinds}))
 
 (defn schedule-stats-job
   "Schedule a daily job execution based on the sch-time in the form [HH mm ss]"
   [sch-time]
-  (let [settings @config/settings
-        {:keys [username password stats-path]} settings
-        all-instances (set (map #(last (str/split % #"https?://")) (keys @config/instance-alias)))
-        dev-instances (set (:dev-instances @config/settings))
-        server-list (difference all-instances dev-instances)
-        kinds (apply sorted-set (:stats-kinds settings))
-        job (jobs/build
+  (let [job (jobs/build
               (jobs/of-type StatsJob)
               (jobs/with-identity (jobs/key "stats-job"))
-              (jobs/using-job-data {"username" username
-                                    "password" password
-                                    "server-list" server-list
-                                    "stats-path" stats-path
-                                    "kinds" kinds}))
+              (jobs/using-job-data (job-data @config/settings)))
         trigger (triggers/build
                   (triggers/with-identity (triggers/key "stats-trigger"))
                   (triggers/start-now)
@@ -106,3 +110,9 @@
                       (interval/starting-daily-at
                         (apply interval/time-of-day sch-time)))))]
     (scheduler/schedule job trigger)))
+
+
+(comment
+  (stats-job (job-data @config/settings))
+
+  )
