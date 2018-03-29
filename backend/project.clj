@@ -2,7 +2,7 @@
   :description "HTTP layer to applets functionality"
   :url "https://github.com/akvo/akvo-flow-services"
   :license {:name "GNU Affero General Public License"
-            :url "https://www.gnu.org/licenses/agpl"}
+            :url  "https://www.gnu.org/licenses/agpl"}
   :min-lein-version "2.0.0"
   :dependencies [[org.clojure/clojure "1.7.0"]
                  [org.clojure/data.csv "0.1.3"]
@@ -40,6 +40,6 @@
                  [com.google.appengine/appengine-remote-api "1.9.50"]
                  [com.google.appengine/appengine-api-1.0-sdk "1.9.50"]]
   :main akvo.flow-services.core
+  :uberjar-name "akvo-flow-services.jar"
   :plugins [[lein-ring "0.8.5"]]
-  :ring {:handler akvo.flow-services.core/app
-         :init akvo.flow-services.core/init})
+  :profiles {:uberjar {:aot :all}})
