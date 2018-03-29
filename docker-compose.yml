@@ -1,12 +1,13 @@
 version: "3"
 services:
-# keycloak:
-#   build: keycloak
-#   expose:
-#    - 8080
+ mainnetwork:
+    image: alpine
+    command: tail -f /dev/null
+ gae-dev-server:
+   build: gae-dev-server
+   network_mode: service:mainnetwork
  backend:
-   expose:
-      - 3000
+   network_mode: service:mainnetwork
    environment:
      - HOST_UID
      - HOST_GID
