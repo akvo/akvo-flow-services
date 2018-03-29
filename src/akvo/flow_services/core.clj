@@ -104,6 +104,8 @@
   (GET ["/survey/:bucket/:survey-id", :survey-id #"[0-9]+"] [bucket survey-id]
        (exporter/export-survey-definition bucket (Long/valueOf survey-id)))
 
+  (route/files "/report/" {:root (:stats-path @config/settings)})
+
   (route/resources "/")
 
   (route/not-found "Page not found"))
