@@ -29,7 +29,8 @@
             [akvo.commons.config :as config]
             [akvo.commons.gae :as gae]
             [akvo.commons.gae.query :as query]
-            [taoensso.timbre :as timbre :refer (debugf infof errorf)]))
+            [taoensso.timbre :as timbre :refer (debugf infof errorf)]
+            [akvo.flow-services.util :as util]))
 
 
 (defn- get-path []
@@ -105,29 +106,21 @@
       (s3/put-object creds bucket-name obj-key f))))
 
 (defn add-message [bucket-name action obj-id content]
-  (let [config (config/find-config bucket-name)
-        msg {"actionAbout" action
+  (let [msg {"actionAbout" action
              "objectId" (if obj-id (Long/parseLong obj-id))
              ;; Return only first 500 xters of message due to GAE String limitation
              "shortMessage" (if (nil? content)
                               ""
                               (subs content 0 (min 499 (count content))))}]
-    (gae/with-datastore [ds {:hostname (:domain config)
-                             :service-account-id (:service-account-id config)
-                             :private-key-file (:private-key-file config)
-                             :port 443}]
+    (gae/with-datastore [ds (util/datastore-spec bucket-name)]
       (gae/put! ds "Message" msg))))
 
 (defn- retrieve-question-ids [bucket-name survey-id]
-  (let [config (config/find-config bucket-name)]
-    (gae/with-datastore [ds {:hostname (:domain config)
-                             :service-account-id (:service-account-id config)
-                             :private-key-file (:private-key-file config)
-                             :port 443}]
-      (for [question (seq (query/result ds {:kind "Question"
-                                            :filter (query/= "surveyId" (Long/valueOf survey-id))
-                                            :keys-only true}))]
-        (.getId (.getKey question))))))
+  (gae/with-datastore [ds (util/datastore-spec bucket-name)]
+    (for [question (seq (query/result ds {:kind      "Question"
+                                          :filter    (query/= "surveyId" (Long/valueOf survey-id))
+                                          :keys-only true}))]
+      (.getId (.getKey question)))))
 
 (defn- get-file-ids [sheet]
   (->> (.getRow sheet 0)

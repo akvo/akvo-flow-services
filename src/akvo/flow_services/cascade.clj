@@ -17,7 +17,7 @@
            [java.nio.file Paths Files]
            [java.util UUID Date])
   (:require [clojurewerkz.quartzite [conversion :as conversion]
-                                    [jobs :as jobs]]
+             [jobs :as jobs]]
             [akvo.commons.config :as config]
             [akvo.commons.gae :as gae]
             [akvo.flow-services.scheduler :as scheduler]
@@ -30,7 +30,8 @@
             [clojure.data.csv :as csv]
             [clojure.string :as str]
             [aws.sdk.s3 :as s3]
-            [taoensso.timbre :refer [errorf debugf infof]]))
+            [taoensso.timbre :refer [errorf debugf infof]]
+            [akvo.flow-services.util :as util]))
 
 ;; Each node is roughly ~1KB (depending on the code & name values)
 ;; We have a maximum of 1MB per request
@@ -129,11 +130,7 @@
         (throw e)))))
 
 (defn datastore-spec [upload-url]
-  (let [cfg (config/find-config (config/get-bucket-name upload-url))]
-    {:hostname (:domain cfg)
-     :service-account-id (:service-account-id cfg)
-     :private-key-file (:private-key-file cfg)
-     :port 443}))
+  (util/datastore-spec (config/get-bucket-name upload-url)))
 
 (defn get-nodes
   "Returns the nodes for a given cascadeResourceId.

@@ -14,23 +14,13 @@
 
 (ns akvo.flow-services.geoshape-export
   (:require [clojure.java.io :as io]
-            [clojure.set :as set]
-            [clojure.string :as string]
             [akvo.commons.gae :as gae]
             [akvo.commons.gae.query :as query]
             [akvo.commons.config :as config]
             [cheshire.core :as json]
-            [taoensso.timbre :as timbre])
-  (:import [java.util UUID]
-           [com.fasterxml.jackson.core JsonParseException]
-           [com.google.appengine.api.datastore Entity]))
-
-(defn datastore-spec [app-id]
-  (let [cfg (config/find-config app-id)]
-    {:hostname (:domain cfg)
-     :service-account-id (:service-account-id cfg)
-     :private-key-file (:private-key-file cfg)
-     :port 443}))
+            [taoensso.timbre :as timbre]
+            [akvo.flow-services.util :as util])
+  (:import [java.util UUID]))
 
 (defn feature [question-id questions question-answers]
   (let [geoshape (-> question-answers
@@ -93,7 +83,7 @@
 
 (defn export [app-id form-id geoshape-question-id]
   (timbre/infof "Exporting geoshape app-id: %s - form-id: %s - geoshape-question-id: %s" app-id form-id geoshape-question-id)
-  (gae/with-datastore [ds (datastore-spec app-id)]
+  (gae/with-datastore [ds (util/datastore-spec app-id)]
     (let [form-id (Long/parseLong form-id)
           questions (reduce (fn [result {:keys [id text]}]
                               (assoc result id text))

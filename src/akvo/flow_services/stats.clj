@@ -21,20 +21,17 @@
                                     [scheduler :as scheduler]]
             [clojurewerkz.quartzite.schedule.daily-interval :as interval]
             [akvo.commons.config :as config]
+            [akvo.flow-services.util :as util]
             [akvo.commons.gae :as gae]
             [clojure.data.csv :as csv]
             [clojure.java.io :as io]
             [clojure.string :as str]
             [clojure.set :refer (difference)]
-            [taoensso.timbre :as timbre :refer (errorf)]))
+            [taoensso.timbre :refer (errorf)]))
 
 (defn datastore-spec [server]
-  (let [host (first (str/split server #"\."))
-        cfg (config/find-config host)]
-    {:hostname server
-     :service-account-id (:service-account-id cfg)
-     :private-key-file (:private-key-file cfg)
-     :port 443}))
+  (let [host (first (str/split server #"\."))]
+    (util/datastore-spec host)))
 
 (defn get-stats
   "Returns a list of stats for the given instance"

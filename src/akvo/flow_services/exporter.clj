@@ -14,12 +14,13 @@
 
 (ns akvo.flow-services.exporter
   (:require [clojure.java.io :as io]
-    [clojure.walk :refer (stringify-keys keywordize-keys)]
-    [akvo.commons.config :as config]
-    [taoensso.timbre :as timbre :refer (infof)]
-    [cheshire.core :as json]
-    [akvo.commons.gae :as gae]
-    [akvo.commons.gae.query :as query])
+            [clojure.walk :refer (stringify-keys keywordize-keys)]
+            [akvo.commons.config :as config]
+            [taoensso.timbre :as timbre :refer (infof)]
+            [cheshire.core :as json]
+            [akvo.commons.gae :as gae]
+            [akvo.commons.gae.query :as query]
+            [akvo.flow-services.util :as util])
   (:import java.io.File
     java.util.UUID
     org.waterforpeople.mapping.dataexport.SurveyDataImportExportFactory))
@@ -171,10 +172,5 @@
   "Export survey definition as a JSON string"
   [gae-app-id survey-id]
   {:pre [(> survey-id 0)]}
-  (let [settings @config/settings
-        {:keys [domain service-account-id private-key-file]} (config/find-config gae-app-id)]
-    (gae/with-datastore [ds {:hostname domain
-                             :service-account-id service-account-id
-                             :private-key-file private-key-file
-                             :port 443}]
-        (json/generate-string (assemble-survey-definition ds survey-id)))))
+  (gae/with-datastore [ds (util/datastore-spec gae-app-id)]
+    (json/generate-string (assemble-survey-definition ds survey-id))))
