@@ -86,6 +86,17 @@ spec:
             readOnly: true
           - name: akvo-flow-services-reports
             mountPath: /var/tmp/akvo/flow
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 3000
+          initialDelaySeconds: 30
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: 3000
+          initialDelaySeconds: 30
+
 ---
 apiVersion: v1
 kind: Service

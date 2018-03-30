@@ -42,8 +42,8 @@
 
 
 (defroutes ^:private endpoints
-  (GET "/" []
-    "OK")
+  (GET "/" [] "OK")
+  (GET "/healthz" [] "OK")
 
   (GET "/generate" [:as {params :params}]
     (let [criteria (json/parse-string (:criteria params))  ;; TODO: validation
