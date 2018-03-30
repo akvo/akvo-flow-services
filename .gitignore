@@ -14,3 +14,4 @@ classes/*
 /bin/
 .idea
 *.iml
+akvo-flow-services.yaml
