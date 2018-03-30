@@ -55,6 +55,9 @@ spec:
           secret:
              secretName: akvo-flow-services
              defaultMode: 0700
+        - name: akvo-flow-services-reports
+          persistentVolumeClaim:
+             claimName: akvo-flow-services-reports
       containers:
       - name: akvo-flow-services
         image: eu.gcr.io/akvo-lumen/akvo-flow-services:$TRAVIS_COMMIT
@@ -81,6 +84,8 @@ spec:
           - name: git-keys-volume
             mountPath: /root/.ssh
             readOnly: true
+          - name: akvo-flow-services-reports
+            mountPath: /var/tmp/akvo/flow
 ---
 apiVersion: v1
 kind: Service
@@ -96,3 +101,16 @@ spec:
     targetPort: 3000
   selector:
     run: akvo-flow-services
+---
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: akvo-flow-services-reports
+  labels:
+    app: akvo-flow-services
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
