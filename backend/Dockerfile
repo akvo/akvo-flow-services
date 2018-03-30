@@ -2,7 +2,7 @@ FROM openjdk:8-jre-alpine
 MAINTAINER Akvo Foundation <devops@akvo.org>
 
 RUN set -ex; apk update && \
-    apk add git && \
+    apk add git openssl-client && \
     rm -rf /var/cache/apk/*
 
 WORKDIR /app
