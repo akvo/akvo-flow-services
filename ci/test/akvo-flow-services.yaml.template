@@ -1,0 +1,90 @@
+apiVersion: v1
+data:
+  config.edn: |
+        {
+         :config-folder "/akvo-flow-server-config"
+         :http-port 3000
+         :stats-kinds ["User" "Device" "SurveyInstance" "Survey" "DeviceFiles"]
+         :base-path "/var/tmp/akvo/flow"
+         :stats-path "/var/tmp/akvo/flow/reports/stats"
+         :stats-schedule-time [01 00 00]
+         :username "usr@gmail.com"
+         :password "passW0rD"
+         :log-level :info
+         :dev-instances ["akvoflowsandbox.appspot.com" "watermappingmonitoring-hrd.appspot.com"
+                         "flowaglimmerofhope-hrd.appspot.com" "akvoflow-uat1.appspot.com"
+                         "akvoflow-dev1.appspot.com" "akvoflow-dev2.appspot.com" "wfp-161.appspot.com"
+                         "flowdemoenvironment-hrd.appspot.com" "akvoflow-beta1.appspot.com"
+                         "akvoflow-beta2.appspot.com"]
+         :notification {:host "mail.akvo.org"
+                        :user "noreply@akvoflow.org"
+                        :pass "..."
+                        :ssl true}
+         :notification-from "noreply@akvoflow.org"
+         :notification-reply-to "reports@akvoflow.org"
+         :max-data-report-rows nil
+         :nrepl-bind            "0.0.0.0"
+         }
+kind: ConfigMap
+metadata:
+  name: akvo-flow-services
+  namespace: default
+---
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: akvo-flow-services
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      run: akvo-flow-services
+  template:
+    metadata:
+      labels:
+        run: akvo-flow-services
+        akvo-flow-services-version: $TRAVIS_COMMIT
+        app: akvo-flow-services
+    spec:
+      volumes:
+        - name: config-volume
+          configMap:
+            name: akvo-flow-services
+      containers:
+      - name: akvo-flow-services
+        image: eu.gcr.io/akvo-lumen/akvo-flow-services:$TRAVIS_COMMIT
+        ports:
+        - containerPort: 3000
+        resources:
+          requests:
+            cpu: "50m"
+          limits:
+            cpu: "1000m"
+        env:
+         - name: POD_NAME
+           valueFrom:
+             fieldRef:
+               fieldPath: metadata.name
+         - name: POD_NAMESPACE
+           valueFrom:
+             fieldRef:
+               fieldPath: metadata.namespace
+        volumeMounts:
+          - name: config-volume
+            mountPath: /etc/config/akvo-flow-services
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: akvo-flow-services
+  namespace: default
+  labels:
+    run: akvo-flow-services
+spec:
+  type: NodePort
+  ports:
+  - port: 3000
+    targetPort: 3000
+  selector:
+    run: akvo-flow-services

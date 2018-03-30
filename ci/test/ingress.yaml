@@ -1,0 +1,11 @@
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: akvo-flow-services
+  namespace: default
+spec:
+  tls:
+  - secretName: tls
+  backend:
+    serviceName: akvo-flow-services
+    servicePort: 3000
