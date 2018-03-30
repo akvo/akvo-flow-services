@@ -6,6 +6,8 @@ RUN set -ex; apk update && \
     rm -rf /var/cache/apk/*
 
 WORKDIR /app
+COPY prod/start-prod-env.sh /app/start-prod-env.sh
+RUN chmod u+x /app/start-prod-env.sh
 COPY target/akvo-flow-services.jar /app/akvo-flow-services.jar
 
-CMD ["start-prod-env.sh"]
+CMD ["/app/start-prod-env.sh"]
