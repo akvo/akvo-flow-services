@@ -13,8 +13,7 @@ before_install:
 - if [[ ! -f "${HOME}/google-cloud-sdk/bin/gcloud" ]]; then rm -rf "${HOME}/google-cloud-sdk";
   curl https://sdk.cloud.google.com | bash > /dev/null; fi
 script:
-#- "./ci/test/build.sh && ./ci/test/deploy.sh"
-- "./ci/test/build.sh"
+- "./ci/test/build.sh && ./ci/test/deploy.sh"
 after_failure:
 - docker-compose -p akvo-flow-ci -f docker-compose.yml -f docker-compose.ci.yml logs
 env:
