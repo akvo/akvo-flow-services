@@ -8,7 +8,7 @@ services:
  backend:
    build:
      context: .
-     dockerfile: backend/dev/Dockerfile-dev
+     dockerfile: backend/Dockerfile-dev
    volumes:
       - ./backend:/app
       - ~/.m2:/root/.m2

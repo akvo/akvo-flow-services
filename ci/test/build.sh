@@ -9,7 +9,7 @@ if [ -z "$TRAVIS_COMMIT" ]; then
     export TRAVIS_COMMIT=local
 fi
 
-docker build --rm=false -t akvo-flow-services-dev:develop backend -f backend/dev/Dockerfile-dev
+docker build --rm=false -t akvo-flow-services-dev:develop backend -f backend/Dockerfile-dev
 docker run -v $HOME/.m2:/root/.m2 -v `pwd`/backend:/app akvo-flow-services-dev:develop lein do test, uberjar
 
 docker build --rm=false -t eu.gcr.io/${PROJECT_NAME}/akvo-flow-services:$TRAVIS_COMMIT ./backend
