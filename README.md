@@ -5,7 +5,7 @@ An HTTP layer on top of the existing Akvo FLOW applet functionality for:
 * Generating reports
 * Importing data
 
-Please read the [installation](doc/InstallationNotes.md) and [deployment](doc/DeploymentNotes.md) notes.
+Please read the [running locally](doc/RunningLocally.md) and [deployment](doc/DeploymentNotes.md) notes.
 
 ## License
 
