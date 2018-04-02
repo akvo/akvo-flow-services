@@ -129,6 +129,6 @@
     (run-jetty (handler/site (routes
                                ;; This route is using the config, so we need to create it after the
                                ;; config has been loaded
-                               (route/files "/report/" {:root (:stats-path @config/settings)})
+                               (route/files "/report/" {:root (exporter/get-report-directory)})
                                #'endpoints))
                {:join? false :port (:http-port cfg)})))

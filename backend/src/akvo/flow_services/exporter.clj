@@ -31,10 +31,12 @@
     (= t "RAW_DATA_TEXT") "txt"
     :else "xlsx"))
 
+(defn get-report-directory []
+  (format "%s/%s" (:base-path @config/settings) "reports"))
+
 (defn- get-path [base-url]
-  (let [base-path (:base-path @config/settings)
-        bn (config/get-bucket-name base-url)]
-    (format "%s/%s/%s/%s" base-path "reports" bn (UUID/randomUUID))))
+  (let [bn (config/get-bucket-name base-url)]
+    (format "%s/%s/%s" (get-report-directory) bn (UUID/randomUUID))))
 
 (defn- get-caddisfly-tests-file-url [options]
   "Retrieve the URL for caddisfly tests file"
