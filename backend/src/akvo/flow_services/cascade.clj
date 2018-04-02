@@ -351,9 +351,7 @@
         (errorf "No CascadeResource found with id: %s" cascade-id)))))
 
 (defn- publish-cascade [uploadUrl cascadeResourceId version]
-   (let [{:keys [username password]} @config/settings
-        bucket (config/get-bucket-name uploadUrl)
-        config (config/find-config bucket)
+   (let [bucket (config/get-bucket-name uploadUrl)
         tmp-dir (fs/temp-dir (UUID/randomUUID))
         db-name (format  "cascade-%s-v%s.sqlite" cascadeResourceId version)
         db-spec (get-db-spec (.getAbsolutePath tmp-dir) db-name)

@@ -8,8 +8,6 @@ data:
          :base-path "/var/tmp/akvo/flow"
          :stats-path "/var/tmp/akvo/flow/reports/stats"
          :stats-schedule-time [01 00 00]
-         :username "usr@gmail.com"
-         :password "passW0rD"
          :log-level :info
          :dev-instances ["akvoflowsandbox.appspot.com" "watermappingmonitoring-hrd.appspot.com"
                          "flowaglimmerofhope-hrd.appspot.com" "akvoflow-uat1.appspot.com"

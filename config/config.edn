@@ -17,12 +17,6 @@
  ;; Scheduling time for the daily stats job [HH mm ss]
  :stats-schedule-time [01 00 00]
 
- ;; Google account username used for making remote api calls (needs to be developer in all instances)
- :username "usr@gmail.com"
-
- ;; Google account password used for making remote api calls
- :password "passW0rD"
-
  ;; Default logging level - :trace :debug :info :warn :error :fatal :report (timbre's logging levels)
  :log-level :info
 

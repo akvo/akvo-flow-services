@@ -80,14 +80,12 @@
   (stats-job (conversion/from-job-data job-data)))
 
 (defn job-data [settings]
-  (let [{:keys [username password stats-path]} settings
+  (let [{:keys [stats-path]} settings
         all-instances (set (map #(last (str/split % #"https?://")) (keys @config/instance-alias)))
-        dev-instances (set (:dev-instances @config/settings))
+        dev-instances (set (:dev-instances settings))
         server-list (difference all-instances dev-instances)
         kinds (apply sorted-set (:stats-kinds settings))]
-    {"username"    username
-     "password"    password
-     "server-list" server-list
+    {"server-list" server-list
      "stats-path"  stats-path
      "kinds"       kinds}))
 
