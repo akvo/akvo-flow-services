@@ -16,9 +16,9 @@
   (:import [com.google.appengine.api.datastore Entity Query]
            java.util.Date java.text.SimpleDateFormat)
   (:require [clojurewerkz.quartzite [conversion :as conversion]
-                                    [jobs :as jobs]
-                                    [triggers :as triggers]
-                                    [scheduler :as scheduler]]
+             [jobs :as jobs]
+             [triggers :as triggers]
+             [scheduler :as scheduler]]
             [clojurewerkz.quartzite.schedule.daily-interval :as interval]
             [akvo.commons.config :as config]
             [akvo.flow-services.util :as util]
@@ -27,7 +27,8 @@
             [clojure.java.io :as io]
             [clojure.string :as str]
             [clojure.set :refer (difference)]
-            [taoensso.timbre :refer (errorf)]))
+            [taoensso.timbre :refer (errorf)]
+            [akvo.flow-services.exporter :as exporter]))
 
 (defn datastore-spec [server]
   (let [host (first (str/split server #"\."))]
@@ -80,7 +81,7 @@
   (stats-job (conversion/from-job-data job-data)))
 
 (defn job-data [settings]
-  (let [{:keys [stats-path]} settings
+  (let [stats-path (str (exporter/get-report-directory) "/stats")
         all-instances (set (map #(last (str/split % #"https?://")) (keys @config/instance-alias)))
         dev-instances (set (:dev-instances settings))
         server-list (difference all-instances dev-instances)

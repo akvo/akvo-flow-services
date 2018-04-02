@@ -6,7 +6,6 @@ data:
          :http-port 3000
          :stats-kinds ["User" "Device" "SurveyInstance" "Survey" "DeviceFiles"]
          :base-path "/var/tmp/akvo/flow"
-         :stats-path "/var/tmp/akvo/flow/reports/stats"
          :stats-schedule-time [01 00 00]
          :log-level :info
          :dev-instances ["akvoflowsandbox.appspot.com" "watermappingmonitoring-hrd.appspot.com"
