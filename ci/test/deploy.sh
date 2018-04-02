@@ -39,7 +39,6 @@ gcloud docker -- push eu.gcr.io/${PROJECT_NAME}/akvo-flow-services
 sed -e "s/\$TRAVIS_COMMIT/$TRAVIS_COMMIT/" ci/test/akvo-flow-services.yaml.template > akvo-flow-services.yaml
 
 kubectl apply -f akvo-flow-services.yaml
-kubectl apply -f ci/test/ingress.yaml
 
 ci/test/wait-for-k8s-deployment-to-be-ready.sh
 
