@@ -19,6 +19,7 @@
     [cheshire.core :as json]
     [compojure [handler :as handler] [route :as route]]
     [clojurewerkz.quartzite.scheduler :as quartzite-scheduler]
+    [aero.core :as aero]
     [akvo.commons.config :as config]
     [akvo.flow-services [scheduler :as scheduler]
                         [uploader :as uploader]
@@ -118,7 +119,7 @@
 (defonce nrepl-srv (atom nil))
 
 (defn -main [config-file]
-  (when-let [cfg (config/set-settings! config-file)]
+  (when-let [cfg (reset! config/settings (aero/read-config config-file))]
     (config/reload (:config-folder cfg))
     (init)
     (stats/schedule-stats-job (:stats-schedule-time cfg))

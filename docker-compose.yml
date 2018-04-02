@@ -11,3 +11,4 @@ services:
    environment:
      - HOST_UID
      - HOST_GID
+     - EMAIL_PASSWORD=anything

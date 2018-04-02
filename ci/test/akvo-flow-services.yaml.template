@@ -16,7 +16,7 @@ data:
                          "akvoflow-beta2.appspot.com"]
          :notification {:host "mail.akvo.org"
                         :user "noreply@akvoflow.org"
-                        :pass "..."
+                        :pass #env EMAIL_PASSWORD
                         :ssl true}
          :notification-from "noreply@akvoflow.org"
          :notification-reply-to "reports@akvoflow.org"
@@ -75,6 +75,11 @@ spec:
            valueFrom:
              fieldRef:
                fieldPath: metadata.namespace
+         - name: EMAIL_PASSWORD
+           valueFrom:
+             secretKeyRef:
+               name: akvo-flow-services
+               key: email-password
         volumeMounts:
           - name: config-volume
             mountPath: /etc/config/akvo-flow-services

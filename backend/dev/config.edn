@@ -27,9 +27,9 @@
                  "akvoflow-beta2.appspot.com"]
 
 
- :notification {:host "mail.akvo.org"
+ :notification {:host "invalid.just.in.case.akvo.org"
                 :user "noreply@akvoflow.org"
-                :pass "..."
+                :pass #env EMAIL_PASSWORD
                 :ssl true}
 
  :notification-from "noreply@akvoflow.org"
