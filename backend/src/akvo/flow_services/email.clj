@@ -20,10 +20,7 @@
             [taoensso.timbre :as timbre :refer (infof)]
             [cheshire.core :as json]))
 
-(defn mail-jet-send [settings
-                     emails
-                     url
-                     locale]
+(defn mail-jet-send [settings emails locale url]
   (let [body {"FromEmail"  (:notification-from settings)
               "Recipients" (into []
                                  (map (fn [email] {"Email" email})
