@@ -28,7 +28,7 @@
                 :credentials [#env EMAIL_USER #env EMAIL_PASSWORD]
                 :api-url     "invalid.just.in.case.akvo.org"}
 
- :notification-from "noreply@akvoflow.org"
+ :notification-from "noreply@akvo.org"
  :notification-reply-to "reports@akvoflow.org"
 
  ;; Maximum number of rows generated for raw data reports. Nil means no limit.

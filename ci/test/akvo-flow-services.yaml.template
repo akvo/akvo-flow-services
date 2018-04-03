@@ -16,7 +16,7 @@ data:
          :notification {:mailjet true
                         :credentials [#env EMAIL_USER #env EMAIL_PASSWORD]
                         :api-url     "https://api.mailjet.com/v3"}
-         :notification-from "noreply@akvoflow.org"
+         :notification-from "noreply@akvo.org"
          :notification-reply-to "reports@akvoflow.org"
          :max-data-report-rows nil
          :nrepl-bind            "0.0.0.0"
