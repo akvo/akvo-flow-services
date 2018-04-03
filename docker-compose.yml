@@ -12,3 +12,4 @@ services:
      - HOST_UID
      - HOST_GID
      - EMAIL_PASSWORD=anything
+     - EMAIL_USER=anything.else

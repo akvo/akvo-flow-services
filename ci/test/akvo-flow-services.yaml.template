@@ -13,10 +13,9 @@ data:
                          "akvoflow-dev1.appspot.com" "akvoflow-dev2.appspot.com" "wfp-161.appspot.com"
                          "flowdemoenvironment-hrd.appspot.com" "akvoflow-beta1.appspot.com"
                          "akvoflow-beta2.appspot.com"]
-         :notification {:host "mail.akvo.org"
-                        :user "noreply@akvoflow.org"
-                        :pass #env EMAIL_PASSWORD
-                        :ssl true}
+         :notification {:mailjet true
+                        :credentials [#env EMAIL_USER #env EMAIL_PASSWORD]
+                        :api-url     "https://api.mailjet.com/v3"}
          :notification-from "noreply@akvoflow.org"
          :notification-reply-to "reports@akvoflow.org"
          :max-data-report-rows nil
@@ -74,10 +73,15 @@ spec:
            valueFrom:
              fieldRef:
                fieldPath: metadata.namespace
+         - name: EMAIL_USER
+           valueFrom:
+             secretKeyRef:
+               name: mailjet
+               key: email-user
          - name: EMAIL_PASSWORD
            valueFrom:
              secretKeyRef:
-               name: akvo-flow-services
+               name: mailjet
                key: email-password
         volumeMounts:
           - name: config-volume

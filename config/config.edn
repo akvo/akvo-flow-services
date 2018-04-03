@@ -25,10 +25,9 @@
                  "akvoflow-beta2.appspot.com"]
 
 
- :notification {:host "mail.akvo.org"
-                :user "noreply@akvoflow.org"
-                :pass "..."
-                :ssl true}
+ :notification {:mailjet true
+                :credentials [#env EMAIL_USER #env EMAIL_PASSWORD]
+                :api-url     "https://api.mailjet.com/v3"}
 
  :notification-from "noreply@akvoflow.org"
  :notification-reply-to "reports@akvoflow.org"

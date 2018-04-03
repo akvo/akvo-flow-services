@@ -16,14 +16,38 @@
   (:require [akvo.flow-services.translate :refer (t>)]
             [akvo.commons.config :as config]
             [postal.core :as postal]
-            [taoensso.timbre :as timbre :refer (infof)]))
+            [clj-http.client :as client]
+            [taoensso.timbre :as timbre :refer (infof)]
+            [cheshire.core :as json]))
+
+(defn mail-jet-send [settings
+                     emails
+                     url
+                     locale]
+  (let [body {"FromEmail"  (:notification-from settings)
+              "Recipients" (into []
+                                 (map (fn [email] {"Email" email})
+                                      emails))
+              "Subject"    (t> locale "_report_header")
+              "Text-part"  (t> locale "_report_body" url)
+              "Headers"    {"Reply-To" (:notification-reply-to settings)}}]
+    (client/post (format "%s/send" (-> settings :notification :api-url))
+                 {:basic-auth (-> settings :notification :credentials)
+                  :headers    {"Content-Type" "application/json"}
+                  :body       (json/encode body)})))
+
+(defn postal-send [settings emails locale url]
+  (postal/send-message (:notification settings)
+                       {:from     (:notification-from settings)
+                        :to       emails
+                        :subject  (t> locale "_report_header")
+                        :body     (t> locale "_report_body" url)
+                        :Reply-To (:notification-reply-to settings)}))
 
 (defn send-report-ready [emails locale url]
   (infof "Notifying %s about %s" emails url)
-  (let [settings @config/settings]
-    (postal/send-message (:notification settings)
-                         {:from (:notification-from settings)
-                          :to emails
-                          :subject (t> locale "_report_header")
-                          :body (t> locale "_report_body" url)
-                          :Reply-To (:notification-reply-to settings)})))
+  (let [settings @config/settings
+        send-email (if (-> settings :notification :mailjet)
+                     mail-jet-send
+                     postal-send)]
+    (send-email settings emails locale url)))
