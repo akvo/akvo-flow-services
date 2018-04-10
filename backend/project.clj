@@ -43,5 +43,8 @@
                  [aero "1.1.3"]]
   :main akvo.flow-services.core
   :uberjar-name "akvo-flow-services.jar"
+  :test-selectors {:default (fn [m] (not (or (:integration m) (:kubernetes-test m))))
+                   :integration :integration
+                   :kubernetes-test :kubernetes-test}
   :plugins [[lein-ring "0.8.5"]]
   :profiles {:uberjar {:aot :all}})

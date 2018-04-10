@@ -15,8 +15,3 @@ services:
      - EMAIL_USER=anything.else
  wiremock-proxy:
    image: rodolpheche/wiremock:2.16.0-alpine
-   ports:
-     - 8081:8080
-   volumes:
-     - ./record:/home/wiremock
-#   command: --proxy-all="http://192.168.0.100:8888" --record-mappings --verbose

@@ -15,5 +15,5 @@ docker run -v $HOME/.m2:/root/.m2 -v `pwd`/backend:/app akvo-flow-services-dev:d
 docker build --rm=false -t eu.gcr.io/${PROJECT_NAME}/akvo-flow-services:$TRAVIS_COMMIT ./backend
 docker tag eu.gcr.io/${PROJECT_NAME}/akvo-flow-services:$TRAVIS_COMMIT eu.gcr.io/${PROJECT_NAME}/akvo-flow-services:develop
 
-#docker-compose -p akvo-flow-ci -f docker-compose.yml -f docker-compose.ci.yml up -d --build
-#docker-compose -p akvo-flow-ci -f docker-compose.yml -f docker-compose.ci.yml run --no-deps tests /import-and-run.sh integration-test
+docker-compose -p akvo-flow-ci -f docker-compose.yml -f docker-compose.ci.yml up -d --build
+docker-compose -p akvo-flow-ci -f docker-compose.yml -f docker-compose.ci.yml run --no-deps tests lein test :integration
