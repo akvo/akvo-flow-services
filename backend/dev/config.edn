@@ -26,7 +26,7 @@
 
  :notification {:mailjet     true
                 :credentials [#env EMAIL_USER #env EMAIL_PASSWORD]
-                :api-url     "invalid.just.in.case.akvo.org"}
+                :api-url     "http://wiremock-proxy:8080/mailjet"}
 
  :notification-from "noreply@akvo.org"
  :notification-reply-to "reports@akvoflow.org"
