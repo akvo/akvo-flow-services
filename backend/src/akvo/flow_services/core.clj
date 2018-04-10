@@ -132,3 +132,6 @@
                                (route/files "/report/" {:root (exporter/get-report-directory)})
                                #'endpoints))
                {:join? false :port (:http-port cfg)})))
+
+(comment
+  (reset! config/settings (aero/read-config "dev/config.edn")))
