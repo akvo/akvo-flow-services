@@ -4,7 +4,7 @@ services:
     ports:
       - "7888:7888"
       - "3000:3000"
-      - "8888:8888"
+      - "8889:8888"
  backend:
    build:
      context: .
