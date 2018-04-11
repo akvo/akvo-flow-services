@@ -101,5 +101,6 @@
           file (export-file app-id form-id geoshape-question-id)]
       (with-open [writer (io/writer file)]
         (json/generate-stream feature-collection writer)
-        (timbre/infof "Successfully exported geoshape to %s" file))
+        (timbre/infof "Successfully exported geoshape ")
+        (timbre/debugf "Successfully exported geoshape to %s" file))
       file)))

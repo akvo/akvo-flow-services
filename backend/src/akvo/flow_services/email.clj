@@ -17,8 +17,9 @@
             [akvo.commons.config :as config]
             [postal.core :as postal]
             [clj-http.client :as client]
-            [taoensso.timbre :as timbre :refer (infof)]
-            [cheshire.core :as json]))
+            [taoensso.timbre :as timbre :refer (infof debugf)]
+            [cheshire.core :as json]
+            [clojure.string :as str]))
 
 (defn mail-jet-send [settings emails locale url]
   (let [body {"FromEmail"  (:notification-from settings)
@@ -41,8 +42,15 @@
                         :body     (t> locale "_report_body" url)
                         :Reply-To (:notification-reply-to settings)}))
 
+(defn obfuscate [emails]
+  (map (fn [email]
+         (when email
+           (str/replace email #"^[^@]*" "****")))
+       emails))
+
 (defn send-report-ready [emails locale url]
-  (infof "Notifying %s about %s" emails url)
+  (infof "Notifying %s" (obfuscate emails))
+  (debugf "Notifying %s about %s" emails url)
   (let [settings @config/settings
         send-email (if (-> settings :notification :mailjet)
                      mail-jet-send
