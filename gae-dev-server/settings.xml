@@ -1,0 +1,3 @@
+<settings>
+  <localRepository>/somepath/that/we/can/mount</localRepository>
+</settings>

@@ -6,6 +6,8 @@ services:
  gae-dev-server:
    build: gae-dev-server
    network_mode: service:mainnetwork
+   volumes:
+     - ~/.m2:/somepath/that/we/can/mount/
  backend:
    network_mode: service:mainnetwork
    environment:
