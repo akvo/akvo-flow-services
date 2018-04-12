@@ -78,9 +78,7 @@ spec:
              fieldRef:
                fieldPath: metadata.namespace
          - name: APP_VERSION
-           valueFrom:
-             fieldRef:
-               fieldPath: metadata.labels[akvo-flow-services-version]
+           value: $TRAVIS_COMMIT
          - name: ENV_NAME
            valueFrom:
              configMapKeyRef:
