@@ -14,20 +14,21 @@
 
 (ns akvo.flow-services.core
   (:require [compojure.core :refer (defroutes GET POST OPTIONS routes)]
-    [ring.util.response :refer (response charset content-type header)]
-    [ring.adapter.jetty :refer (run-jetty)]
-    [cheshire.core :as json]
-    [compojure [handler :as handler] [route :as route]]
-    [clojurewerkz.quartzite.scheduler :as quartzite-scheduler]
-    [aero.core :as aero]
-    [akvo.commons.config :as config]
-    [akvo.flow-services [scheduler :as scheduler]
-                        [uploader :as uploader]
-                        [cascade :as cascade]
-                        [stats :as stats]
-                        [exporter :as exporter]]
-    [clojure.tools.nrepl.server :as nrepl]
-    [taoensso.timbre :as timbre])
+            [ring.util.response :refer (response charset content-type header)]
+            [ring.adapter.jetty :refer (run-jetty)]
+            [cheshire.core :as json]
+            [compojure [handler :as handler] [route :as route]]
+            [clojurewerkz.quartzite.scheduler :as quartzite-scheduler]
+            [aero.core :as aero]
+            [akvo.commons.config :as config]
+            [akvo.flow-services [scheduler :as scheduler]
+             [uploader :as uploader]
+             [cascade :as cascade]
+             [stats :as stats]
+             [exporter :as exporter]]
+            [clojure.tools.nrepl.server :as nrepl]
+            [taoensso.timbre :as timbre]
+            [taoensso.timbre.appenders.3rd-party.sentry :as sentry])
   (:gen-class))
 
 (defn- generate-report [criteria callback]
@@ -118,14 +119,26 @@
 
 (defonce nrepl-srv (atom nil))
 
+(defn config-logging [cfg]
+  (timbre/handle-uncaught-jvm-exceptions!)
+  (timbre/set-level! (or (:log-level cfg) :info))
+  (timbre/merge-config! {:timestamp-opts {:pattern "yyyy-MM-dd HH:mm:ss,SSS"}})
+  (let [{:keys [dsn env host version]} (:sentry cfg)]
+    (when dsn
+      (timbre/merge-config! {:appenders {:sentry (-> (sentry/sentry-appender dsn
+                                                                             {:environment env
+                                                                              :release     host
+                                                                              :event-fn    (fn [event]
+                                                                                             (assoc event :server_name version))})
+                                                     (assoc :min-level :error))}}))))
+
 (defn -main [config-file]
   (when-let [cfg (reset! config/settings (aero/read-config config-file))]
+    (config-logging cfg)
     (config/reload (:config-folder cfg))
     (init)
     (stats/schedule-stats-job (:stats-schedule-time cfg))
     (reset! nrepl-srv (nrepl/start-server :port 7888 :bind (:nrepl-bind cfg "localhost")))
-    (timbre/set-level! (or (:log-level cfg) :info))
-    (timbre/merge-config! timbre/example-config {:timestamp-pattern "yyyy-MM-dd HH:mm:ss,SSS"})
     (run-jetty (handler/site (routes
                                ;; This route is using the config, so we need to create it after the
                                ;; config has been loaded

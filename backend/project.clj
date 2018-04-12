@@ -8,7 +8,7 @@
                  [org.clojure/data.csv "0.1.3"]
                  [org.clojure/tools.nrepl "0.2.12"]
                  [org.akvo/commons "0.4.6"]
-                 [com.taoensso/timbre "3.3.1"]
+                 [com.taoensso/timbre "4.10.0"]
                  [cheshire "5.3.1"]
                  [compojure "1.1.8"]
                  [clojurewerkz/quartzite "1.3.0"]
@@ -40,7 +40,8 @@
                  [com.google.appengine/appengine-remote-api "1.9.50"]
                  [com.google.appengine/appengine-api-1.0-sdk "1.9.50"]
 
-                 [aero "1.1.3"]]
+                 [aero "1.1.3"]
+                 [raven-clj "1.5.1"]]
   :main akvo.flow-services.core
   :uberjar-name "akvo-flow-services.jar"
   :test-selectors {:default (fn [m] (not (or (:integration m) (:kubernetes-test m))))

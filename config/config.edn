@@ -1,3 +1,4 @@
+
 {
  ;; path to akvo-flow-server-config
  :config-folder "/path/to/akvo-flow-server-config"
@@ -25,6 +26,7 @@
                  "akvoflow-beta2.appspot.com"]
 
 
+ ;; Email notifications
  :notification {:mailjet true
                 :credentials [#env EMAIL_USER #env EMAIL_PASSWORD]
                 :api-url     "https://api.mailjet.com/v3"}
@@ -34,4 +36,9 @@
 
  ;; Maximum number of rows generated for raw data reports. Nil means no limit.
  :max-data-report-rows nil
-}
+
+ ;; Sentry configuration
+ :sentry {:dsn #env SENTRY_DSN
+          :env #env ENV_NAME
+          :host #env POD_NAME
+          :version #env APP_VERSION}

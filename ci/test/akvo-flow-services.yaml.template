@@ -18,6 +18,10 @@ data:
                         :api-url     "https://api.mailjet.com/v3"}
          :notification-from "noreply@akvo.org"
          :notification-reply-to "reports@akvoflow.org"
+          :sentry {:dsn #env SENTRY_DSN
+                   :env #env ENV_NAME
+                   :host #env POD_NAME
+                   :version #env APP_VERSION}
          :max-data-report-rows nil
          :nrepl-bind            "0.0.0.0"
          }
@@ -73,6 +77,20 @@ spec:
            valueFrom:
              fieldRef:
                fieldPath: metadata.namespace
+         - name: APP_VERSION
+           valueFrom:
+             fieldRef:
+               fieldPath: metadata.labels.akvo-flow-services-version
+         - name: ENV_NAME
+           valueFrom:
+             configMapKeyRef:
+               name: akvo
+               key: environment
+         - name: SENTRY_DSN
+           valueFrom:
+             secretKeyRef:
+               name: akvo-flow-services
+               key: sentry-dsn
          - name: EMAIL_USER
            valueFrom:
              secretKeyRef:
