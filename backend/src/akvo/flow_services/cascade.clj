@@ -363,24 +363,25 @@
          ;; recover this when we have more data on the size of db after vacuum
          ;; (db-do-commands db-spec false "vacuum")
          (upload-to-s3 (create-zip-file db-spec) bucket db-spec)
-         (infof "Cascade resource published - uploadUrl: %s - resourceId: %s - version: %s" uploadUrl cascadeResourceId version))
-       (throw (ex-info "Could not create db" {"uploadUrl" uploadUrl
-                                              "cascadeResourceId" cascadeResourceId
+         (infof "Cascade resource published - resourceId: %s - version: %s" cascadeResourceId version)
+         (debugf "Cascade resource published - uploadUrl: %s - resourceId: %s - version: %s" uploadUrl cascadeResourceId version))
+       (throw (ex-info "Could not create db" {"cascadeResourceId" cascadeResourceId
                                               "version" version})))))
 
 (jobs/defjob CascadeJob [job-data]
   (let [{:strs [uploadUrl cascadeResourceId version]} (conversion/from-job-data job-data)
         cfg (config/find-config (config/get-bucket-name uploadUrl))
         domain (:domain cfg)]
-    (infof "Publishing cascade resource - uploadUrl: %s - resourceId: %s - version: %s" uploadUrl cascadeResourceId version)
+    (infof "Publishing cascade resource - resourceId: %s - version: %s" cascadeResourceId version)
+    (debugf "Publishing cascade resource - uploadUrl: %s - resourceId: %s - version: %s" uploadUrl cascadeResourceId version)
     (try
       (publish-cascade uploadUrl cascadeResourceId version)
       (future (notify-gae domain {"action" "cascade"
                                   "cascadeResourceId" cascadeResourceId
                                   "status" "published"}))
       (catch Exception e
-        (errorf e "Publishing cascade failed - uploadUrl: %s - resourceId: %s - version: %s - reason: %s"
-                uploadUrl cascadeResourceId version (.getMessage e))
+        (errorf e "Publishing cascade failed - resourceId: %s - version: %s - reason: %s"
+                cascadeResourceId version (.getMessage e))
         (future (notify-gae domain {"action" "cascade"
                                     "cascadeResourceId" cascadeResourceId
                                     "status" "error"}))))))

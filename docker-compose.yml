@@ -6,6 +6,8 @@ services:
  gae-dev-server:
    build: gae-dev-server
    network_mode: service:mainnetwork
+   volumes:
+     - ~/.m2:/opt/m2/
  backend:
    network_mode: service:mainnetwork
    environment:

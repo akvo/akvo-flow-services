@@ -17,6 +17,7 @@
             [clojure.walk :refer (stringify-keys keywordize-keys)]
             [akvo.commons.config :as config]
             [taoensso.timbre :as timbre :refer (infof)]
+
             [cheshire.core :as json]
             [akvo.commons.gae :as gae]
             [akvo.commons.gae.query :as query]
@@ -48,6 +49,9 @@
     (.mkdirs (io/file path))
     (io/file (format "%s/%s-%s.%s" path type id (get-file-extension type)))))
 
+(defn without-secrets [criteria]
+  (select-keys criteria ["service-account-id" "s3bucket" "app-id" "domain" "surveyId" "alias"]))
+
 (defn ^File export-report
   "Exports a report using SurveyDataImportExportFactory based on the report type.
    Returns the reference to the saved file."
@@ -64,7 +68,7 @@
                      config/get-bucket-name
                      (config/get-criteria id)
                      stringify-keys)]
-    (infof "Exporting report baseURL: %s - criteria: %s - options: %s" base-url criteria options)
+    (infof "Exporting report baseURL: %s - criteria: %s - options: %s" base-url (without-secrets criteria) options) ;; TODO: do not log everything
     (.export exporter criteria file base-url options)
     file))
 
