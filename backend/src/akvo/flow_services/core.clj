@@ -127,9 +127,9 @@
     (when dsn
       (timbre/merge-config! {:appenders {:sentry (-> (sentry/sentry-appender dsn
                                                                              {:environment env
-                                                                              :release     host
+                                                                              :release     version
                                                                               :event-fn    (fn [event]
-                                                                                             (assoc event :server_name version))})
+                                                                                             (assoc event :server_name host))})
                                                      (assoc :min-level :error))}}))))
 
 (defn -main [config-file]
