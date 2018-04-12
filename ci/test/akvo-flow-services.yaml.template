@@ -80,7 +80,7 @@ spec:
          - name: APP_VERSION
            valueFrom:
              fieldRef:
-               fieldPath: metadata.labels.akvo-flow-services-version
+               fieldPath: metadata.labels[akvo-flow-services-version]
          - name: ENV_NAME
            valueFrom:
              configMapKeyRef:
