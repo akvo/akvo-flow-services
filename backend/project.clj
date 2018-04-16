@@ -4,7 +4,7 @@
   :license {:name "GNU Affero General Public License"
             :url  "https://www.gnu.org/licenses/agpl"}
   :min-lein-version "2.0.0"
-  :dependencies [[org.clojure/clojure "1.7.0"]
+  :dependencies [[org.clojure/clojure "1.9.0"]
                  [org.clojure/data.csv "0.1.3"]
                  [org.clojure/tools.nrepl "0.2.12"]
                  [org.akvo/commons "0.4.6"]
@@ -16,7 +16,7 @@
                  [ring/ring-jetty-adapter "1.3.1"]
                  [me.raynes/fs "1.4.6"]
                  [clj-aws-s3 "0.3.9" :exclusions [joda-time]]
-                 [clj-http "1.0.0"]
+                 [clj-http "3.8.0"]
                  [org.clojure/java.jdbc "0.3.5"]
                  [com.draines/postal "1.11.3"]
                  ; Java libraries
@@ -26,14 +26,15 @@
                  [org.apache.poi/poi-ooxml "3.8"]
                  [org.apache.tika/tika-core "1.6"]
                  [org.apache.tika/tika-parsers "1.6"]
-                 [org.slf4j/slf4j-api "1.7.7"]
-                 [org.slf4j/slf4j-simple "1.7.7"]
+                 [com.fzakaria/slf4j-timbre "0.3.8"]
+                 [org.slf4j/log4j-over-slf4j "1.7.25"]
+                 [org.slf4j/jul-to-slf4j "1.7.25"]
+                 [org.slf4j/jcl-over-slf4j "1.7.25"]
                  [com.google.gdata/core "1.47.1"]
                  [org.xerial/sqlite-jdbc "3.7.2"]
                  ; Akvo FLOW dependencies
                  [org.akvo.flow/akvo-flow "v1.9.29-52-g4bc8f24" :classifier "classes"]
                  [org.json/json "20090211"]
-                 [log4j/log4j "1.2.16"]
                  [org.codehaus.jackson/jackson-mapper-asl "1.9.13"]
                  ; Configuration and Stats
                  [com.google.appengine/appengine-tools-sdk "1.9.50"]
@@ -42,6 +43,7 @@
 
                  [aero "1.1.3"]
                  [raven-clj "1.5.1"]]
+  :exclusions [log4j]
   :main akvo.flow-services.core
   :uberjar-name "akvo-flow-services.jar"
   :test-selectors {:default (fn [m] (not (or (:integration m) (:kubernetes-test m))))
