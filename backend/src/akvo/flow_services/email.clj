@@ -43,10 +43,10 @@
                         :Reply-To (:notification-reply-to settings)}))
 
 (defn obfuscate [emails]
-  (map (fn [email]
-         (when email
-           (str/replace email #"^[^@]*" "****")))
-       emails))
+  (mapv (fn [email]
+          (when email
+            (str/replace email #"^[^@]*" "****")))
+        emails))
 
 (defn send-report-ready [emails locale url]
   (infof "Notifying %s" (obfuscate emails))
