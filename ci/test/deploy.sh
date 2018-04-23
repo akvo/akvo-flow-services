@@ -46,7 +46,7 @@ gcloud docker -- push eu.gcr.io/${PROJECT_NAME}/akvo-flow-services
 
 # Deploying
 
-sed -e "s/\$TRAVIS_COMMIT/$TRAVIS_COMMIT/"
+sed -e "s/\$TRAVIS_COMMIT/$TRAVIS_COMMIT/" \
   -e "s/\${ENVIRONMENT}/${ENVIRONMENT}" \
   -e "s/\${POD_CPU_REQUESTS}/${POD_CPU_REQUESTS}" \
   -e "s/\${POD_MEM_REQUESTS}/${POD_MEM_REQUESTS}" \
