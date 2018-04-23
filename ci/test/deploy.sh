@@ -47,11 +47,11 @@ gcloud docker -- push eu.gcr.io/${PROJECT_NAME}/akvo-flow-services
 # Deploying
 
 sed -e "s/\$TRAVIS_COMMIT/$TRAVIS_COMMIT/" \
-  -e "s/\${ENVIRONMENT}/${ENVIRONMENT}" \
-  -e "s/\${POD_CPU_REQUESTS}/${POD_CPU_REQUESTS}" \
-  -e "s/\${POD_MEM_REQUESTS}/${POD_MEM_REQUESTS}" \
-  -e "s/\${POD_CPU_LIMITS}/${POD_CPU_LIMITS}" \
-  -e "s/\${POD_MEM_LIMITS}/${POD_MEM_LIMITS}" \
+  -e "s/\${ENVIRONMENT}/${ENVIRONMENT}/" \
+  -e "s/\${POD_CPU_REQUESTS}/${POD_CPU_REQUESTS}/" \
+  -e "s/\${POD_MEM_REQUESTS}/${POD_MEM_REQUESTS}/" \
+  -e "s/\${POD_CPU_LIMITS}/${POD_CPU_LIMITS}/" \
+  -e "s/\${POD_MEM_LIMITS}/${POD_MEM_LIMITS}/" \
   ci/test/akvo-flow-services.yaml.template > akvo-flow-services.yaml
 
 kubectl apply -f akvo-flow-services.yaml
