@@ -46,6 +46,7 @@ spec:
         run: akvo-flow-services
         akvo-flow-services-version: $TRAVIS_COMMIT
         app: akvo-flow-services
+        environment: ${ENVIRONMENT}
     spec:
       volumes:
         - name: config-volume
@@ -65,9 +66,11 @@ spec:
         - containerPort: 3000
         resources:
           requests:
-            cpu: "50m"
+            cpu: ${POD_CPU_REQUESTS}
+            memory: ${POD_MEM_REQUESTS}
           limits:
-            cpu: "1000m"
+            cpu: ${POD_CPU_LIMITS}
+            memory: ${POD_MEM_LIMITS}
         env:
          - name: POD_NAME
            valueFrom:
