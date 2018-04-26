@@ -15,3 +15,5 @@ classes/*
 .idea
 *.iml
 akvo-flow-services.yaml
+
+backend/target
