@@ -2,11 +2,11 @@
   (:require [clojure.test :refer :all]
             [akvo.flow-services.cascade :as cascade]))
 
-(def comma-sep-2-levels "resources/test/cascades/comma-sep-2-levels.csv")
-(def semicolon-sep-3-levels "resources/test/cascades/semicolon-sep-3-levels.csv")
-(def tab-sep-4-levels "resources/test/cascades/tab-sep-4-levels.csv")
-(def cascade-with-empty-nodes "resources/test/cascades/empty-nodes.csv")
-(def quoted-comma-separator "resources/test/cascades/quoted-comma-separator.csv")
+(def comma-sep-2-levels "test/cascades/comma-sep-2-levels.csv")
+(def semicolon-sep-3-levels "test/cascades/semicolon-sep-3-levels.csv")
+(def tab-sep-4-levels "test/cascades/tab-sep-4-levels.csv")
+(def cascade-with-empty-nodes "test/cascades/empty-nodes.csv")
+(def quoted-comma-separator "test/cascades/quoted-comma-separator.csv")
 
 (deftest test-find-csv-separator
   (is (= \, (cascade/find-csv-separator comma-sep-2-levels 2)))
