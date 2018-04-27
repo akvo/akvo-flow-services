@@ -107,12 +107,11 @@
   (let [baseURL (config/get-domain (params "baseURL"))
         alias (config/get-alias baseURL)]
     (doseq [sid (params "surveyIds")]
-      (dosync
-        (doseq [k (keys @cache) :when (and (= (:surveyId k) (str sid))
-                                           (or (= (:baseURL k) baseURL)
-                                               (= (:baseURL k) alias)))]
-          (infof "Invalidating: %s" k)
-          (swap! cache dissoc k))))
+      (doseq [k (keys @cache) :when (and (= (:surveyId k) (str sid))
+                                         (or (= (:baseURL k) baseURL)
+                                             (= (:baseURL k) alias)))]
+        (infof "Invalidating: %s" k)
+        (swap! cache dissoc k)))
     "OK"))
 
 (defn generate-report
