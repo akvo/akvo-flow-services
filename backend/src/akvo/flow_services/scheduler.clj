@@ -29,7 +29,7 @@
   (:use [akvo.flow-services.exporter :only (export-report)]
         [akvo.flow-services.uploader :only (bulk-upload)]))
 
-(def cache (ref {}))
+(def cache (atom {}))
 
 (def in-flight-reports (atom {}))
 
@@ -51,11 +51,10 @@
                  (geoshape/export appId surveyId questionId)
                  (export-report exportType baseURL surveyId opts))
         path (get-path report)]
-    (dosync
-      (alter cache conj {{:id id
-                          :surveyId surveyId
-                          :questionId questionId
-                          :baseURL (config/get-domain baseURL)} path}))
+    (swap! cache conj {{:id         id
+                        :surveyId   surveyId
+                        :questionId questionId
+                        :baseURL    (config/get-domain baseURL)} path})
     (when (get opts "email")
       (if (= path "INVALID_PATH")
         (warnf "Could not generate report %s for surveyId %s" id surveyId)
@@ -114,7 +113,7 @@
                                            (or (= (:baseURL k) baseURL)
                                                (= (:baseURL k) alias)))]
           (infof "Invalidating: %s" k)
-          (alter cache dissoc k))))
+          (swap! cache dissoc k))))
     "OK"))
 
 (defn generate-report
