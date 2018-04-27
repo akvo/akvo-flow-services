@@ -13,7 +13,7 @@
 (def wiremock-mappings-url (str wiremock-url "/__admin/mappings"))
 (def flow-services-url "http://mainnetwork:3000")
 
-(defn generate-report [survey-id]
+(defn generate-report [survey-id & [opts]]
   (some->> (http/get (str flow-services-url "/generate")
                      {:query-params {:callback "somejson"
                                      :criteria (json/generate-string
@@ -21,14 +21,15 @@
                                                   "exportType" "DATA_CLEANING"
                                                   "surveyId"   (str survey-id)
                                                   "id"         "asdf"
-                                                  "opts"       {"email"          "dan@akvo.org"
-                                                                "lastCollection" "false"
-                                                                "uploadUrl"      "https://flowservices-dev-config.s3.amazonaws.com"
-                                                                "exportMode"     "DATA_CLEANING"
-                                                                "from"           "2013-03-06"
-                                                                "to"             "2018-03-09"
-                                                                "flowServices"   flow-services-url
-                                                                "appId"          "flowservices-dev-config"}})}})
+                                                  "opts"       (merge {"email"          "dan@akvo.org"
+                                                                       "lastCollection" "false"
+                                                                       "uploadUrl"      "https://flowservices-dev-config.s3.amazonaws.com"
+                                                                       "exportMode"     "DATA_CLEANING"
+                                                                       "from"           "2013-03-06"
+                                                                       "to"             "2018-03-09"
+                                                                       "flowServices"   flow-services-url
+                                                                       "appId"          "flowservices-dev-config"}
+                                                                      opts)})}})
            :body
            (re-seq #"somejson\((.*)\);")
            first
@@ -128,8 +129,7 @@
                "jsonBody" {"surveyInstanceData"   {"surveyedLocaleDisplayName" ""
                                                    "surveyId"                  survey-id
                                                    "surveyedLocaleId"          147442028
-                                                   "userID"                    1
-                                                   "collectionDate"            1418598306000
+                                                   "userID"                    1 "collectionDate" 1418598306000
                                                    "submitterName"             "BASH & JAMES"
                                                    "deviceIdentifier"          "IMPORTER"
                                                    "surveyalTime"              0
@@ -230,3 +230,52 @@
                           (generate-report survey-id)))
     (is (< current-errors (sentry-alerts-count)))
     (assert-report-not-updated-in-flow)))
+
+(defn mock-flow-report-api [flow-report-id user]
+  (http/post wiremock-mappings-url
+             {:body (json/generate-string
+                      {"request"  {"method"       "POST"
+                                   "urlPath"      "/reports"
+                                   "bodyPatterns" [{"matchesJsonPath" {"expression" "$.state" "equalTo" "IN_PROGRESS"}}
+                                                   {"matchesJsonPath" {"expression" "$.user" "equalTo" user}}]}
+                       "response" {"status"   200
+                                   "jsonBody" {:id flow-report-id}}})})
+  (http/post wiremock-mappings-url
+             {:body (json/generate-string
+                      {"request"  {"method"       "PUT"
+                                   "urlPath"      "/reports"
+                                   "bodyPatterns" [{"matchesJsonPath" {"expression" "$.id" "equalTo" flow-report-id}}]}
+                       "response" {"status"   200
+                                   "jsonBody" {:id flow-report-id}}})}))
+
+(defn final-report-state-in-flow [flow-report-id]
+  (->> (http/post (str wiremock-url "/__admin/requests/find")
+                  {:as   :json
+                   :body (json/generate-string
+                           {"method"       "PUT"
+                            "urlPath"      "/reports"
+                            "bodyPatterns" [{"matchesJsonPath" {"expression" "$.id" "equalTo" flow-report-id}}]})})
+       :body
+       :requests
+       (map (comp :state #(json/parse-string % true) :body))))
+
+(deftest report-generation-flow-notified-of-progress
+  (let [survey-id (System/currentTimeMillis)
+        flow-report-id (str "the flow id" survey-id)
+        user (str survey-id "@akvo.org")
+        opts {"gdpr"  "true"
+              "email" user}]
+    (mock-flow-report-api survey-id user)
+    (mock-gae survey-id)
+    (mock-mailjet)
+    (test-util/try-for "Processing for too long" 20
+                       (not= {"status" "OK", "message" "PROCESSING"}
+                             (generate-report survey-id opts)))
+    (let [report-result (generate-report survey-id opts)]
+      (is (= "OK" (get report-result "status")))
+
+      (test-util/try-for "email not sent" 5
+                         (= 1 (email-sent-count (get report-result "file"))))
+
+      (is (= 200 (:status (http/get (str flow-services-url "/report/" (get report-result "file"))))))
+      (is (= ["FINISHED_SUCCESS"] (final-report-state-in-flow flow-report-id))))))
