@@ -46,7 +46,7 @@
   :exclusions [log4j]
   :main akvo.flow-services.core
   :uberjar-name "akvo-flow-services.jar"
-  :test-selectors {:default (fn [m] (not (or (:integration m) (:kubernetes-test m))))
+  :test-selectors {:default (fn [m] (not (or (:integration m) (:kubernetes-test m) (:wip m))))
                    :integration :integration
                    :kubernetes-test :kubernetes-test}
   :plugins [[lein-ring "0.8.5"]]
