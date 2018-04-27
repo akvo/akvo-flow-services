@@ -253,15 +253,14 @@
                   {:as   :json
                    :body (json/generate-string
                            {"method"       "PUT"
-                            "urlPath"      "/reports"
-                            "bodyPatterns" [{"matchesJsonPath" {"expression" "$.id" "equalTo" flow-report-id}}]})})
+                            "urlPath"      (str "/reports/" flow-report-id)})})
        :body
        :requests
        (map (comp :state #(json/parse-string % true) :body))))
 
 (deftest ^:wip report-generation-flow-notified-of-progress
   (let [survey-id (System/currentTimeMillis)
-        flow-report-id (str "the flow id" survey-id)
+        flow-report-id (str "the-flow-id-" survey-id)
         user (str survey-id "@akvo.org")
         opts {"gdpr"  "true"
               "email" user}]
