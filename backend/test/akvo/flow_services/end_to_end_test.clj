@@ -170,6 +170,17 @@
       :body
       :count))
 
+(defn report-notifications []
+  (-> (http/post (str wiremock-url "/__admin/requests/find")
+                 {:as   :json
+                  :body (json/generate-string
+                          {"urlPath" "/reports"})})
+      :body
+      :requests))
+
+(defn assert-report-not-updated-in-flow []
+  (is (empty? (report-notifications))))
+
 (defn reset-wiremock []
   (http/post (str wiremock-mappings-url "/reset")))
 
@@ -177,7 +188,7 @@
   (test-util/wait-for-server "mainnetwork" 3000)
   (test-util/wait-for-server "wiremock-proxy" 8080))
 
-(use-fixtures :once (fn [f]
+(use-fixtures :each (fn [f]
                       (check-servers-up)
                       (reset-wiremock)
                       (f)))
@@ -195,25 +206,27 @@
       (test-util/try-for "email not sent" 5
                          (= 1 (email-sent-count (get report-result "file"))))
 
-      (is (= 200 (:status (http/get (str flow-services-url "/report/" (get report-result "file")))))))))
+      (is (= 200 (:status (http/get (str flow-services-url "/report/" (get report-result "file"))))))
+      (assert-report-not-updated-in-flow))))
 
 (defn sentry-alerts-count []
   (-> (http/post (str wiremock-url "/__admin/requests/count")
                  {:as   :json
                   :body (json/generate-string
-                          {"method"       "POST"
-                           "urlPath"      "/sentry/api/213123/store/"})})
+                          {"method"  "POST"
+                           "urlPath" "/sentry/api/213123/store/"})})
       :body
       :count))
 
-(deftest sentry
+(deftest error-in-report-generation
   (let [survey-id (System/currentTimeMillis)
         current-errors (sentry-alerts-count)]
     (http/post wiremock-mappings-url {:body (json/generate-string {"request"  {"method"          "GET"
                                                                                "urlPath"         "/surveyrestapi"
                                                                                "queryParameters" {"surveyId" {"equalTo" (str survey-id)}}}
-                                                                   "response" {"status"   500}})})
+                                                                   "response" {"status" 500}})})
     (test-util/try-for "Processing for too long" 20
                        (= {"status" "ERROR", "message" "_error_generating_report"}
                           (generate-report survey-id)))
-    (is (< current-errors (sentry-alerts-count)))))
+    (is (< current-errors (sentry-alerts-count)))
+    (assert-report-not-updated-in-flow)))
