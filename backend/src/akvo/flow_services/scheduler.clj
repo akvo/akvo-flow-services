@@ -14,11 +14,10 @@
 
 (ns akvo.flow-services.scheduler
   (:refer-clojure :exclude [key])
-  (:import [org.quartz JobExecutionContext Scheduler ObjectAlreadyExistsException]
-           java.io.File
-           java.util.UUID)
+  (:import [org.quartz ObjectAlreadyExistsException]
+           java.io.File)
   (:require [clojure.string :as str]
-            [taoensso.timbre :as timbre :refer (infof warnf)]
+            [taoensso.timbre :refer (infof warnf)]
             [clojurewerkz.quartzite [conversion :as conversion]
                                     [jobs :as jobs]
                                     [scheduler :as scheduler]
