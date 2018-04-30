@@ -61,11 +61,12 @@
                          :filename   (:report-path report-result)}}})))
 
 (defn handle-create-report-in-flow [http-response]
-  (cond
-    (:exception http-response) [:abort (RuntimeException. "Error connecting to Flow" (:exception http-response))]
-    (not= 200 (:status http-response)) [:abort (str "Flow returns error on report creation. HTTP code: " (:status http-response))]
-    (-> http-response :body :report :id) [:continue {"flow-create-result" (-> http-response :body :report :id)}]
-    :default [:abort "Flow did not return an id for the report"]))
+  (let [flow-id (-> http-response :body :report :id)]
+    (cond
+      (:exception http-response) [:abort (RuntimeException. "Error connecting to Flow" (:exception http-response))]
+      (not= 200 (:status http-response)) [:abort (str "Flow returns error on report creation. HTTP code: " (:status http-response))]
+      flow-id [:continue {"flow-create-result" flow-id}]
+      :default [:abort "Flow did not return an id for the report"])))
 
 (def cache (atom {}))
 
