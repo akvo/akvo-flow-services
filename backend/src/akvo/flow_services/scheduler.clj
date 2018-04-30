@@ -28,6 +28,38 @@
   (:use [akvo.flow-services.exporter :only (export-report)]
         [akvo.flow-services.uploader :only (bulk-upload)]))
 
+(defn gdpr-flow? [job-data]
+  (= "true" (get-in job-data ["opts" "gdpr"])))
+
+(defn create-report-in-flow [{:strs [baseURL exportType opts]}]
+  {:method :post
+   :url    (str baseURL "/reports")
+   :body   {:report {:state      "IN_PROGRESS"
+                     :user       (get opts "email")
+                     :reportType exportType}}})
+
+(defn finish-report-in-flow [{:strs [baseURL flowId]} report-result]
+  (if-let [exception (:exception report-result)]
+    {:method :put
+     :url    (str baseURL "/reports/" flowId)
+     :body   {:report {:state      "FINISHED_ERROR"
+                       :user       "user@akvo.org"
+                       :reportType "GEOSHAPE"
+                       :message    (.getMessage exception)}}}
+    (if (= "INVALID_PATH" (:report-path report-result))
+      {:method :put
+       :url    (str baseURL "/reports/" flowId)
+       :body   {:report {:state      "FINISHED_ERROR"
+                         :user       "user@akvo.org"
+                         :reportType "GEOSHAPE"
+                         :message    "Error generating report"}}}
+      {:method :put
+       :url    (str baseURL "/reports/" flowId)
+       :body   {:report {:state      "FINISHED_SUCCESS"
+                         :user       "user@akvo.org"
+                         :reportType "GEOSHAPE"
+                         :filename   (:report-path report-result)}}})))
+
 (def cache (atom {}))
 
 (defn- valid-report? [report-path]
