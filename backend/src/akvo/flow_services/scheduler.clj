@@ -38,25 +38,25 @@
                      :user       (get opts "email")
                      :reportType exportType}}})
 
-(defn finish-report-in-flow [{:strs [baseURL flowId]} report-result]
+(defn finish-report-in-flow [{:strs [baseURL flowId opts]} report-result]
   (if-let [exception (:exception report-result)]
     {:method :put
      :url    (str baseURL "/reports/" flowId)
      :body   {:report {:state      "FINISHED_ERROR"
-                       :user       "user@akvo.org"
+                       :user       (get opts "email")
                        :reportType "GEOSHAPE"
                        :message    (.getMessage exception)}}}
     (if (= "INVALID_PATH" (:report-path report-result))
       {:method :put
        :url    (str baseURL "/reports/" flowId)
        :body   {:report {:state      "FINISHED_ERROR"
-                         :user       "user@akvo.org"
+                         :user       (get opts "email")
                          :reportType "GEOSHAPE"
                          :message    "Error generating report"}}}
       {:method :put
        :url    (str baseURL "/reports/" flowId)
        :body   {:report {:state      "FINISHED_SUCCESS"
-                         :user       "user@akvo.org"
+                         :user       (get opts "email")
                          :reportType "GEOSHAPE"
                          :filename   (:report-path report-result)}}})))
 

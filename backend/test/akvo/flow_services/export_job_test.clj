@@ -21,16 +21,17 @@
 
     (testing "finish request"
       (are [report-result expected-body]
-        (= (scheduler/finish-report-in-flow {"opts"       {"email" "user@akvo.org"}
-                                             "baseURL"    "http://foobar"
-                                             "exportType" "GEOSHAPE"
-                                             "flowId"     "id-returned-by-flow"}
-                                            report-result)
-           {:method :put
-            :url    "http://foobar/reports/id-returned-by-flow"
-            :body   {:report (merge {:user       "user@akvo.org"
-                                     :reportType "GEOSHAPE"}
-                                    expected-body)}})
+        (let [an-email (str (rand-int 30000) "-user@akvo.org")]
+          (= (scheduler/finish-report-in-flow {"opts"       {"email" an-email}
+                                               "baseURL"    "http://foobar"
+                                               "exportType" "GEOSHAPE"
+                                               "flowId"     "id-returned-by-flow"}
+                                              report-result)
+             {:method :put
+              :url    "http://foobar/reports/id-returned-by-flow"
+              :body   {:report (merge {:user       an-email
+                                       :reportType "GEOSHAPE"}
+                                      expected-body)}}))
 
         {:report-path "some awesome path"} {:state    "FINISHED_SUCCESS"
                                             :filename "some awesome path"}
