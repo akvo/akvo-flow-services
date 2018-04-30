@@ -1,6 +1,7 @@
 (ns akvo.flow-services.export-job-test
   (:require [clojure.test :refer [deftest is are testing]]
-            [akvo.flow-services.scheduler :as scheduler]))
+            [akvo.flow-services.scheduler :as scheduler])
+  (:import (java.io IOException)))
 
 
 (deftest gdpr?
@@ -19,13 +20,30 @@
                                 :user       "user@akvo.org"
                                 :reportType "GEOSHAPE"}}})))
 
+    (testing "handle create response"
+      (is (= (scheduler/handle-create-report-in-flow {:status 200
+                                                      :body   {:report {:id "some-id"}}})
+             [:continue {"flow-create-result" "some-id"}]))
+
+      (is (= (scheduler/handle-create-report-in-flow {:status 200
+                                                      :body   nil})
+             [:abort "Flow did not return an id for the report"]))
+
+      (is (= (scheduler/handle-create-report-in-flow {:status 500})
+             [:abort "Flow returns error on report creation. HTTP code: 500"]))
+
+      (let [an-exception (IOException. "some error")
+            [action value] (scheduler/handle-create-report-in-flow {:exception an-exception})]
+        (is (= action :abort))
+        (is (= an-exception (.getCause value)))))
+
     (testing "finish request"
       (are [report-result expected-body]
         (let [an-email (str (rand-int 30000) "-user@akvo.org")]
-          (= (scheduler/finish-report-in-flow {"opts"       {"email" an-email}
-                                               "baseURL"    "http://foobar"
-                                               "exportType" "GEOSHAPE"
-                                               "flowId"     "id-returned-by-flow"}
+          (= (scheduler/finish-report-in-flow {"opts"               {"email" an-email}
+                                               "baseURL"            "http://foobar"
+                                               "exportType"         "GEOSHAPE"
+                                               "flow-create-result" "id-returned-by-flow"}
                                               report-result)
              {:method :put
               :url    "http://foobar/reports/id-returned-by-flow"

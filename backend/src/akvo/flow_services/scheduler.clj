@@ -38,27 +38,34 @@
                      :user       (get opts "email")
                      :reportType exportType}}})
 
-(defn finish-report-in-flow [{:strs [baseURL flowId opts]} report-result]
+(defn finish-report-in-flow [{:strs [baseURL flow-create-result opts]} report-result]
   (if-let [exception (:exception report-result)]
     {:method :put
-     :url    (str baseURL "/reports/" flowId)
+     :url    (str baseURL "/reports/" flow-create-result)
      :body   {:report {:state      "FINISHED_ERROR"
                        :user       (get opts "email")
                        :reportType "GEOSHAPE"
                        :message    (.getMessage exception)}}}
     (if (= "INVALID_PATH" (:report-path report-result))
       {:method :put
-       :url    (str baseURL "/reports/" flowId)
+       :url    (str baseURL "/reports/" flow-create-result)
        :body   {:report {:state      "FINISHED_ERROR"
                          :user       (get opts "email")
                          :reportType "GEOSHAPE"
                          :message    "Error generating report"}}}
       {:method :put
-       :url    (str baseURL "/reports/" flowId)
+       :url    (str baseURL "/reports/" flow-create-result)
        :body   {:report {:state      "FINISHED_SUCCESS"
                          :user       (get opts "email")
                          :reportType "GEOSHAPE"
                          :filename   (:report-path report-result)}}})))
+
+(defn handle-create-report-in-flow [http-response]
+  (cond
+    (:exception http-response) [:abort (RuntimeException. "Error connecting to Flow" (:exception http-response))]
+    (not= 200 (:status http-response)) [:abort (str "Flow returns error on report creation. HTTP code: " (:status http-response))]
+    (-> http-response :body :report :id) [:continue {"flow-create-result" (-> http-response :body :report :id)}]
+    :default [:abort "Flow did not return an id for the report"]))
 
 (def cache (atom {}))
 
