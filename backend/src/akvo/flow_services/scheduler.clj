@@ -30,8 +30,6 @@
 
 (def cache (atom {}))
 
-(def in-flight-reports (atom {}))
-
 (defn- valid-report? [report-path]
   (boolean
     (and (.exists report-path)
@@ -57,12 +55,11 @@
     (when (get opts "email")
       (if (= path "INVALID_PATH")
         (warnf "Could not generate report %s for surveyId %s" id surveyId)
-        (email/send-report-ready (get @in-flight-reports id)
+        (email/send-report-ready (get opts "email")
                                  (get opts "locale" "en")
                                  (format "%s/report/%s"
                                          (get opts "flowServices")
-                                         path)))
-      (swap! in-flight-reports dissoc id))
+                                         path))))
     (scheduler/delete-job (jobs/key id))))
 
 
@@ -91,8 +88,6 @@
     (try
       (scheduler/maybe-schedule job trigger)
       (catch ObjectAlreadyExistsException _))
-    (when-let [email (get-in params ["opts" "email"])]
-      (swap! in-flight-reports update-in [id] (fnil conj #{}) email))
     {:status "OK"
      :message "PROCESSING"}))
 

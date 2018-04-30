@@ -21,11 +21,9 @@
             [cheshire.core :as json]
             [clojure.string :as str]))
 
-(defn mail-jet-send [settings emails locale url]
+(defn mail-jet-send [settings email locale url]
   (let [body {"FromEmail"  (:notification-from settings)
-              "Recipients" (into []
-                                 (map (fn [email] {"Email" email})
-                                      emails))
+              "Recipients" [{"Email" email}]
               "Subject"    (t> locale "_report_header")
               "Text-part"  (t> locale "_report_body" url)
               "Headers"    {"Reply-To" (:notification-reply-to settings)}}]
@@ -34,25 +32,23 @@
                   :headers    {"Content-Type" "application/json"}
                   :body       (json/encode body)})))
 
-(defn postal-send [settings emails locale url]
+(defn postal-send [settings email locale url]
   (postal/send-message (:notification settings)
                        {:from     (:notification-from settings)
-                        :to       emails
+                        :to       [email]
                         :subject  (t> locale "_report_header")
                         :body     (t> locale "_report_body" url)
                         :Reply-To (:notification-reply-to settings)}))
 
-(defn obfuscate [emails]
-  (mapv (fn [email]
-          (when email
-            (str/replace email #"^[^@]*" "****")))
-        emails))
+(defn obfuscate [email]
+  (when email
+    (str/replace email #"^[^@]*" "****")))
 
-(defn send-report-ready [emails locale url]
-  (infof "Notifying %s" (obfuscate emails))
-  (debugf "Notifying %s about %s" emails url)
+(defn send-report-ready [email locale url]
+  (infof "Notifying %s" (obfuscate email))
+  (debugf "Notifying %s about %s" email url)
   (let [settings @config/settings
         send-email (if (-> settings :notification :mailjet)
                      mail-jet-send
                      postal-send)]
-    (send-email settings emails locale url)))
+    (send-email settings email locale url)))
