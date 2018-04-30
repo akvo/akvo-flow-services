@@ -83,9 +83,8 @@
 (jobs/defjob ExportJob [job-data]
   (let [{:strs [baseURL exportType surveyId opts id]} (conversion/from-job-data job-data)
         questionId (get opts "questionId")
-        appId (get opts "appId")
         report (if (= exportType "GEOSHAPE")
-                 (geoshape/export appId surveyId questionId)
+                 (geoshape/export (get opts "appId") surveyId questionId)
                  (export-report exportType baseURL surveyId opts))
         path (get-path report)]
     (swap! cache conj {{:id         id
