@@ -255,7 +255,7 @@
                             "urlPath"      (str "/reports/" flow-report-id)})})
        :body
        :requests
-       (map (comp :state #(json/parse-string % true) :body))))
+       (map (comp :state :report #(json/parse-string % true) :body))))
 
 (deftest ^:wip report-generation-flow-notified-of-progress
   (let [survey-id (System/currentTimeMillis)
