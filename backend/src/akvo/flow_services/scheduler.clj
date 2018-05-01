@@ -25,6 +25,7 @@
             [akvo.commons.config :as config]
             [akvo.flow-services.email :as email]
             [akvo.flow-services.geoshape-export :as geoshape]
+            [akvo.flow-services.error :as e]
             [clj-http.client :as http])
   (:use [akvo.flow-services.exporter :only (export-report)]
         [akvo.flow-services.uploader :only (bulk-upload)]))
@@ -40,75 +41,47 @@
                           :reportType exportType}}})
 
 (defn expect-200 [http-response]
-  (cond
-    (:error http-response) {:error {:message "Error connecting to Flow" :cause (:error http-response)}}
-    (not= 200 (:status http-response)) {:error {:message (str "Flow returns error on report creation. HTTP code: " (:status http-response))}}
-    :default http-response))
-
-(defn unwrap-throwing [{:keys [error] :as v}]
-  (if error
-    (throw (if-let [cause (:cause error)]
-             (RuntimeException. (:message error) cause)
-             (RuntimeException. (:message error))))
-    v))
-
-(defn if-ok [{:keys [error] :as v} f]
-  (if error v (f v)))
+  (if (e/ok? http-response)
+    (if (not= 200 (:status http-response))
+      (e/error {:message (str "Flow returns error on report creation. HTTP code: " (:status http-response))})
+      http-response)
+    http-response))
 
 (defn handle-create-report-in-flow [http-response]
   (-> http-response
       expect-200
-      (if-ok (fn [ok]
-               (if-let [flow-id (-> ok :body :report :id)]
-                 flow-id
-                 {:error "Flow did not return an id for the report"})))))
-
-(defmacro wrap-exceptions [body]
-  `(try
-     ~body
-     (catch Exception e# {:error {:cause e#}})))
-
-(defn invalid-report? [report-path]
-  (= "INVALID_PATH" report-path))
-
-(defn user-friendly-message [error]
-  (or (:message error)
-      (some-> error :cause .getMessage)))
+      (e/if-ok (fn [ok]
+                 (if-let [flow-id (-> ok :body :report :id)]
+                   flow-id
+                   (e/error {:message "Flow did not return an id for the report"}))))))
 
 (defn finish-report-in-flow [{:strs [baseURL opts]} flow-id report-result]
-  (if-let [error (:error report-result)]
+  (if (e/ok? report-result)
+    {:method      :put
+     :url         (str baseURL "/reports/" flow-id)
+     :form-params {:report {:state      "FINISHED_SUCCESS"
+                            :user       (get opts "email")
+                            :reportType "GEOSHAPE"
+                            :filename   report-result}}}
     {:method      :put
      :url         (str baseURL "/reports/" flow-id)
      :form-params {:report {:state      "FINISHED_ERROR"
                             :user       (get opts "email")
                             :reportType "GEOSHAPE"
-                            :message    (user-friendly-message error)}}}
-    (if (invalid-report? report-result)
-      {:method      :put
-       :url         (str baseURL "/reports/" flow-id)
-       :form-params {:report {:state      "FINISHED_ERROR"
-                              :user       (get opts "email")
-                              :reportType "GEOSHAPE"
-                              :message    "Error generating report"}}}
-      {:method      :put
-       :url         (str baseURL "/reports/" flow-id)
-       :form-params {:report {:state      "FINISHED_SUCCESS"
-                              :user       (get opts "email")
-                              :reportType "GEOSHAPE"
-                              :filename   report-result}}})))
+                            :message    (e/user-friendly-message report-result)}}}))
 
 (defn send-http-json! [request]
-  (wrap-exceptions
+  (e/wrap-exceptions
     (http/request (merge {:as               :json
                           :content-type     :json
                           :throw-exceptions false}
                          request))))
 
 (defn open-report-in-flow [job-data]
-  (-> job-data create-report-in-flow send-http-json! handle-create-report-in-flow unwrap-throwing))
+  (-> job-data create-report-in-flow send-http-json! handle-create-report-in-flow e/unwrap-throwing))
 
 (defn close-report-in-flow [flow-id job-data report]
-  (-> (finish-report-in-flow job-data flow-id report) send-http-json! expect-200 unwrap-throwing))
+  (-> (finish-report-in-flow job-data flow-id report) send-http-json! expect-200 e/unwrap-throwing))
 
 (def cache (atom {}))
 
@@ -133,7 +106,9 @@
                         :questionId questionId
                         :baseURL    (config/get-domain baseURL)} path})
     (scheduler/delete-job (jobs/key id))
-    path))
+    (if (= "INVALID_PATH" path)
+      (e/error {:message "Error generating report"})
+      path)))
 
 (defn gdpr-email [{:strs [opts]}]
   (email/send-gdpr-report-ready (get opts "email")
@@ -149,12 +124,12 @@
 (defn do-export [job-data]
   (if (gdpr-flow? job-data)
     (let [flow-data (open-report-in-flow job-data)
-          report (wrap-exceptions (run-report job-data))]
+          report (e/wrap-exceptions (run-report job-data))]
       (close-report-in-flow flow-data job-data report)
-      (when-not (invalid-report? report)
+      (when (e/ok? report)
         (gdpr-email job-data)))
     (let [report (run-report job-data)]
-      (when-not (invalid-report? report)
+      (when (e/ok? report)
         (old-email job-data report)))))
 
 (jobs/defjob ExportJob [job-data]

@@ -1,6 +1,7 @@
 (ns akvo.flow-services.export-job-test
   (:require [clojure.test :refer [deftest is are testing]]
-            [akvo.flow-services.scheduler :as scheduler])
+            [akvo.flow-services.scheduler :as scheduler]
+            [akvo.flow-services.error :as e])
   (:import (java.io IOException)))
 
 
@@ -28,14 +29,14 @@
 
         (is (= (scheduler/handle-create-report-in-flow {:status 200
                                                         :body   nil})
-               {:error "Flow did not return an id for the report"}))
+               (e/error {:message "Flow did not return an id for the report"})))
 
         (is (= (scheduler/handle-create-report-in-flow {:status 500})
-               {:error {:message "Flow returns error on report creation. HTTP code: 500"}}))
+               (e/error {:message "Flow returns error on report creation. HTTP code: 500"})))
 
         (let [an-exception (IOException. "some error")
-              error (:error (scheduler/handle-create-report-in-flow {:error an-exception}))]
-          (is (= an-exception (:cause error)))))
+              error (::e/error (scheduler/handle-create-report-in-flow (e/error {:cause an-exception})))]
+          (is (= (:cause error) an-exception))))
 
       (testing "finish request"
         (are [report-result expected-body]
@@ -54,9 +55,6 @@
           "some awesome path" {:state    "FINISHED_SUCCESS"
                                :filename "some awesome path"}
 
-          "INVALID_PATH" {:state   "FINISHED_ERROR"
-                          :message "Error generating report"}
-
-          {:error {:cause (RuntimeException. "Something very bad")}} {:state   "FINISHED_ERROR"
-                                                                      :message "Something very bad"}))))
+          (e/error {:cause (RuntimeException. "Something very bad")}) {:state   "FINISHED_ERROR"
+                                                                       :message "Something very bad"}))))
   )
