@@ -99,8 +99,9 @@
 
 (defn send-http-json! [request]
   (wrap-exceptions
-    (http/request (merge {:as           :json
-                          :content-type :json}
+    (http/request (merge {:as               :json
+                          :content-type     :json
+                          :throw-exceptions false}
                          request))))
 
 (defn open-report-in-flow [job-data]
