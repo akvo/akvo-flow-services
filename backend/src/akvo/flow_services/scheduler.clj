@@ -122,9 +122,6 @@
     (str/join "/" (take-last 3 (str/split (.getAbsolutePath ^File report-file) #"/")))
     "INVALID_PATH"))
 
-(defn send-email [{:keys [to locale content]}]
-  )
-
 (defn run-report [{:strs [baseURL exportType surveyId opts id]}]
   (let [questionId (get opts "questionId")
         report (if (= exportType "GEOSHAPE")
@@ -138,8 +135,9 @@
     (scheduler/delete-job (jobs/key id))
     path))
 
-(defn gdpr-email [job-data report]
-  )
+(defn gdpr-email [{:strs [opts]}]
+  (email/send-gdpr-report-ready (get opts "email")
+                                (get opts "locale" "en")))
 
 (defn old-email [{:strs [opts]} report]
   (email/send-report-ready (get opts "email")
@@ -154,7 +152,7 @@
           report (wrap-exceptions (run-report job-data))]
       (close-report-in-flow flow-data job-data report)
       (when-not (invalid-report? report)
-        (send-email (gdpr-email job-data report))))
+        (gdpr-email job-data)))
     (let [report (run-report job-data)]
       (when-not (invalid-report? report)
         (old-email job-data report)))))
