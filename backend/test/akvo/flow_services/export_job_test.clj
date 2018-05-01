@@ -43,13 +43,13 @@
           (let [an-email (str (rand-int 30000) "-user@akvo.org")]
             (= (scheduler/finish-report-in-flow {"opts"       {"email" an-email}
                                                  "baseURL"    "http://foobar"
-                                                 "exportType" "GEOSHAPE"}
+                                                 "exportType" "COOL"}
                                                 flow-id
                                                 report-result)
                {:method      :put
                 :url         "http://foobar/reports/id-returned-by-flow"
                 :form-params {:report (merge {:user       an-email
-                                              :reportType "GEOSHAPE"}
+                                              :reportType "COOL"}
                                              expected-body)}}))
 
           "some awesome path" {:state    "FINISHED_SUCCESS"

@@ -55,7 +55,7 @@
                    flow-id
                    (e/error {:message "Flow did not return an id for the report"}))))))
 
-(defn finish-report-in-flow [{:strs [baseURL opts]} flow-id report-result]
+(defn finish-report-in-flow [{:strs [baseURL opts exportType]} flow-id report-result]
   (let [report (if (e/ok? report-result)
                  {:state    "FINISHED_SUCCESS"
                   :filename report-result}
@@ -66,7 +66,7 @@
      :form-params {:report
                    (assoc report
                      :user (get opts "email")
-                     :reportType "GEOSHAPE")}}))
+                     :reportType exportType)}}))
 
 (defn send-http-json! [request]
   (e/wrap-exceptions
