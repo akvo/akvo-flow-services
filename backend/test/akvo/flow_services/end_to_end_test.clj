@@ -236,15 +236,14 @@
              {:body (json/generate-string
                       {"request"  {"method"       "POST"
                                    "urlPath"      "/reports"
-                                   "bodyPatterns" [{"matchesJsonPath" {"expression" "$.state" "equalTo" "IN_PROGRESS"}}
-                                                   {"matchesJsonPath" {"expression" "$.user" "equalTo" user}}]}
+                                   "bodyPatterns" [{"matchesJsonPath" {"expression" "$.report.state" "equalTo" "IN_PROGRESS"}}
+                                                   {"matchesJsonPath" {"expression" "$.report.user" "equalTo" user}}]}
                        "response" {"status"   200
-                                   "jsonBody" {:id flow-report-id}}})})
+                                   "jsonBody" {:report {:id flow-report-id}}}})})
   (http/post wiremock-mappings-url
              {:body (json/generate-string
-                      {"request"  {"method"       "PUT"
-                                   "urlPath"      "/reports"
-                                   "bodyPatterns" [{"matchesJsonPath" {"expression" "$.id" "equalTo" flow-report-id}}]}
+                      {"request"  {"method"  "PUT"
+                                   "urlPath" (str "/reports/" flow-report-id)}
                        "response" {"status"   200
                                    "jsonBody" {:id flow-report-id}}})}))
 
@@ -264,7 +263,7 @@
         user (str survey-id "@akvo.org")
         opts {"gdpr"  "true"
               "email" user}]
-    (mock-flow-report-api survey-id user)
+    (mock-flow-report-api flow-report-id user)
     (mock-gae survey-id)
     (mock-mailjet)
     (test-util/try-for "Processing for too long" 20
