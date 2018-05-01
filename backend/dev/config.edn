@@ -24,8 +24,7 @@
                  "akvoflow-beta2.appspot.com"]
 
 
- :notification {:mailjet     true
-                :credentials [#env EMAIL_USER #env EMAIL_PASSWORD]
+ :notification {:credentials [#env EMAIL_USER #env EMAIL_PASSWORD]
                 :api-url     "http://wiremock-proxy:8080/mailjet"}
 
  :notification-from "noreply@akvo.org"

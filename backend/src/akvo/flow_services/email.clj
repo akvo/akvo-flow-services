@@ -32,14 +32,6 @@
                   :headers    {"Content-Type" "application/json"}
                   :body       (json/encode body)})))
 
-(defn postal-send [settings email locale url]
-  (postal/send-message (:notification settings)
-                       {:from     (:notification-from settings)
-                        :to       [email]
-                        :subject  (t> locale "_report_header")
-                        :body     (t> locale "_report_body" url)
-                        :Reply-To (:notification-reply-to settings)}))
-
 (defn obfuscate [email]
   (when email
     (str/replace email #"^[^@]*" "****")))
@@ -47,8 +39,5 @@
 (defn send-report-ready [email locale url]
   (infof "Notifying %s" (obfuscate email))
   (debugf "Notifying %s about %s" email url)
-  (let [settings @config/settings
-        send-email (if (-> settings :notification :mailjet)
-                     mail-jet-send
-                     postal-send)]
-    (send-email settings email locale url)))
+  (let [settings @config/settings]
+    (mail-jet-send settings email locale url)))
