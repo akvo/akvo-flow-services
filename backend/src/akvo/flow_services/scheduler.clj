@@ -33,11 +33,11 @@
   (= "true" (get-in job-data ["opts" "gdpr"])))
 
 (defn create-report-in-flow [{:strs [baseURL exportType opts]}]
-  {:method :post
-   :url    (str baseURL "/reports")
-   :body   {:report {:state      "IN_PROGRESS"
-                     :user       (get opts "email")
-                     :reportType exportType}}})
+  {:method      :post
+   :url         (str baseURL "/reports")
+   :form-params {:report {:state      "IN_PROGRESS"
+                          :user       (get opts "email")
+                          :reportType exportType}}})
 
 (defn expect-200 [http-response]
   (cond
@@ -65,7 +65,7 @@
 
 (defmacro wrap-exceptions [body]
   `(try
-     ~@body
+     ~body
      (catch Exception e# {:error {:cause e#}})))
 
 (defn invalid-report? [report-path]
@@ -77,34 +77,37 @@
 
 (defn finish-report-in-flow [{:strs [baseURL opts]} flow-id report-result]
   (if-let [error (:error report-result)]
-    {:method :put
-     :url    (str baseURL "/reports/" flow-id)
-     :body   {:report {:state      "FINISHED_ERROR"
-                       :user       (get opts "email")
-                       :reportType "GEOSHAPE"
-                       :message    (user-friendly-message error)}}}
+    {:method      :put
+     :url         (str baseURL "/reports/" flow-id)
+     :form-params {:report {:state      "FINISHED_ERROR"
+                            :user       (get opts "email")
+                            :reportType "GEOSHAPE"
+                            :message    (user-friendly-message error)}}}
     (if (invalid-report? report-result)
-      {:method :put
-       :url    (str baseURL "/reports/" flow-id)
-       :body   {:report {:state      "FINISHED_ERROR"
-                         :user       (get opts "email")
-                         :reportType "GEOSHAPE"
-                         :message    "Error generating report"}}}
-      {:method :put
-       :url    (str baseURL "/reports/" flow-id)
-       :body   {:report {:state      "FINISHED_SUCCESS"
-                         :user       (get opts "email")
-                         :reportType "GEOSHAPE"
-                         :filename   report-result}}})))
+      {:method      :put
+       :url         (str baseURL "/reports/" flow-id)
+       :form-params {:report {:state      "FINISHED_ERROR"
+                              :user       (get opts "email")
+                              :reportType "GEOSHAPE"
+                              :message    "Error generating report"}}}
+      {:method      :put
+       :url         (str baseURL "/reports/" flow-id)
+       :form-params {:report {:state      "FINISHED_SUCCESS"
+                              :user       (get opts "email")
+                              :reportType "GEOSHAPE"
+                              :filename   report-result}}})))
 
-(defn send-http! [request]
-  (wrap-exceptions (http/request request)))
+(defn send-http-json! [request]
+  (wrap-exceptions
+    (http/request (merge {:as           :json
+                          :content-type :json}
+                         request))))
 
 (defn open-report-in-flow [job-data]
-  (-> job-data create-report-in-flow send-http! handle-create-report-in-flow unwrap-throwing))
+  (-> job-data create-report-in-flow send-http-json! handle-create-report-in-flow unwrap-throwing))
 
 (defn close-report-in-flow [flow-id job-data report]
-  (-> (finish-report-in-flow job-data flow-id report) send-http! expect-200 unwrap-throwing))
+  (-> (finish-report-in-flow job-data flow-id report) send-http-json! expect-200 unwrap-throwing))
 
 (def cache (atom {}))
 

@@ -15,11 +15,11 @@
         (is (= (scheduler/create-report-in-flow {"opts"       {"email" "user@akvo.org"}
                                                  "baseURL"    "http://foobar"
                                                  "exportType" "GEOSHAPE"})
-               {:method :post
-                :url    "http://foobar/reports"
-                :body   {:report {:state      "IN_PROGRESS"
-                                  :user       "user@akvo.org"
-                                  :reportType "GEOSHAPE"}}})))
+               {:method      :post
+                :url         "http://foobar/reports"
+                :form-params {:report {:state      "IN_PROGRESS"
+                                       :user       "user@akvo.org"
+                                       :reportType "GEOSHAPE"}}})))
 
       (testing "handle create response"
         (is (= (scheduler/handle-create-report-in-flow {:status 200
@@ -40,16 +40,16 @@
       (testing "finish request"
         (are [report-result expected-body]
           (let [an-email (str (rand-int 30000) "-user@akvo.org")]
-            (= (scheduler/finish-report-in-flow {"opts"               {"email" an-email}
-                                                 "baseURL"            "http://foobar"
-                                                 "exportType"         "GEOSHAPE"}
+            (= (scheduler/finish-report-in-flow {"opts"       {"email" an-email}
+                                                 "baseURL"    "http://foobar"
+                                                 "exportType" "GEOSHAPE"}
                                                 flow-id
                                                 report-result)
-               {:method :put
-                :url    "http://foobar/reports/id-returned-by-flow"
-                :body   {:report (merge {:user       an-email
-                                         :reportType "GEOSHAPE"}
-                                        expected-body)}}))
+               {:method      :put
+                :url         "http://foobar/reports/id-returned-by-flow"
+                :form-params {:report (merge {:user       an-email
+                                              :reportType "GEOSHAPE"}
+                                             expected-body)}}))
 
           "some awesome path" {:state    "FINISHED_SUCCESS"
                                :filename "some awesome path"}
