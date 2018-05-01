@@ -19,12 +19,13 @@
   (:require [clojure.string :as str]
             [taoensso.timbre :refer (infof warnf)]
             [clojurewerkz.quartzite [conversion :as conversion]
-                                    [jobs :as jobs]
-                                    [scheduler :as scheduler]
-                                    [triggers :as triggers]]
+             [jobs :as jobs]
+             [scheduler :as scheduler]
+             [triggers :as triggers]]
             [akvo.commons.config :as config]
             [akvo.flow-services.email :as email]
-            [akvo.flow-services.geoshape-export :as geoshape])
+            [akvo.flow-services.geoshape-export :as geoshape]
+            [clj-http.client :as http])
   (:use [akvo.flow-services.exporter :only (export-report)]
         [akvo.flow-services.uploader :only (bulk-upload)]))
 
@@ -38,51 +39,90 @@
                      :user       (get opts "email")
                      :reportType exportType}}})
 
-(defn finish-report-in-flow [{:strs [baseURL flow-create-result opts]} report-result]
-  (if-let [exception (:exception report-result)]
+(defn expect-200 [http-response]
+  (cond
+    (:error http-response) {:error {:message "Error connecting to Flow" :cause (:error http-response)}}
+    (not= 200 (:status http-response)) {:error {:message (str "Flow returns error on report creation. HTTP code: " (:status http-response))}}
+    :default http-response))
+
+(defn unwrap-throwing [{:keys [error] :as v}]
+  (if error
+    (throw (if-let [cause (:cause error)]
+             (RuntimeException. (:message error) cause)
+             (RuntimeException. (:message error))))
+    v))
+
+(defn if-ok [{:keys [error] :as v} f]
+  (if error v (f v)))
+
+(defn handle-create-report-in-flow [http-response]
+  (-> http-response
+      expect-200
+      (if-ok (fn [ok]
+               (if-let [flow-id (-> ok :body :report :id)]
+                 flow-id
+                 {:error "Flow did not return an id for the report"})))))
+
+(defmacro wrap-exceptions [body]
+  `(try
+     ~@body
+     (catch Exception e# {:error {:cause e#}})))
+
+(defn invalid-report? [report-path]
+  (= "INVALID_PATH" report-path))
+
+(defn user-friendly-message [error]
+  (or (:message error)
+      (some-> error :cause .getMessage)))
+
+(defn finish-report-in-flow [{:strs [baseURL opts]} flow-id report-result]
+  (if-let [error (:error report-result)]
     {:method :put
-     :url    (str baseURL "/reports/" flow-create-result)
+     :url    (str baseURL "/reports/" flow-id)
      :body   {:report {:state      "FINISHED_ERROR"
                        :user       (get opts "email")
                        :reportType "GEOSHAPE"
-                       :message    (.getMessage exception)}}}
-    (if (= "INVALID_PATH" (:report-path report-result))
+                       :message    (user-friendly-message error)}}}
+    (if (invalid-report? report-result)
       {:method :put
-       :url    (str baseURL "/reports/" flow-create-result)
+       :url    (str baseURL "/reports/" flow-id)
        :body   {:report {:state      "FINISHED_ERROR"
                          :user       (get opts "email")
                          :reportType "GEOSHAPE"
                          :message    "Error generating report"}}}
       {:method :put
-       :url    (str baseURL "/reports/" flow-create-result)
+       :url    (str baseURL "/reports/" flow-id)
        :body   {:report {:state      "FINISHED_SUCCESS"
                          :user       (get opts "email")
                          :reportType "GEOSHAPE"
-                         :filename   (:report-path report-result)}}})))
+                         :filename   report-result}}})))
 
-(defn handle-create-report-in-flow [http-response]
-  (let [flow-id (-> http-response :body :report :id)]
-    (cond
-      (:exception http-response) [:abort (RuntimeException. "Error connecting to Flow" (:exception http-response))]
-      (not= 200 (:status http-response)) [:abort (str "Flow returns error on report creation. HTTP code: " (:status http-response))]
-      flow-id [:continue {"flow-create-result" flow-id}]
-      :default [:abort "Flow did not return an id for the report"])))
+(defn send-http! [request]
+  (wrap-exceptions (http/request request)))
+
+(defn open-report-in-flow [job-data]
+  (-> job-data create-report-in-flow send-http! handle-create-report-in-flow unwrap-throwing))
+
+(defn close-report-in-flow [flow-id job-data report]
+  (-> (finish-report-in-flow job-data flow-id report) send-http! expect-200 unwrap-throwing))
 
 (def cache (atom {}))
 
 (defn- valid-report? [report-path]
   (boolean
     (and (.exists report-path)
-      (pos? (.length report-path)))))
+         (pos? (.length report-path)))))
 
 (defn- get-path [report-file]
   (if (valid-report? report-file)
     (str/join "/" (take-last 3 (str/split (.getAbsolutePath ^File report-file) #"/")))
     "INVALID_PATH"))
 
-(jobs/defjob ExportJob [job-data]
-  (let [{:strs [baseURL exportType surveyId opts id]} (conversion/from-job-data job-data)
-        questionId (get opts "questionId")
+(defn send-email [{:keys [to locale content]}]
+  )
+
+(defn run-report [{:strs [baseURL exportType surveyId opts id]}]
+  (let [questionId (get opts "questionId")
         report (if (= exportType "GEOSHAPE")
                  (geoshape/export (get opts "appId") surveyId questionId)
                  (export-report exportType baseURL surveyId opts))
@@ -91,16 +131,32 @@
                         :surveyId   surveyId
                         :questionId questionId
                         :baseURL    (config/get-domain baseURL)} path})
-    (when (get opts "email")
-      (if (= path "INVALID_PATH")
-        (warnf "Could not generate report %s for surveyId %s" id surveyId)
-        (email/send-report-ready (get opts "email")
-                                 (get opts "locale" "en")
-                                 (format "%s/report/%s"
-                                         (get opts "flowServices")
-                                         path))))
-    (scheduler/delete-job (jobs/key id))))
+    (scheduler/delete-job (jobs/key id))
+    path))
 
+(defn gdpr-email [job-data report]
+  )
+
+(defn old-email [{:strs [opts]} report]
+  (email/send-report-ready (get opts "email")
+                           (get opts "locale" "en")
+                           (format "%s/report/%s"
+                                   (get opts "flowServices")
+                                   report)))
+
+(defn do-export [job-data]
+  (if (gdpr-flow? job-data)
+    (let [flow-data (open-report-in-flow job-data)
+          report (wrap-exceptions (run-report job-data))]
+      (close-report-in-flow flow-data job-data report)
+      (when-not (invalid-report? report)
+        (send-email (gdpr-email job-data report))))
+    (let [report (run-report job-data)]
+      (when-not (invalid-report? report)
+        (old-email job-data report)))))
+
+(jobs/defjob ExportJob [job-data]
+  (do-export (conversion/from-job-data job-data)))
 
 (jobs/defjob BulkUploadJob [job-data]
   (let [{:strs [baseURL uniqueIdentifier filename uploadDomain surveyId id]} (conversion/from-job-data job-data)]
@@ -113,7 +169,7 @@
 (defn- get-job [job-type id params]
   (jobs/build
     (jobs/of-type job-type)
-    (jobs/using-job-data (conj params {:id id} ))
+    (jobs/using-job-data (conj params {:id id}))
     (jobs/with-identity (jobs/key id))))
 
 (defn- get-trigger [id]
@@ -127,7 +183,7 @@
     (try
       (scheduler/maybe-schedule job trigger)
       (catch ObjectAlreadyExistsException _))
-    {:status "OK"
+    {:status  "OK"
      :message "PROCESSING"}))
 
 (defn- get-report-by-id [id]
@@ -154,12 +210,12 @@
   (if-let [file (get-report-by-id (report-id criteria))]
     (if (= file "INVALID_PATH")
       (do
-        (invalidate-cache {"baseURL" (criteria "baseURL")
+        (invalidate-cache {"baseURL"   (criteria "baseURL")
                            "surveyIds" [(criteria "surveyId")]})
-        {:status "ERROR"
+        {:status  "ERROR"
          :message "_error_generating_report"})
       {:status "OK"
-       :file file})
+       :file   file})
     (schedule-job ExportJob (report-id criteria) criteria)))
 
 (defn process-and-upload

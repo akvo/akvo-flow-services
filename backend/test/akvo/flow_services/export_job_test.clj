@@ -9,54 +9,54 @@
   (is (not (scheduler/gdpr-flow? {"opts" {}})))
   (is (not (scheduler/gdpr-flow? {"opts" {"gdpr" "false"}})))
 
-  (testing "flow notifications"
-    (testing "create request"
-      (is (= (scheduler/create-report-in-flow {"opts"       {"email" "user@akvo.org"}
-                                               "baseURL"    "http://foobar"
-                                               "exportType" "GEOSHAPE"})
-             {:method :post
-              :url    "http://foobar/reports"
-              :body   {:report {:state      "IN_PROGRESS"
-                                :user       "user@akvo.org"
-                                :reportType "GEOSHAPE"}}})))
+  (let [flow-id "id-returned-by-flow"]
+    (testing "flow notifications"
+      (testing "create request"
+        (is (= (scheduler/create-report-in-flow {"opts"       {"email" "user@akvo.org"}
+                                                 "baseURL"    "http://foobar"
+                                                 "exportType" "GEOSHAPE"})
+               {:method :post
+                :url    "http://foobar/reports"
+                :body   {:report {:state      "IN_PROGRESS"
+                                  :user       "user@akvo.org"
+                                  :reportType "GEOSHAPE"}}})))
 
-    (testing "handle create response"
-      (is (= (scheduler/handle-create-report-in-flow {:status 200
-                                                      :body   {:report {:id "some-id"}}})
-             [:continue {"flow-create-result" "some-id"}]))
+      (testing "handle create response"
+        (is (= (scheduler/handle-create-report-in-flow {:status 200
+                                                        :body   {:report {:id flow-id}}})
+               flow-id))
 
-      (is (= (scheduler/handle-create-report-in-flow {:status 200
-                                                      :body   nil})
-             [:abort "Flow did not return an id for the report"]))
+        (is (= (scheduler/handle-create-report-in-flow {:status 200
+                                                        :body   nil})
+               {:error "Flow did not return an id for the report"}))
 
-      (is (= (scheduler/handle-create-report-in-flow {:status 500})
-             [:abort "Flow returns error on report creation. HTTP code: 500"]))
+        (is (= (scheduler/handle-create-report-in-flow {:status 500})
+               {:error {:message "Flow returns error on report creation. HTTP code: 500"}}))
 
-      (let [an-exception (IOException. "some error")
-            [action value] (scheduler/handle-create-report-in-flow {:exception an-exception})]
-        (is (= action :abort))
-        (is (= an-exception (.getCause value)))))
+        (let [an-exception (IOException. "some error")
+              error (:error (scheduler/handle-create-report-in-flow {:error an-exception}))]
+          (is (= an-exception (:cause error)))))
 
-    (testing "finish request"
-      (are [report-result expected-body]
-        (let [an-email (str (rand-int 30000) "-user@akvo.org")]
-          (= (scheduler/finish-report-in-flow {"opts"               {"email" an-email}
-                                               "baseURL"            "http://foobar"
-                                               "exportType"         "GEOSHAPE"
-                                               "flow-create-result" "id-returned-by-flow"}
-                                              report-result)
-             {:method :put
-              :url    "http://foobar/reports/id-returned-by-flow"
-              :body   {:report (merge {:user       an-email
-                                       :reportType "GEOSHAPE"}
-                                      expected-body)}}))
+      (testing "finish request"
+        (are [report-result expected-body]
+          (let [an-email (str (rand-int 30000) "-user@akvo.org")]
+            (= (scheduler/finish-report-in-flow {"opts"               {"email" an-email}
+                                                 "baseURL"            "http://foobar"
+                                                 "exportType"         "GEOSHAPE"}
+                                                flow-id
+                                                report-result)
+               {:method :put
+                :url    "http://foobar/reports/id-returned-by-flow"
+                :body   {:report (merge {:user       an-email
+                                         :reportType "GEOSHAPE"}
+                                        expected-body)}}))
 
-        {:report-path "some awesome path"} {:state    "FINISHED_SUCCESS"
-                                            :filename "some awesome path"}
+          "some awesome path" {:state    "FINISHED_SUCCESS"
+                               :filename "some awesome path"}
 
-        {:report-path "INVALID_PATH"} {:state   "FINISHED_ERROR"
-                                       :message "Error generating report"}
+          "INVALID_PATH" {:state   "FINISHED_ERROR"
+                          :message "Error generating report"}
 
-        {:exception (RuntimeException. "Something very bad")} {:state   "FINISHED_ERROR"
-                                                               :message "Something very bad"})))
+          {:error {:cause (RuntimeException. "Something very bad")}} {:state   "FINISHED_ERROR"
+                                                                      :message "Something very bad"}))))
   )
