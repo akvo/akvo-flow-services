@@ -18,7 +18,6 @@
                  [clj-aws-s3 "0.3.9" :exclusions [joda-time]]
                  [clj-http "3.8.0"]
                  [org.clojure/java.jdbc "0.3.5"]
-                 [com.draines/postal "1.11.3"]
                  ; Java libraries
                  [jfree/jfreechart "1.0.13"]
                  [commons-lang/commons-lang "2.4"]

@@ -15,7 +15,6 @@
 (ns akvo.flow-services.email
   (:require [akvo.flow-services.translate :refer (t>)]
             [akvo.commons.config :as config]
-            [postal.core :as postal]
             [clj-http.client :as client]
             [taoensso.timbre :as timbre :refer (infof debugf)]
             [cheshire.core :as json]
