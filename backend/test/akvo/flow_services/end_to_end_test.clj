@@ -266,7 +266,7 @@
        :requests
        (map (comp :state :report #(json/parse-string % true) :body))))
 
-(deftest ^:wip report-generation-flow-notified-of-progress
+(deftest report-generation-flow-notified-of-progress
   (let [survey-id (System/currentTimeMillis)
         flow-report-id (str "the-flow-id-" survey-id)
         user (str survey-id "@akvo.org")
