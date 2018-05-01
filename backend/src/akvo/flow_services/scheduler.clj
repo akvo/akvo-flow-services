@@ -26,7 +26,7 @@
             [akvo.flow-services.email :as email]
             [akvo.flow-services.geoshape-export :as geoshape]
             [akvo.flow-services.error :as e]
-            [clj-http.client :as http])
+            [akvo.flow-services.util :as util])
   (:use [akvo.flow-services.exporter :only (export-report)]
         [akvo.flow-services.uploader :only (bulk-upload)]))
 
@@ -67,19 +67,18 @@
                    (assoc report
                      :user (get opts "email")
                      :reportType exportType)}}))
-
-(defn send-http-json! [request]
-  (e/wrap-exceptions
-    (http/request (merge {:as               :json
-                          :content-type     :json
-                          :throw-exceptions false}
-                         request))))
-
 (defn open-report-in-flow [job-data]
-  (-> job-data create-report-in-flow send-http-json! handle-create-report-in-flow e/unwrap-throwing))
+  (-> job-data
+      create-report-in-flow
+      (#(util/send-http-json! job-data %))
+      handle-create-report-in-flow
+      e/unwrap-throwing))
 
 (defn close-report-in-flow [flow-id job-data report]
-  (-> (finish-report-in-flow job-data flow-id report) send-http-json! expect-200 e/unwrap-throwing))
+  (-> (finish-report-in-flow job-data flow-id report)
+      (#(util/send-http-json! job-data %))
+      expect-200
+      e/unwrap-throwing))
 
 (def cache (atom {}))
 
