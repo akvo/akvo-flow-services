@@ -4,8 +4,12 @@
             [cheshire.core :as json]
             [clj-http.client :as http]
             [akvo.flow-services.test-util :as test-util]
-            [clojure.string :as str])
+            [clojure.string :as str]
+            [taoensso.timbre :as timbre])
   (:import java.util.Base64))
+
+(when-let [log-level (System/getenv "LOG_LEVEL")]
+  (timbre/set-level! (keyword log-level)))
 
 (defn encode [to-encode]
   (.encodeToString (Base64/getEncoder) (.getBytes to-encode)))

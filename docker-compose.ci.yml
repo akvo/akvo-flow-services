@@ -9,6 +9,8 @@ services:
 
   tests:
     image: akvo-flow-services-dev:develop
+    environment:
+     - LOG_LEVEL=info
     volumes:
       - ./backend:/app
       - ~/.m2:/root/.m2
