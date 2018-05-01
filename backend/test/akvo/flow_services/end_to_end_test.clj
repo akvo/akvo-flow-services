@@ -3,7 +3,8 @@
   (:require [clojure.test :refer :all]
             [cheshire.core :as json]
             [clj-http.client :as http]
-            [akvo.flow-services.test-util :as test-util])
+            [akvo.flow-services.test-util :as test-util]
+            [clojure.string :as str])
   (:import java.util.Base64))
 
 (defn encode [to-encode]
@@ -160,15 +161,19 @@
                                                                  "response" {"status" 200
                                                                              "body"   "ok"}})}))
 
-(defn email-sent-count [body]
-  (-> (http/post (str wiremock-url "/__admin/requests/count")
-                 {:as   :json
-                  :body (json/generate-string
-                          {"method"       "POST"
-                           "bodyPatterns" [{"matches" (str ".*" body ".*")}]
-                           "urlPath"      "/mailjet/send"})})
-      :body
-      :count))
+(defn text-first-email-sent-to [email]
+  (->> (http/post (str wiremock-url "/__admin/requests/find")
+                  {:as   :json
+                   :body (json/generate-string
+                           {"method"       "POST"
+                            "bodyPatterns" [{"matches" (str ".*" email ".*")}]
+                            "urlPath"      "/mailjet/send"})})
+       :body
+       :requests
+       first
+       :body
+       (#(json/parse-string % true))
+       :Text-part))
 
 (defn report-notifications []
   (-> (http/post (str wiremock-url "/__admin/requests/find")
@@ -204,7 +209,7 @@
       (is (= "OK" (get report-result "status")))
 
       (test-util/try-for "email not sent" 5
-                         (= 1 (email-sent-count (get report-result "file"))))
+                         (str/includes? (text-first-email-sent-to "dan@akvo.org") (get report-result "file")))
 
       (is (= 200 (:status (http/get (str flow-services-url "/report/" (get report-result "file"))))))
       (assert-report-not-updated-in-flow))))
@@ -251,8 +256,8 @@
   (->> (http/post (str wiremock-url "/__admin/requests/find")
                   {:as   :json
                    :body (json/generate-string
-                           {"method"       "PUT"
-                            "urlPath"      (str "/reports/" flow-report-id)})})
+                           {"method"  "PUT"
+                            "urlPath" (str "/reports/" flow-report-id)})})
        :body
        :requests
        (map (comp :state :report #(json/parse-string % true) :body))))
@@ -273,7 +278,9 @@
       (is (= "OK" (get report-result "status")))
 
       (test-util/try-for "email not sent" 5
-                         (= 1 (email-sent-count (get report-result "file"))))
+                         (text-first-email-sent-to user))
+
+      (is (not (str/includes? (text-first-email-sent-to user) (get report-result "file"))))
 
       (is (= 200 (:status (http/get (str flow-services-url "/report/" (get report-result "file"))))))
       (is (= ["FINISHED_SUCCESS"] (final-report-state-in-flow flow-report-id))))))
