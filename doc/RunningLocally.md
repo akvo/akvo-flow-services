@@ -30,4 +30,4 @@ If you want to run both Flow and Flow Services locally and talking to each other
 docker-compose -f docker-compose.together.yml up --build -d
 ```
 
-See documentation in Flow to start it in a "integrat"
+Read the Flow documentation for the Flow specific instructions.
