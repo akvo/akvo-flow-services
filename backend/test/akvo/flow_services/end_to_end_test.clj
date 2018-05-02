@@ -183,7 +183,7 @@
   (-> (http/post (str wiremock-url "/__admin/requests/find")
                  {:as   :json
                   :body (json/generate-string
-                          {"urlPath" "/reports"})})
+                          {"urlPath" "/rest/reports"})})
       :body
       :requests))
 
@@ -244,7 +244,7 @@
   (http/post wiremock-mappings-url
              {:body (json/generate-string
                       {"request"  {"method"       "POST"
-                                   "urlPath"      "/reports"
+                                   "urlPath"      "/rest/reports"
                                    "bodyPatterns" [{"matchesJsonPath" {"expression" "$.report.state" "equalTo" "IN_PROGRESS"}}
                                                    {"matchesJsonPath" {"expression" "$.report.user" "equalTo" user}}]}
                        "response" {"status"   200
@@ -252,7 +252,7 @@
   (http/post wiremock-mappings-url
              {:body (json/generate-string
                       {"request"  {"method"  "PUT"
-                                   "urlPath" (str "/reports/" flow-report-id)}
+                                   "urlPath" (str "/rest/reports/" flow-report-id)}
                        "response" {"status"   200
                                    "jsonBody" {:id flow-report-id}}})}))
 
@@ -261,7 +261,7 @@
                   {:as   :json
                    :body (json/generate-string
                            {"method"  "PUT"
-                            "urlPath" (str "/reports/" flow-report-id)})})
+                            "urlPath" (str "/rest/reports/" flow-report-id)})})
        :body
        :requests
        (map (comp :state :report #(json/parse-string % true) :body))))

@@ -17,7 +17,7 @@
                                                  "baseURL"    "http://foobar"
                                                  "exportType" "GEOSHAPE"})
                {:method      :post
-                :url         "http://foobar/reports"
+                :url         "http://foobar/rest/reports"
                 :form-params {:report {:state      "IN_PROGRESS"
                                        :user       "user@akvo.org"
                                        :reportType "GEOSHAPE"}}})))
@@ -47,7 +47,7 @@
                                                 flow-id
                                                 report-result)
                {:method      :put
-                :url         "http://foobar/reports/id-returned-by-flow"
+                :url         "http://foobar/rest/reports/id-returned-by-flow"
                 :form-params {:report (merge {:user       an-email
                                               :reportType "COOL"}
                                              expected-body)}}))

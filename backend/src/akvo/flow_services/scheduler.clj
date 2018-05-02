@@ -35,7 +35,7 @@
 
 (defn create-report-in-flow [{:strs [baseURL exportType opts]}]
   {:method      :post
-   :url         (str baseURL "/reports")
+   :url         (str baseURL "/rest/reports")
    :form-params {:report {:state      "IN_PROGRESS"
                           :user       (get opts "email")
                           :reportType exportType}}})
@@ -62,7 +62,7 @@
                  {:state   "FINISHED_ERROR"
                   :message (e/user-friendly-message report-result)})]
     {:method      :put
-     :url         (str baseURL "/reports/" flow-id)
+     :url         (str baseURL "/rest/reports/" flow-id)
      :form-params {:report
                    (assoc report
                      :user (get opts "email")
