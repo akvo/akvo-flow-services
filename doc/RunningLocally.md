@@ -21,3 +21,13 @@ or the integration tests:
 ```sh
 docker-compose exec backend lein test :integration
 ```
+
+### Running Flow Services and Flow together locally
+
+If you want to run both Flow and Flow Services locally and talking to each other, run:
+
+```
+docker-compose -f docker-compose.together.yml up --build -d
+```
+
+See documentation in Flow to start it in a "integrat"

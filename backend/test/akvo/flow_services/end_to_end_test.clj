@@ -28,12 +28,12 @@
                                                   "id"         "asdf"
                                                   "opts"       (merge {"email"          "dan@akvo.org"
                                                                        "lastCollection" "false"
-                                                                       "uploadUrl"      "https://flowservices-dev-config.s3.amazonaws.com"
+                                                                       "uploadUrl"      "s3/"
                                                                        "exportMode"     "DATA_CLEANING"
                                                                        "from"           "2013-03-06"
                                                                        "to"             "2018-03-09"
                                                                        "flowServices"   flow-services-url
-                                                                       "appId"          "flowservices-dev-config"}
+                                                                       "appId"          "akvoflowsandbox"}
                                                                       opts)})}})
            :body
            (re-seq #"somejson\((.*)\);")

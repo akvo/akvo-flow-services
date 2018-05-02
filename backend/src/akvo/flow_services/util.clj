@@ -11,7 +11,7 @@
 
 (defn datastore-spec [app-id-or-bucket]
   (let [cfg (config/find-config app-id-or-bucket)]
-    (if (= "flowservices-dev-config" (:app-id cfg))
+    (if (= "this is a hack to force the remote API to use localhost" (:service-account-id cfg))
       {:hostname           "localhost"
        :port               8888}
       {:hostname           (:domain cfg)
