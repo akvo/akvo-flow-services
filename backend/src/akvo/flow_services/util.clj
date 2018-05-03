@@ -1,7 +1,8 @@
 (ns akvo.flow-services.util
   (:require [akvo.commons.config :as config]
             [clj-http.client :as http]
-            [akvo.flow-services.error :as e])
+            [akvo.flow-services.error :as e]
+            [taoensso.timbre :as timbre])
   (:import (java.text SimpleDateFormat)
            (java.util TimeZone Date)
            (java.net URLEncoder)
@@ -12,8 +13,8 @@
 (defn datastore-spec [app-id-or-bucket]
   (let [cfg (config/find-config app-id-or-bucket)]
     (if (= "this is a hack to force the remote API to use localhost" (:service-account-id cfg))
-      {:hostname           "localhost"
-       :port               8888}
+      {:hostname "localhost"
+       :port     8888}
       {:hostname           (:domain cfg)
        :service-account-id (:service-account-id cfg)
        :private-key-file   (:private-key-file cfg)
@@ -36,9 +37,13 @@
 
 (defn send-http-json! [job-data request]
   (assert (not (:query-params request)) "Signing just works when request has no params")
-  (e/wrap-exceptions
-    (http/request (merge {:as               :json
-                          :content-type     :json
-                          :throw-exceptions false}
-                         (sign-request-with-timestamp (api-key-for job-data))
-                         request))))
+  (let [final-request (merge {:as               :json
+                              :content-type     :json
+                              :throw-exceptions false}
+                             (sign-request-with-timestamp (api-key-for job-data))
+                             request)
+        _ (timbre/debug "request" final-request)
+        response (e/wrap-exceptions
+                   (http/request final-request))]
+    (timbre/debug "response" response)
+    response))
