@@ -5,7 +5,7 @@ services:
       - "7888:7888"
       - "3000:3000"
       - "8889:8888"
- backend:
+ flow-services:
    build:
      context: .
      dockerfile: backend/Dockerfile-dev

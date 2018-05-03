@@ -13,13 +13,13 @@ time.
 If you dont want to use the REPL, to run the unit tests:
 
 ```sh
-docker-compose exec backend lein test
+docker-compose exec flow-services lein test
 ```
 
 or the integration tests:
 
 ```sh
-docker-compose exec backend lein test :integration
+docker-compose exec flow-services lein test :integration
 ```
 
 ### Running Flow Services and Flow together locally

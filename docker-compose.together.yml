@@ -1,6 +1,6 @@
 version: "3"
 services:
- backend:
+ flow-services:
    build:
      context: .
      dockerfile: backend/Dockerfile-dev
