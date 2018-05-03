@@ -24,10 +24,8 @@ docker-compose exec backend lein test :integration
 
 ### Running Flow Services and Flow together locally
 
-If you want to run both Flow and Flow Services locally and talking to each other, run:
+If you want to run both Flow and Flow Services locally and talking to each other, first look at Flow documentation counterpart, and then run:
 
 ```
 docker-compose -f docker-compose.together.yml up --build -d
 ```
-
-Read the Flow documentation for the Flow specific instructions.
