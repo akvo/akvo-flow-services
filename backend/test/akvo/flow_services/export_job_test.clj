@@ -24,7 +24,7 @@
 
       (testing "handle create response"
         (is (= (scheduler/handle-create-report-in-flow {:status 200
-                                                        :body   {:report {:id flow-id}}})
+                                                        :body   {:report {:keyId flow-id}}})
                flow-id))
 
         (is (= (scheduler/handle-create-report-in-flow {:status 200
@@ -49,6 +49,7 @@
                {:method      :put
                 :url         "http://foobar/rest/reports/id-returned-by-flow"
                 :form-params {:report (merge {:user       an-email
+                                              :keyId      "id-returned-by-flow"
                                               :reportType "COOL"}
                                              expected-body)}}))
 

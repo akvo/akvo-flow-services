@@ -248,13 +248,13 @@
                                    "bodyPatterns" [{"matchesJsonPath" {"expression" "$.report.state" "equalTo" "IN_PROGRESS"}}
                                                    {"matchesJsonPath" {"expression" "$.report.user" "equalTo" user}}]}
                        "response" {"status"   200
-                                   "jsonBody" {:report {:id flow-report-id}}}})})
+                                   "jsonBody" {:report {:keyId flow-report-id}}}})})
   (http/post wiremock-mappings-url
              {:body (json/generate-string
                       {"request"  {"method"  "PUT"
                                    "urlPath" (str "/rest/reports/" flow-report-id)}
                        "response" {"status"   200
-                                   "jsonBody" {:id flow-report-id}}})}))
+                                   "jsonBody" {:keyId flow-report-id}}})}))
 
 (defn final-report-state-in-flow [flow-report-id]
   (->> (http/post (str wiremock-url "/__admin/requests/find")

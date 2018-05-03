@@ -51,7 +51,7 @@
   (-> http-response
       expect-200
       (e/if-ok (fn [ok]
-                 (if-let [flow-id (-> ok :body :report :id)]
+                 (if-let [flow-id (-> ok :body :report :keyId)]
                    flow-id
                    (e/error {:message "Flow did not return an id for the report"}))))))
 
@@ -65,6 +65,7 @@
      :url         (str baseURL "/rest/reports/" flow-id)
      :form-params {:report
                    (assoc report
+                     :keyId flow-id
                      :user (get opts "email")
                      :reportType exportType)}}))
 (defn open-report-in-flow [job-data]
