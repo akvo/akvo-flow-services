@@ -28,4 +28,4 @@ services:
 networks:
   default:
     external:
-      name: akvoflow_default
+      name: akvoflow_together
