@@ -4,13 +4,16 @@ services:
    build:
      context: .
      dockerfile: backend/Dockerfile-dev
-   network_mode: host
    environment:
      - HOST_UID
      - HOST_GID
      - EMAIL_PASSWORD=anything
      - EMAIL_USER=anything.else
-     - WIREMOCK_URL=localhost:8080
+   external_links:
+     - "akvo-flow:akvoflow.local"
+   ports:
+      - "7888:7888"
+      - "3000:3000"
    volumes:
       - ./backend:/app
       - ~/.m2:/root/.m2
@@ -18,7 +21,11 @@ services:
 
  wiremock-proxy:
    image: rodolpheche/wiremock:2.16.0-alpine
-   network_mode: host
    volumes:
      - ./wiremock:/etc/wiremock/files
    command: --root-dir /etc/wiremock/files --no-request-journal --verbose
+
+networks:
+  default:
+    external:
+      name: akvoflow_default
