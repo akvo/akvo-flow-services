@@ -41,20 +41,21 @@
       (testing "finish request"
         (are [report-result expected-body]
           (let [an-email (str (rand-int 30000) "-user@akvo.org")]
-            (= (scheduler/finish-report-in-flow {"opts"       {"email" an-email}
-                                                 "baseURL"    "http://foobar"
-                                                 "exportType" "COOL"}
-                                                flow-id
-                                                report-result)
-               {:method      :put
-                :url         "http://foobar/rest/reports/id-returned-by-flow"
-                :form-params {:report (merge {:user       an-email
-                                              :keyId      "id-returned-by-flow"
-                                              :reportType "COOL"}
-                                             expected-body)}}))
+            (is (= (scheduler/finish-report-in-flow {"opts"       {"email"        an-email
+                                                                   "flowServices" "http://some-flow-url:23423"}
+                                                     "baseURL"    "http://foobar"
+                                                     "exportType" "COOL"}
+                                                    flow-id
+                                                    report-result)
+                   {:method      :put
+                    :url         "http://foobar/rest/reports/id-returned-by-flow"
+                    :form-params {:report (merge {:user       an-email
+                                                  :keyId      "id-returned-by-flow"
+                                                  :reportType "COOL"}
+                                                 expected-body)}})))
 
           "some awesome path" {:state    "FINISHED_SUCCESS"
-                               :filename "some awesome path"}
+                               :filename "http://some-flow-url:23423/report/some awesome path"}
 
           (e/error {:cause (RuntimeException. "Something very bad")}) {:state   "FINISHED_ERROR"
                                                                        :message "Something very bad"}))))

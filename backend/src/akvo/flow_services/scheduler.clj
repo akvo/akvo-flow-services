@@ -55,10 +55,15 @@
                    flow-id
                    (e/error {:message "Flow did not return an id for the report"}))))))
 
+(defn report-full-url [opts report]
+  (format "%s/report/%s"
+          (get opts "flowServices")
+          report))
+
 (defn finish-report-in-flow [{:strs [baseURL opts exportType]} flow-id report-result]
   (let [report (if (e/ok? report-result)
                  {:state    "FINISHED_SUCCESS"
-                  :filename report-result}
+                  :filename (report-full-url opts report-result)}
                  {:state   "FINISHED_ERROR"
                   :message (e/user-friendly-message report-result)})]
     {:method      :put
@@ -115,9 +120,7 @@
 (defn old-email [{:strs [opts]} report]
   (email/send-report-ready (get opts "email")
                            (get opts "locale" "en")
-                           (format "%s/report/%s"
-                                   (get opts "flowServices")
-                                   report)))
+                           (report-full-url opts report)))
 
 (defn do-export [job-data]
   (if (gdpr-flow? job-data)
