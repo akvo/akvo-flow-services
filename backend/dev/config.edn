@@ -25,7 +25,7 @@
 
 
  :notification {:credentials [#env EMAIL_USER #env EMAIL_PASSWORD]
-                :api-url     #join ["http://" #or [#env WIREMOCK_URL "wiremock-proxy:8080"] "/mailjet"]}
+                :api-url     "http://wiremock-proxy:8080/mailjet"}
 
  :notification-from "noreply@akvo.org"
  :notification-reply-to "reports@akvoflow.org"
@@ -35,7 +35,7 @@
 
  :nrepl-bind            "0.0.0.0"
 
- :sentry {:dsn  #join ["http://a-sentry-key:a-sentry-secret@" #or [#env "WIREMOCK-URL" "wiremock-proxy:8080"] "/sentry/213123"]
+ :sentry {:dsn "http://a-sentry-key:a-sentry-secret@wiremock-proxy:8080/sentry/213123"
           :env "dev"
           :host "localhost"
           :version "SNAPSHOT"}
