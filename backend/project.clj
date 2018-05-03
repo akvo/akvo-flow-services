@@ -9,6 +9,7 @@
                  [org.clojure/tools.nrepl "0.2.12"]
                  [org.akvo/commons "0.4.6"]
                  [com.taoensso/timbre "4.10.0"]
+                 [timbre-ns-pattern-level "0.1.2"]
                  [cheshire "5.3.1"]
                  [compojure "1.1.8"]
                  [clojurewerkz/quartzite "1.3.0"]
