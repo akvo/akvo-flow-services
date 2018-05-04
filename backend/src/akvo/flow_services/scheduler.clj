@@ -38,7 +38,9 @@
    :url         (str baseURL "/rest/reports")
    :form-params {:report {:state      "IN_PROGRESS"
                           :user       (get opts "email")
-                          :formId surveyId
+                          :formId     surveyId
+                          :startDate  (get opts "from")
+                          :endDate    (get opts "to")
                           :reportType exportType}}})
 
 (defn expect-200 [http-response]
@@ -73,6 +75,8 @@
                    (assoc report
                      :keyId flow-id
                      :user (get opts "email")
+                     :startDate (get opts "from")
+                     :endDate (get opts "to")
                      :formId surveyId
                      :reportType exportType)}}))
 (defn open-report-in-flow [job-data]

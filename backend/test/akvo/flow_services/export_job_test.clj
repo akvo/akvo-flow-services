@@ -13,7 +13,9 @@
   (let [flow-id "id-returned-by-flow"]
     (testing "flow notifications"
       (testing "create request"
-        (is (= (scheduler/create-report-in-flow {"opts"       {"email" "user@akvo.org"}
+        (is (= (scheduler/create-report-in-flow {"opts"       {"email" "user@akvo.org"
+                                                               "from"  "2000-01-01"
+                                                               "to"    "9999-01-01"}
                                                  "baseURL"    "http://foobar"
                                                  "surveyId"   "000000000000"
                                                  "exportType" "GEOSHAPE"})
@@ -21,6 +23,8 @@
                 :url         "http://foobar/rest/reports"
                 :form-params {:report {:state      "IN_PROGRESS"
                                        :user       "user@akvo.org"
+                                       :startDate  "2000-01-01"
+                                       :endDate    "9999-01-01"
                                        :formId     "000000000000"
                                        :reportType "GEOSHAPE"}}})))
 
@@ -44,7 +48,9 @@
         (are [report-result expected-body]
           (let [an-email (str (rand-int 30000) "-user@akvo.org")]
             (is (= (scheduler/finish-report-in-flow {"opts"       {"email"        an-email
-                                                                   "flowServices" "http://some-flow-url:23423"}
+                                                                   "flowServices" "http://some-flow-url:23423"
+                                                                   "from"       "2000-01-01"
+                                                                   "to"         "9999-01-01"}
                                                      "baseURL"    "http://foobar"
                                                      "surveyId"   "000000000000"
                                                      "exportType" "COOL"}
@@ -55,6 +61,8 @@
                     :form-params {:report (merge {:user       an-email
                                                   :keyId      "id-returned-by-flow"
                                                   :formId     "000000000000"
+                                                  :startDate  "2000-01-01"
+                                                  :endDate    "9999-01-01"
                                                   :reportType "COOL"}
                                                  expected-body)}})))
 
