@@ -49,8 +49,11 @@
     (.mkdirs (io/file path))
     (io/file (format "%s/%s-%s.%s" path type id (get-file-extension type)))))
 
-(defn without-secrets [criteria]
+(defn safe-to-log-criteria [criteria]
   (select-keys criteria ["service-account-id" "s3bucket" "app-id" "domain" "surveyId" "alias"]))
+
+(defn safe-to-log-options [options]
+  (select-keys options ["exportMode" "lastCollection" "imgPrefix" "uploadUrl" "appId" "flowServices" "maxDataReportsRows" "caddisflyTestsFileUrl"]))
 
 (defn ^File export-report
   "Exports a report using SurveyDataImportExportFactory based on the report type.
@@ -68,7 +71,7 @@
                      config/get-bucket-name
                      (config/get-criteria id)
                      stringify-keys)]
-    (infof "Exporting report baseURL: %s - criteria: %s - options: %s" base-url (without-secrets criteria) options) ;; TODO: do not log everything
+    (infof "Exporting report baseURL: %s - criteria: %s - options: %s" base-url (safe-to-log-criteria criteria) (safe-to-log-options options))
     (.export exporter criteria file base-url options)
     file))
 
