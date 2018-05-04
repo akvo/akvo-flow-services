@@ -15,11 +15,13 @@
       (testing "create request"
         (is (= (scheduler/create-report-in-flow {"opts"       {"email" "user@akvo.org"}
                                                  "baseURL"    "http://foobar"
+                                                 "surveyId"   "000000000000"
                                                  "exportType" "GEOSHAPE"})
                {:method      :post
                 :url         "http://foobar/rest/reports"
                 :form-params {:report {:state      "IN_PROGRESS"
                                        :user       "user@akvo.org"
+                                       :formId     "000000000000"
                                        :reportType "GEOSHAPE"}}})))
 
       (testing "handle create response"
@@ -44,6 +46,7 @@
             (is (= (scheduler/finish-report-in-flow {"opts"       {"email"        an-email
                                                                    "flowServices" "http://some-flow-url:23423"}
                                                      "baseURL"    "http://foobar"
+                                                     "surveyId"   "000000000000"
                                                      "exportType" "COOL"}
                                                     flow-id
                                                     report-result)
@@ -51,6 +54,7 @@
                     :url         "http://foobar/rest/reports/id-returned-by-flow"
                     :form-params {:report (merge {:user       an-email
                                                   :keyId      "id-returned-by-flow"
+                                                  :formId     "000000000000"
                                                   :reportType "COOL"}
                                                  expected-body)}})))
 

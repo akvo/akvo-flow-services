@@ -33,11 +33,12 @@
 (defn gdpr-flow? [job-data]
   (= "true" (get-in job-data ["opts" "gdpr"])))
 
-(defn create-report-in-flow [{:strs [baseURL exportType opts]}]
+(defn create-report-in-flow [{:strs [baseURL exportType opts surveyId]}]
   {:method      :post
    :url         (str baseURL "/rest/reports")
    :form-params {:report {:state      "IN_PROGRESS"
                           :user       (get opts "email")
+                          :formId surveyId
                           :reportType exportType}}})
 
 (defn expect-200 [http-response]
@@ -60,7 +61,7 @@
           (get opts "flowServices")
           report))
 
-(defn finish-report-in-flow [{:strs [baseURL opts exportType]} flow-id report-result]
+(defn finish-report-in-flow [{:strs [baseURL opts exportType surveyId]} flow-id report-result]
   (let [report (if (e/ok? report-result)
                  {:state    "FINISHED_SUCCESS"
                   :filename (report-full-url opts report-result)}
@@ -72,6 +73,7 @@
                    (assoc report
                      :keyId flow-id
                      :user (get opts "email")
+                     :formId surveyId
                      :reportType exportType)}}))
 (defn open-report-in-flow [job-data]
   (-> job-data
