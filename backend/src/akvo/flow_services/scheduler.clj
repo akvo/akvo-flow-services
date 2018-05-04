@@ -33,15 +33,20 @@
 (defn gdpr-flow? [job-data]
   (= "true" (get-in job-data ["opts" "gdpr"])))
 
-(defn create-report-in-flow [{:strs [baseURL exportType opts surveyId]}]
+(defn common-report-fields [{:strs [exportType opts surveyId]}]
+  {:user       (get opts "email")
+   :formId     surveyId
+   :startDate  (get opts "from")
+   :endDate    (get opts "to")
+   :reportType exportType})
+
+(defn create-report-in-flow [{:strs [baseURL] :as job-data}]
   {:method      :post
    :url         (str baseURL "/rest/reports")
-   :form-params {:report {:state      "IN_PROGRESS"
-                          :user       (get opts "email")
-                          :formId     surveyId
-                          :startDate  (get opts "from")
-                          :endDate    (get opts "to")
-                          :reportType exportType}}})
+   :form-params {:report
+                 (assoc
+                   (common-report-fields job-data)
+                   :state "IN_PROGRESS")}})
 
 (defn expect-200 [http-response]
   (if (e/ok? http-response)
@@ -63,7 +68,7 @@
           (get opts "flowServices")
           report))
 
-(defn finish-report-in-flow [{:strs [baseURL opts exportType surveyId]} flow-id report-result]
+(defn finish-report-in-flow [{:strs [baseURL opts] :as job-data} flow-id report-result]
   (let [report (if (e/ok? report-result)
                  {:state    "FINISHED_SUCCESS"
                   :filename (report-full-url opts report-result)}
@@ -72,13 +77,10 @@
     {:method      :put
      :url         (str baseURL "/rest/reports/" flow-id)
      :form-params {:report
-                   (assoc report
-                     :keyId flow-id
-                     :user (get opts "email")
-                     :startDate (get opts "from")
-                     :endDate (get opts "to")
-                     :formId surveyId
-                     :reportType exportType)}}))
+                   (merge
+                     (common-report-fields job-data)
+                     report
+                     {:keyId flow-id})}}))
 (defn open-report-in-flow [job-data]
   (-> job-data
       create-report-in-flow
