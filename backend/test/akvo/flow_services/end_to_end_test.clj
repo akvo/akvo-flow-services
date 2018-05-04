@@ -23,13 +23,13 @@
                      {:query-params {:callback "somejson"
                                      :criteria (json/generate-string
                                                  {"baseURL"    wiremock-url
-                                                  "exportType" "DATA_CLEANING"
+                                                  "exportType" "COMPREHENSIVE"
                                                   "surveyId"   (str survey-id)
                                                   "id"         "asdf"
                                                   "opts"       (merge {"email"          "dan@akvo.org"
                                                                        "lastCollection" "false"
                                                                        "uploadUrl"      "s3/"
-                                                                       "exportMode"     "DATA_CLEANING"
+                                                                       "exportMode"     "COMPREHENSIVE"
                                                                        "from"           "2013-03-06"
                                                                        "to"             "2018-03-09"
                                                                        "flowServices"   flow-services-url
@@ -72,32 +72,32 @@
                      "path"                "/Folder with a few large data sets/NR-handpump"}]))
 
 (defn gae-list-survey-questions [survey-id question-group-id question-id]
-  (survey-rest-api "listSurveyQuestions" survey-id [{"keyId"                 question-id
-                                                     "surveyId"              survey-id
-                                                     "questionGroupId"       question-group-id
-                                                     "text"                  "Location"
-                                                     "order"                 1
-                                                     "allowDecimal"          false
-                                                     "allowSign"             false
-                                                     "dependentFlag"         false
-                                                     "allowMultipleFlag"     false
-                                                     "allowOtherFlag"        false
-                                                     "mandatoryFlag"         true
-                                                     "tip"                   "Some GEO question"
-                                                     "collapseable"          false
-                                                     "immutable"             false
-                                                     "geoLocked"             true
-                                                     "allowExternalSources"  false
-                                                     "localeNameFlag"        false
-                                                     "requireDoubleEntry"    false
-                                                     "localeLocationFlag"    false
-                                                     "variableName"          "location"
-                                                     "allowPoints"           false
-                                                     "allowLine"             false
-                                                     "allowPolygon"          false
-                                                     "caddisflyResourceUuid" "nil"
-                                                     "type"                  "GEO"
-                                                     "path"                  ""}]))
+  (survey-rest-api "listSurveyQuestions" survey-id [{"keyId"                   question-id
+                                                     "text"                    "Financier or donor of rehabilitation"
+                                                     "order"                   1
+                                                     "surveyId"                survey-id
+                                                     "questionGroupId"         question-group-id
+                                                     "allowDecimal"            false
+                                                     "allowSign"               false
+                                                     "dependentFlag"           true
+                                                     "allowMultipleFlag"       false
+                                                     "allowOtherFlag"          true
+                                                     "mandatoryFlag"           true
+                                                     "tip"                     ""
+                                                     "collapseable"            false
+                                                     "immutable"               false
+                                                     "allowExternalSources"    false
+                                                     "geoLocked"               false
+                                                     "localeNameFlag"          false
+                                                     "requireDoubleEntry"      false
+                                                     "localeLocationFlag"      false
+                                                     "variableName"            "rehabDonor"
+                                                     "allowPoints"             false
+                                                     "allowLine"               false
+                                                     "allowPolygon"            false
+                                                     "caddisflyResourceUuid"   "null"
+                                                     "type"                    "OPTION"
+                                                     "path"                    ""}]))
 
 (defn gae-list-groups [survey-id question-group-id]
   (survey-rest-api "listGroups" survey-id [{"surveyId"    survey-id
@@ -144,13 +144,25 @@
                            "resultCount"          0
                            "offset"               0}}})
 
+(defn gae-survey-options [survey-id question-id]
+  (survey-rest-api "listSurveyQuestionOptions" survey-id [{"text" "Yes"
+                                                           "order" 1
+                                                           "questionId" question-id
+                                                           "keyId" 3586128}
+                                                          {"text" "No"
+                                                           "order" 2
+                                                           "code" nil
+                                                           "translationMap" nil
+                                                           "questionId" question-id
+                                                           "keyId" 10136126}]))
+
 (defn mock-gae [survey-id]
   (let [question-group-id 148442015
         question-id 144672013
         instance-id 144672047
         messages [(gae-survey-group survey-id)
                   (gae-list-survey-questions survey-id question-group-id question-id)
-                  (survey-rest-api "listSurveyQuestionOptions" survey-id [])
+                  (gae-survey-options survey-id question-id)
                   (gae-list-groups survey-id question-group-id)
 
                   (gae-list-instances survey-id instance-id)

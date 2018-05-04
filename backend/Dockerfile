@@ -1,9 +1,9 @@
-FROM openjdk:8-jre-alpine
+FROM openjdk:8u162-jdk-stretch
 MAINTAINER Akvo Foundation <devops@akvo.org>
 
-RUN set -ex; apk update && \
-    apk add git openssh-client && \
-    rm -rf /var/cache/apk/*
+RUN set -ex; apt-get update && \
+    apt-get install git openssh-client && \
+    rm -rf /var/cache/apt/*
 
 WORKDIR /app
 COPY prod/start-prod-env.sh /app/start-prod-env.sh
