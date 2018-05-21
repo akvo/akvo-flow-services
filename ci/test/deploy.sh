@@ -29,16 +29,16 @@ ENVIRONMENT=test
 if [[ "${TRAVIS_BRANCH}" == "master" ]]; then
     gcloud container clusters get-credentials production
     ENVIRONMENT=production
-    POD_CPU_REQUESTS="100m"
-    POD_CPU_LIMITS="200m"
-    POD_MEM_REQUESTS="384Mi"
-    POD_MEM_LIMITS="512Mi"
+    POD_CPU_REQUESTS="400m"
+    POD_CPU_LIMITS="10000m"
+    POD_MEM_REQUESTS="5120Mi"
+    POD_MEM_LIMITS="5632Mi"
 else
     gcloud container clusters get-credentials test
-    POD_CPU_REQUESTS="100m"
-    POD_CPU_LIMITS="200m"
-    POD_MEM_REQUESTS="256Mi"
-    POD_MEM_LIMITS="384Mi"
+    POD_CPU_REQUESTS="200m"
+    POD_CPU_LIMITS="400m"
+    POD_MEM_REQUESTS="1024Mi"
+    POD_MEM_LIMITS="2048Mi"
 fi
 
 # Pushing images
