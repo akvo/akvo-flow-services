@@ -9,6 +9,7 @@ services:
      - HOST_GID
      - EMAIL_PASSWORD=anything
      - EMAIL_USER=anything.else
+     - APP_VERSION=some.version
    external_links:
      - "akvo-flow:akvoflow.local"
    ports:
