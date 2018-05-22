@@ -252,21 +252,13 @@
     (is (< current-errors (sentry-alerts-count)))
     (assert-report-not-updated-in-flow)))
 
-(defn mock-flow-report-api [flow-report-id user]
-  (http/post wiremock-mappings-url
-             {:body (json/generate-string
-                      {"request"  {"method"       "POST"
-                                   "urlPath"      "/rest/reports"
-                                   "bodyPatterns" [{"matchesJsonPath" {"expression" "$.report.state" "equalTo" "IN_PROGRESS"}}
-                                                   {"matchesJsonPath" {"expression" "$.report.user" "equalTo" user}}]}
-                       "response" {"status"   200
-                                   "jsonBody" {:report {:keyId flow-report-id}}}})})
+(defn mock-flow-report-api [flow-report-id]
   (http/post wiremock-mappings-url
              {:body (json/generate-string
                       {"request"  {"method"  "PUT"
                                    "urlPath" (str "/rest/reports/" flow-report-id)}
                        "response" {"status"   200
-                                   "jsonBody" {:keyId flow-report-id}}})}))
+                                   "jsonBody" {:report {:keyId flow-report-id}}}})}))
 
 (defn final-report-state-in-flow [flow-report-id]
   (->> (http/post (str wiremock-url "/__admin/requests/find")
@@ -282,9 +274,9 @@
   (let [survey-id (System/currentTimeMillis)
         flow-report-id (str "the-flow-id-" survey-id)
         user (str survey-id "@akvo.org")
-        opts {"gdpr"  "true"
-              "email" user}]
-    (mock-flow-report-api flow-report-id user)
+        opts {"reportId" flow-report-id
+              "email"    user}]
+    (mock-flow-report-api flow-report-id)
     (mock-gae survey-id)
     (mock-mailjet)
     (test-util/try-for "Processing for too long" 20
@@ -299,4 +291,4 @@
       (is (not (str/includes? (text-first-email-sent-to user) (get report-result "file"))))
 
       (is (= 200 (:status (http/get (str flow-services-url "/report/" (get report-result "file"))))))
-      (is (= ["FINISHED_SUCCESS"] (final-report-state-in-flow flow-report-id))))))
+      (is (= ["IN_PROGRESS" "FINISHED_SUCCESS"] (final-report-state-in-flow flow-report-id))))))

@@ -6,22 +6,24 @@
 
 
 (deftest gdpr?
-  (is (scheduler/gdpr-flow? {"opts" {"gdpr" "true"}}))
+  (is (scheduler/gdpr-flow? {"opts" {"reportId" 234234}}))
   (is (not (scheduler/gdpr-flow? {"opts" {}})))
-  (is (not (scheduler/gdpr-flow? {"opts" {"gdpr" "false"}})))
+  (is (not (scheduler/gdpr-flow? {"opts" {"gdpr" nil}})))
 
-  (let [flow-id "id-returned-by-flow"]
+  (let [flow-id "some-report-id"]
     (testing "flow notifications"
       (testing "create request"
-        (is (= (scheduler/create-report-in-flow {"opts"       {"email" "user@akvo.org"
-                                                               "from"  "2000-01-01"
-                                                               "to"    "9999-01-01"}
+        (is (= (scheduler/create-report-in-flow {"opts"       {"email"    "user@akvo.org"
+                                                               "reportId" flow-id
+                                                               "from"     "2000-01-01"
+                                                               "to"       "9999-01-01"}
                                                  "baseURL"    "http://foobar"
                                                  "surveyId"   "000000000000"
                                                  "exportType" "GEOSHAPE"})
-               {:method      :post
-                :url         "http://foobar/rest/reports"
+               {:method      :put
+                :url         (str "http://foobar/rest/reports/" flow-id)
                 :form-params {:report {:state      "IN_PROGRESS"
+                                       :keyId      flow-id
                                        :user       "user@akvo.org"
                                        :startDate  "2000-01-01"
                                        :endDate    "9999-01-01"
@@ -29,37 +31,37 @@
                                        :reportType "GEOSHAPE"}}})))
 
       (testing "handle create response"
-        (is (= (scheduler/handle-create-report-in-flow {:status 200
-                                                        :body   {:report {:keyId flow-id}}})
-               flow-id))
+        (is (= (scheduler/handle-start-report-in-flow {:status 200
+                                                        :body  {:report {:keyId flow-id}}})
+               nil))
 
-        (is (= (scheduler/handle-create-report-in-flow {:status 200
-                                                        :body   nil})
-               (e/error {:message "Flow did not return an id for the report"})))
+        (is (= (scheduler/handle-start-report-in-flow {:status 200
+                                                        :body  nil})
+               nil))
 
-        (is (= (scheduler/handle-create-report-in-flow {:status 500})
+        (is (= (scheduler/handle-start-report-in-flow {:status 500})
                (e/error {:message "Flow returns error on report creation. HTTP code: 500"})))
 
         (let [an-exception (IOException. "some error")
-              error (::e/error (scheduler/handle-create-report-in-flow (e/error {:cause an-exception})))]
+              error (::e/error (scheduler/handle-start-report-in-flow (e/error {:cause an-exception})))]
           (is (= (:cause error) an-exception))))
 
       (testing "finish request"
         (are [report-result expected-body]
           (let [an-email (str (rand-int 30000) "-user@akvo.org")]
             (is (= (scheduler/finish-report-in-flow {"opts"       {"email"        an-email
+                                                                   "reportId"     flow-id
                                                                    "flowServices" "http://some-flow-url:23423"
-                                                                   "from"       "2000-01-01"
-                                                                   "to"         "9999-01-01"}
+                                                                   "from"         "2000-01-01"
+                                                                   "to"           "9999-01-01"}
                                                      "baseURL"    "http://foobar"
                                                      "surveyId"   "000000000000"
                                                      "exportType" "COOL"}
-                                                    flow-id
                                                     report-result)
                    {:method      :put
-                    :url         "http://foobar/rest/reports/id-returned-by-flow"
+                    :url         (str "http://foobar/rest/reports/" flow-id)
                     :form-params {:report (merge {:user       an-email
-                                                  :keyId      "id-returned-by-flow"
+                                                  :keyId      flow-id
                                                   :formId     "000000000000"
                                                   :startDate  "2000-01-01"
                                                   :endDate    "9999-01-01"

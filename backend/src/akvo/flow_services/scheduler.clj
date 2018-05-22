@@ -30,23 +30,29 @@
   (:use [akvo.flow-services.exporter :only (export-report)]
         [akvo.flow-services.uploader :only (bulk-upload)]))
 
-(defn gdpr-flow? [job-data]
-  (= "true" (get-in job-data ["opts" "gdpr"])))
+(defn flow-report-id [job-data]
+  (get-in job-data ["opts" "reportId"]))
+
+(def gdpr-flow? (comp some? flow-report-id))
 
 (defn common-report-fields [{:strs [exportType opts surveyId]}]
   {:user       (get opts "email")
    :formId     surveyId
+   :keyId      (get opts "reportId")
    :startDate  (get opts "from")
    :endDate    (get opts "to")
    :reportType exportType})
 
-(defn create-report-in-flow [{:strs [baseURL] :as job-data}]
-  {:method      :post
-   :url         (str baseURL "/rest/reports")
+(defn- notify-flow-request [{:strs [baseURL] :as job-data} report]
+  {:method      :put
+   :url         (str baseURL "/rest/reports/" (flow-report-id job-data))
    :form-params {:report
-                 (assoc
+                 (merge
                    (common-report-fields job-data)
-                   :state "IN_PROGRESS")}})
+                   report)}})
+
+(defn create-report-in-flow [job-data]
+  (notify-flow-request job-data {:state "IN_PROGRESS"}))
 
 (defn expect-200 [http-response]
   (if (e/ok? http-response)
@@ -55,41 +61,33 @@
       http-response)
     http-response))
 
-(defn handle-create-report-in-flow [http-response]
+(defn handle-start-report-in-flow [http-response]
   (-> http-response
       expect-200
-      (e/if-ok (fn [ok]
-                 (if-let [flow-id (-> ok :body :report :keyId)]
-                   flow-id
-                   (e/error {:message "Flow did not return an id for the report"}))))))
+      (e/if-ok (constantly nil))))
 
 (defn report-full-url [opts report]
   (format "%s/report/%s"
           (get opts "flowServices")
           report))
 
-(defn finish-report-in-flow [{:strs [baseURL opts] :as job-data} flow-id report-result]
+(defn finish-report-in-flow [{:strs [opts] :as job-data} report-result]
   (let [report (if (e/ok? report-result)
                  {:state    "FINISHED_SUCCESS"
                   :filename (report-full-url opts report-result)}
                  {:state   "FINISHED_ERROR"
                   :message (e/user-friendly-message report-result)})]
-    {:method      :put
-     :url         (str baseURL "/rest/reports/" flow-id)
-     :form-params {:report
-                   (merge
-                     (common-report-fields job-data)
-                     report
-                     {:keyId flow-id})}}))
-(defn open-report-in-flow [job-data]
+    (notify-flow-request job-data report)))
+
+(defn notify-report-started-in-flow [job-data]
   (-> job-data
       create-report-in-flow
       (#(util/send-http-json! job-data %))
-      handle-create-report-in-flow
+      handle-start-report-in-flow
       e/unwrap-throwing))
 
-(defn close-report-in-flow [flow-id job-data report]
-  (-> (finish-report-in-flow job-data flow-id report)
+(defn notify-report-done-in-flow [job-data report]
+  (-> (finish-report-in-flow job-data report)
       (#(util/send-http-json! job-data %))
       expect-200
       e/unwrap-throwing))
@@ -132,9 +130,9 @@
 
 (defn do-export [job-data]
   (if (gdpr-flow? job-data)
-    (let [flow-data (open-report-in-flow job-data)
+    (let [_ (notify-report-started-in-flow job-data)
           report (e/wrap-exceptions (run-report job-data))]
-      (close-report-in-flow flow-data job-data report)
+      (notify-report-done-in-flow job-data report)
       (when (e/ok? report)
         (gdpr-email job-data)))
     (let [report (run-report job-data)]
