@@ -196,3 +196,24 @@
                          (= 1 (email-sent-count (get report-result "file"))))
 
       (is (= 200 (:status (http/get (str flow-services-url "/report/" (get report-result "file")))))))))
+
+(defn sentry-alerts-count []
+  (-> (http/post (str wiremock-url "/__admin/requests/count")
+                 {:as   :json
+                  :body (json/generate-string
+                          {"method"       "POST"
+                           "urlPath"      "/sentry/api/213123/store/"})})
+      :body
+      :count))
+
+(deftest sentry
+  (let [survey-id (System/currentTimeMillis)
+        current-errors (sentry-alerts-count)]
+    (http/post wiremock-mappings-url {:body (json/generate-string {"request"  {"method"          "GET"
+                                                                               "urlPath"         "/surveyrestapi"
+                                                                               "queryParameters" {"surveyId" {"equalTo" (str survey-id)}}}
+                                                                   "response" {"status"   500}})})
+    (test-util/try-for "Processing for too long" 20
+                       (= {"status" "ERROR", "message" "_error_generating_report"}
+                          (generate-report survey-id)))
+    (is (< current-errors (sentry-alerts-count)))))
