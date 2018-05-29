@@ -37,16 +37,6 @@
            second
            json/parse-string))
 
-(defn survey-rest-api [action survey-id dto-list]
-  {"request"  {"method"          "GET"
-               "urlPath"         "/surveyrestapi"
-               "queryParameters" {"action"   {"equalTo" action}
-                                  "surveyId" {"equalTo" (str survey-id)}}}
-   "response" {"status"   200
-               "jsonBody" {"dtoList"     dto-list
-                           "resultCount" 0
-                           "offset"      0}}})
-
 (defn instance-data [survey-id instance-id]
   {"request"  {"method"          "GET"
                "urlPath"         "/instancedata"
@@ -68,9 +58,7 @@
                            "offset"               0}}})
 
 (defn mock-gae [survey-id]
-  (let [question-group-id 148442015
-        question-id 144672013
-        instance-id 144672047
+  (let [instance-id 144672047
         messages [(instance-data survey-id instance-id)]]
     (doseq [message messages]
       (http/post wiremock-mappings-url {:body (json/generate-string message)}))))
@@ -107,8 +95,8 @@
   (let [survey-id (System/currentTimeMillis)
         question-ids (gae/with-datastore [ds {:hostname "localhost"
                                               :port     8888}]
-                       {:area (.getId (gae/put! ds "Question" {"surveyId" survey-id "text" "area"}))
-                        :name (.getId (gae/put! ds "Question" {"surveyId" survey-id "text" "Name"}))})]
+                       {:geo-question (.getId (gae/put! ds "Question" {"surveyId" survey-id "text" "GeoQuestion"}))
+                        :another-question (.getId (gae/put! ds "Question" {"surveyId" survey-id "text" "AnotherQuestion"}))})]
     (gae/with-datastore [ds (util/datastore-spec "flowservices-dev-config")]
       (gae/put! ds "QuestionAnswerStore"
                 {"surveyId"         survey-id
@@ -122,34 +110,34 @@
                                                            :type     "FeatureCollection"})
                  "iteration"        0
                  "surveyInstanceId" 1232133
-                 "questionID"       (str (:area question-ids))})
+                 "questionID"       (str (:geo-question question-ids))})
       (gae/put! ds "QuestionAnswerStore"
                 {"surveyId"         survey-id
-                 "value"            "the name"
+                 "value"            "the other question response"
                  "iteration"        0
                  "surveyInstanceId" 1232133
-                 "questionID"       (str (:name question-ids))}))
+                 "questionID"       (str (:another-question question-ids))}))
     (mock-gae survey-id)
     (mock-mailjet)
     (test-util/try-for "Processing for too long" 20
                        (not= {"status" "OK", "message" "PROCESSING"}
-                             (generate-report survey-id (:area question-ids))))
-    (let [report-result (generate-report survey-id (:area question-ids))]
+                             (generate-report survey-id (:geo-question question-ids))))
+    (let [report-result (generate-report survey-id (:geo-question question-ids))]
       (is (= "OK" (get report-result "status")))
 
       (test-util/try-for "email not sent" 5
                          (= 1 (email-sent-count (get report-result "file"))))
 
       (is (= 200 (:status (http/get (str flow-services-url "/report/" (get report-result "file"))))))
-      (is (= {:type "FeatureCollection",
-              :properties {:formId survey-id, :questionId (:area question-ids), :questionText "area"},
-              :features [{:type "Feature",
-                          :properties {:length "598909.00", :pointCount "3", :area "13872516944.93", :Name "the name"},
-                          :geometry {:type "Polygon",
-                                     :coordinates [[[43.657240234315395 43.805380480517236]
-                                                    [44.38478909432889 42.843155681966564]
-                                                    [46.41390200704336 44.473117973161685]
-                                                    [43.657240234315395 43.805380480517236]]]}}]}
+      (is (= {:type       "FeatureCollection",
+              :properties {:formId survey-id, :questionId (:geo-question question-ids), :questionText "GeoQuestion"},
+              :features   [{:type       "Feature",
+                            :properties {:length "598909.00", :pointCount "3", :area "13872516944.93", :AnotherQuestion "the other question response"},
+                            :geometry   {:type        "Polygon",
+                                         :coordinates [[[43.657240234315395 43.805380480517236]
+                                                        [44.38478909432889 42.843155681966564]
+                                                        [46.41390200704336 44.473117973161685]
+                                                        [43.657240234315395 43.805380480517236]]]}}]}
              (json/parse-string (:body (http/get (str flow-services-url "/report/" (get report-result "file")))) true)))
       )))
 
