@@ -102,6 +102,7 @@
 
 (deftest report-generation
   (let [survey-id (System/currentTimeMillis)
+        survey-instance-id (rand-int 100000000)
         question-ids (gae/with-datastore [ds gae-local]
                        {:geo-question     (.getId (gae/put! ds "Question" {"surveyId" survey-id "text" "GeoQuestion"}))
                         :another-question (.getId (gae/put! ds "Question" {"surveyId" survey-id "text" "AnotherQuestion"}))})
@@ -111,13 +112,13 @@
                 [46.41390200704336 44.473117973161685]
                 [43.657240234315395 43.805380480517236]]]
     (gae/with-datastore [ds gae-local]
-      (doseq [answer [(question-answer survey-id 12233 (:geo-question question-ids)
+      (doseq [answer [(question-answer survey-id survey-instance-id (:geo-question question-ids)
                                        (json/generate-string {:features [{:type       "Feature",
                                                                           :properties some-additional-properties,
                                                                           :geometry   {:type        "Polygon",
                                                                                        :coordinates [coords]}}],
                                                               :type     "FeatureCollection"}))
-                      (question-answer survey-id 12233 (:another-question question-ids) "the other question response")]]
+                      (question-answer survey-id survey-instance-id (:another-question question-ids) "the other question response")]]
         (gae/put! ds "QuestionAnswerStore" answer)))
     (mock-gae survey-id)
     (mock-mailjet)
