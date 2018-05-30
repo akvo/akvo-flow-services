@@ -4,7 +4,8 @@
             [cheshire.core :as json]
             [clj-http.client :as http]
             [akvo.flow-services.test-util :as test-util]
-            [akvo.commons.gae :as gae]))
+            [akvo.commons.gae :as gae]
+            [akvo.commons.gae.query :as query]))
 
 (defn generate-report [survey-id question-id]
   (some->> (http/get (str test-util/flow-services-url "/generate")
@@ -60,6 +61,12 @@
                                                               :type     "FeatureCollection"}))
                       (question-answer survey-id survey-instance-id (:another-question question-ids) "the other question response")]]
         (gae/put! ds "QuestionAnswerStore" answer)))
+    (test-util/try-for "GAE took too long to return results" 10
+                       (= 2
+                          (gae/with-datastore [ds test-util/gae-local]
+                            (count (iterator-seq (.iterator (query/result ds
+                                                                          {:kind   "QuestionAnswerStore"
+                                                                           :filter (query/= "surveyId" survey-id)})))))))
     (mock-gae survey-id survey-instance-id)
     (test-util/mock-mailjet)
     (test-util/try-for "Processing for too long" 20
