@@ -10,7 +10,7 @@
 
 (def wiremock-url "http://wiremock-proxy:8080")
 (def wiremock-mappings-url (str wiremock-url "/__admin/mappings"))
-(def flow-services-url "http://mainnetwork:3000")
+(def flow-services-url "http://localhost:3000")
 (def gae-local {:hostname "localhost"
                 :port     8888})
 
@@ -81,7 +81,8 @@
   (http/post (str wiremock-mappings-url "/reset")))
 
 (defn check-servers-up []
-  (test-util/wait-for-server "mainnetwork" 3000)
+  (test-util/wait-for-server "localhost" 3000)
+  (test-util/wait-for-server "localhost" 8888)
   (test-util/wait-for-server "wiremock-proxy" 8080))
 
 (use-fixtures :once (fn [f]

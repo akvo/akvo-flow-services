@@ -11,7 +11,7 @@
 
 (def wiremock-url "http://wiremock-proxy:8080")
 (def wiremock-mappings-url (str wiremock-url "/__admin/mappings"))
-(def flow-services-url "http://mainnetwork:3000")
+(def flow-services-url "http://localhost:3000")
 
 (defn generate-report [survey-id]
   (some->> (http/get (str flow-services-url "/generate")
