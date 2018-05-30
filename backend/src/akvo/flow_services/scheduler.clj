@@ -47,8 +47,11 @@
   (let [{:strs [baseURL exportType surveyId opts id]} (conversion/from-job-data job-data)
         questionId (get opts "questionId")
         appId (get opts "appId")
+        config (-> (get opts "uploadUrl")
+                config/get-bucket-name
+                (config/find-config))
         report (if (= exportType "GEOSHAPE")
-                 (geoshape/export appId surveyId questionId)
+                 (geoshape/export baseURL (:apiKey config) appId surveyId questionId)
                  (export-report exportType baseURL surveyId opts))
         path (get-path report)]
     (dosync

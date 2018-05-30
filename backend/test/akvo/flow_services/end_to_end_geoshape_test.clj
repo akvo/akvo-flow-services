@@ -4,12 +4,7 @@
             [cheshire.core :as json]
             [clj-http.client :as http]
             [akvo.flow-services.test-util :as test-util]
-            [akvo.flow-services.util :as util]
-            [akvo.commons.gae :as gae])
-  (:import java.util.Base64))
-
-(defn encode [to-encode]
-  (.encodeToString (Base64/getEncoder) (.getBytes to-encode)))
+            [akvo.commons.gae :as gae]))
 
 (def wiremock-url "http://wiremock-proxy:8080")
 (def wiremock-mappings-url (str wiremock-url "/__admin/mappings"))
@@ -45,7 +40,7 @@
                "queryParameters" {"action"           {"equalTo" "getInstanceData"}
                                   "surveyInstanceId" {"equalTo" (str instance-id)}}}
    "response" {"status"   200
-               "jsonBody" {"surveyInstanceData"   {"surveyedLocaleDisplayName" ""
+               "jsonBody" {"surveyInstanceData"   {"surveyedLocaleDisplayName" "a survey display name"
                                                    "surveyId"                  survey-id
                                                    "surveyedLocaleId"          147442028
                                                    "userID"                    1
@@ -59,9 +54,8 @@
                            "resultCount"          0
                            "offset"               0}}})
 
-(defn mock-gae [survey-id]
-  (let [instance-id 144672047
-        messages [(instance-data survey-id instance-id)]]
+(defn mock-gae [survey-id surveyed-instance-id]
+  (let [messages [(instance-data survey-id surveyed-instance-id)]]
     (doseq [message messages]
       (http/post wiremock-mappings-url {:body (json/generate-string message)}))))
 
@@ -120,7 +114,7 @@
                                                               :type     "FeatureCollection"}))
                       (question-answer survey-id survey-instance-id (:another-question question-ids) "the other question response")]]
         (gae/put! ds "QuestionAnswerStore" answer)))
-    (mock-gae survey-id)
+    (mock-gae survey-id survey-instance-id)
     (mock-mailjet)
     (test-util/try-for "Processing for too long" 20
                        (not= {"status" "OK", "message" "PROCESSING"}
@@ -132,10 +126,7 @@
                          (= 1 (email-sent-count (get report-result "file"))))
 
       (is (= 200 (:status (http/get (str flow-services-url "/report/" (get report-result "file"))))))
-      (is (= {:type       "FeatureCollection",
-              :properties {:formId survey-id, :questionId (:geo-question question-ids), :questionText "GeoQuestion"}
-              :features   [{:type       "Feature",
-                            :properties (assoc some-additional-properties :AnotherQuestion "the other question response")
-                            :geometry   {:type        "Polygon",
-                                         :coordinates [coords]}}]}
-             (json/parse-string (:body (http/get (str flow-services-url "/report/" (get report-result "file")))) true))))))
+      (let [report (json/parse-string (:body (http/get (str flow-services-url "/report/" (get report-result "file")))) true)]
+        (is (= coords (get-in report [:features 0 :geometry :coordinates 0])))
+        (is (= "the other question response" (get-in report [:features 0 :properties :AnotherQuestion])))
+        (is (= "BASH & JAMES" (get-in report [:features 0 :properties :Submitter])))))))
