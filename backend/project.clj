@@ -50,4 +50,10 @@
                    :integration :integration
                    :kubernetes-test :kubernetes-test}
   :plugins [[lein-ring "0.8.5"]]
-  :profiles {:uberjar {:aot :all}})
+  :profiles {:dev  [:project/dev  :profiles/dev]
+             :test [:project/test :profiles/test]
+             :uberjar {:aot :all}
+             :profiles/dev  {}
+             :profiles/test {}
+             :project/dev   {:dependencies [[metosin/testit "0.2.0"]]}
+             :project/test  {}})
