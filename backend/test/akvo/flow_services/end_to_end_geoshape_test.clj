@@ -4,7 +4,9 @@
             [cheshire.core :as json]
             [clj-http.client :as http]
             [akvo.flow-services.test-util :as test-util]
-            [akvo.commons.gae :as gae]))
+            [akvo.commons.gae :as gae]
+            [akvo.flow-services.core :as core]
+            [aero.core :as aero]))
 
 (def wiremock-url "http://wiremock-proxy:8080")
 (def wiremock-mappings-url (str wiremock-url "/__admin/mappings"))
@@ -83,6 +85,7 @@
   (test-util/wait-for-server "wiremock-proxy" 8080))
 
 (use-fixtures :once (fn [f]
+                      (core/config-logging (aero/read-config "dev/config.edn"))
                       (check-servers-up)
                       (reset-wiremock)
                       (f)))

@@ -178,6 +178,7 @@
   (test-util/wait-for-server "wiremock-proxy" 8080))
 
 (use-fixtures :once (fn [f]
+                      (core/config-logging (aero/read-config "dev/config.edn"))
                       (check-servers-up)
                       (reset-wiremock)
                       (f)))
