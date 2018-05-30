@@ -3,7 +3,11 @@
   (:require [clojure.test :refer :all]
             [cheshire.core :as json]
             [clj-http.client :as http]
-            [akvo.flow-services.test-util :as test-util])
+            [akvo.flow-services.test-util :as test-util]
+            [akvo.flow-services.util :as util]
+            [akvo.commons.gae :as gae]
+            [aero.core :as aero]
+            [akvo.flow-services.core :as core])
   (:import java.util.Base64))
 
 (defn encode [to-encode]
@@ -202,8 +206,8 @@
   (-> (http/post (str wiremock-url "/__admin/requests/count")
                  {:as   :json
                   :body (json/generate-string
-                          {"method"       "POST"
-                           "urlPath"      "/sentry/api/213123/store/"})})
+                          {"method"  "POST"
+                           "urlPath" "/sentry/api/213123/store/"})})
       :body
       :count))
 
@@ -213,7 +217,7 @@
     (http/post wiremock-mappings-url {:body (json/generate-string {"request"  {"method"          "GET"
                                                                                "urlPath"         "/surveyrestapi"
                                                                                "queryParameters" {"surveyId" {"equalTo" (str survey-id)}}}
-                                                                   "response" {"status"   500}})})
+                                                                   "response" {"status" 500}})})
     (test-util/try-for "Processing for too long" 20
                        (= {"status" "ERROR", "message" "_error_generating_report"}
                           (generate-report survey-id)))
