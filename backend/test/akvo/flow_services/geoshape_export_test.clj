@@ -100,3 +100,28 @@
   (invalid {:value (assoc-in valid-polygon [:features 0 :geometry :coordinates 1] line-coordinates)})
   (invalid {:question-id (inc geo-question-id)})
   (invalid {:iteration 1}))
+
+(deftest parsing-value
+  (it/fact "Does not touch question types other than cascade or option"
+    (geoshape-export/parse-value {:type :any-type} "[foobar]") => "[foobar]")
+
+  (it/facts "Cascade extract code and name"
+    (geoshape-export/parse-value {:type :CASCADE} "32") => "32"
+    (geoshape-export/parse-value {:type :CASCADE} "[{invalid-json") => "[{invalid-json"
+
+    (geoshape-export/parse-value {:type :CASCADE} (json/generate-string [{:code "spring" :name "spring"}])) => "spring"
+    (geoshape-export/parse-value {:type :CASCADE} (json/generate-string [{:code "spring" :name "spring"}
+                                                                         {:code "winter" :name "winter"}])) => "spring|winter"
+    (geoshape-export/parse-value {:type :CASCADE} (json/generate-string [{:code "one" :name "spring"}])) => "one:spring"
+    (geoshape-export/parse-value {:type :CASCADE} (json/generate-string [{:code nil :name "spring"}])) => "spring")
+
+
+  (it/facts "Option extract code and name"
+            (geoshape-export/parse-value {:type :OPTION} "32") => "32"
+            (geoshape-export/parse-value {:type :OPTION} "[{invalid-json") => "[{invalid-json"
+
+            (geoshape-export/parse-value {:type :OPTION} (json/generate-string [{:code "spring" :text "spring"}])) => "spring"
+            (geoshape-export/parse-value {:type :OPTION} (json/generate-string [{:code "spring" :text "spring"}
+                                                                                 {:code "winter" :text "winter"}])) => "spring|winter"
+            (geoshape-export/parse-value {:type :OPTION} (json/generate-string [{:code "one" :text "spring"}])) => "one:spring"
+            (geoshape-export/parse-value {:type :OPTION} (json/generate-string [{:code nil :text "spring"}])) => "spring"))
