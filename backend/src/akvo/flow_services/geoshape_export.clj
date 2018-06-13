@@ -22,9 +22,9 @@
             [akvo.flow-services.util :as util]
             [clojure.string :as s])
   (:import [java.util UUID TimeZone]
-           (org.waterforpeople.mapping.dataexport.service BulkDataServiceClient)
-           (org.waterforpeople.mapping.dataexport ExportImportUtils)
-           (java.text SimpleDateFormat)))
+           [org.waterforpeople.mapping.dataexport.service BulkDataServiceClient]
+           [org.waterforpeople.mapping.dataexport ExportImportUtils]
+           [java.text SimpleDateFormat]))
 
 (defn feature [question-id questions question-answers instance-data]
   (let [geoshape (-> question-answers
