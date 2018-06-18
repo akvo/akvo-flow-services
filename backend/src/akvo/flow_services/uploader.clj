@@ -73,32 +73,12 @@
   (doseq [file (get-parts path)]
     (fs/delete file)))
 
-(defn- unzip
-  "Takes the path to a zipfile source and unzips it to target-dir."
-  ([source]
-   (unzip source (name source)))
-  ([source target-dir]
-   (with-open [zip (ZipFile. (fs/file source))]
-     (let [entries (enumeration-seq (.entries zip))
-           target-dir-as-file (fs/file target-dir)
-           target-file #(fs/file target-dir-as-file (str %))]
-       (doseq [entry entries :when (not (.isDirectory ^java.util.zip.ZipEntry entry))
-               :let [f (target-file entry)]]
-         (when-not (-> f .getCanonicalPath (.startsWith (.getCanonicalPath target-dir-as-file)))
-           (throw (ex-info "Expanding entry would be created outside target dir"
-                           {:entry            entry
-                            :entry-final-path f
-                            :target-dir       target-dir})))
-         (fs/mkdirs (fs/parent f))
-         (io/copy (.getInputStream zip entry) f))))
-   target-dir))
-
 (defn- unzip-file [directory filename]
   (let [dest (io/file (format "%s/%s" directory "zip-content"))
         source (io/file (format "%s/%s" directory filename))]
     (if-not (.exists ^File dest)
       (.mkdirs dest))
-    (unzip source dest)))
+    (fsc/unzip source dest)))
 
 (defn- get-upload-type [^File path]
   (if (and (.isFile path)
