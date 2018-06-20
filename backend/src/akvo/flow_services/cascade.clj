@@ -437,7 +437,7 @@
         bucket-name (config/get-bucket-name uploadDomain)]
     (if errors
       (do
-        (errorf "CSV Validation failed %s" (first errors))
+        (infof "CSV Validation failed %s" (first errors))
         (add-message bucket-name "cascadeImport" nil (format "Failed to validate csv file: %s" (first errors))))
 
       (try
