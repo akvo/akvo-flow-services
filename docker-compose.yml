@@ -15,5 +15,6 @@ services:
      - HOST_GID
      - EMAIL_PASSWORD=anything
      - EMAIL_USER=anything.else
+     - APP_VERSION=some.version
  wiremock-proxy:
    image: rodolpheche/wiremock:2.16.0-alpine
