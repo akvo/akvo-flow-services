@@ -14,7 +14,8 @@
 
 (ns akvo.flow-services.stats
   (:import [com.google.appengine.api.datastore Entity Query]
-           java.util.Date java.text.SimpleDateFormat)
+           java.util.Date
+           java.text.SimpleDateFormat)
   (:require [clojurewerkz.quartzite [conversion :as conversion]
              [jobs :as jobs]
              [triggers :as triggers]
@@ -27,8 +28,9 @@
             [clojure.java.io :as io]
             [clojure.string :as str]
             [clojure.set :refer (difference)]
-            [taoensso.timbre :refer (errorf)]
-            [akvo.flow-services.exporter :as exporter]))
+            [taoensso.timbre :refer (errorf) :as timbre]
+            [akvo.flow-services.exporter :as exporter]
+            [akvo.flow-services.error :as e]))
 
 (defn datastore-spec [server]
   (let [host (first (str/split server #"\."))]
@@ -39,16 +41,17 @@
   [server kinds]
   (try
     (gae/with-datastore [ds (datastore-spec server)]
-     (let [qt (Query. "__Stat_Total__")
-           total (.asSingleEntity (.prepare ds qt))
-           stats (if total ;; total can be nil on a new unused instance
-                   (let [ts (.getProperty total "timestamp")
-                         qk (.setFilter (Query. "__Stat_Kind__")
-                                        (gae/get-filter "timestamp" ts))]
-                     (.asList (.prepare ds qk) (gae/get-fetch-options))))]
-       (filter #(kinds (.getProperty % "kind_name")) stats)))
+      (let [qt (Query. "__Stat_Total__")
+            total (.asSingleEntity (.prepare ds qt))
+            stats (if total                                 ;; total can be nil on a new unused instance
+                    (let [ts (.getProperty total "timestamp")
+                          qk (.setFilter (Query. "__Stat_Kind__")
+                                         (gae/get-filter "timestamp" ts))]
+                      (.asList (.prepare ds qk) (gae/get-fetch-options))))]
+        (filter #(kinds (.getProperty % "kind_name")) stats)))
     (catch Exception e
-      (errorf e "Error trying to get data for %s" server))))
+      (e/error {:cause  e
+                :server server}))))
 
 (defn calc-stats [kinds stats]
   (let [entities (reduce #(assoc %1 (.getProperty %2 "kind_name") (.getProperty %2 "count")) {} stats)]
@@ -68,14 +71,30 @@
                      (conj data kinds)))))
 
 (defn get-all-data [server-list kinds]
-  (for [server server-list
-        :let [stats (get-stats server kinds)]
-        :when stats]
-    (conj (calc-stats kinds stats) server)))
+  (for [server server-list]
+    (e/if-ok (get-stats server kinds)
+             #(conj (calc-stats kinds %) server))))
+
+(defn too-many-errors? [all-data]
+  (let [errors (vec (filter e/error? all-data))]
+    (cond
+      (empty? errors) {:level :info :message "No errors collecting stats" :data ""}
+
+      (< 0.2
+         (/ (count errors)
+            (count all-data))) {:level :error :message "Too many errors collecting stats" :data errors}
+
+      :else {:level :info :message "Some errors collecting stats" :data errors})))
+
+(defn report-errors [all-data]
+  (let [errors (too-many-errors? all-data)]
+    (timbre/log (:level errors) (:message errors) (:data errors))))
 
 (defn- stats-job [{:strs [server-list kinds stats-path]}]
-  (let [all-data (get-all-data server-list kinds)]
-    (write-stats (conj (seq kinds) "Instance") all-data stats-path)))
+  (let [all-data (get-all-data server-list kinds)
+        valid-stats (filter e/ok? all-data)]
+    (write-stats (conj (seq kinds) "Instance") valid-stats stats-path)
+    (report-errors all-data)))
 
 (jobs/defjob StatsJob [job-data]
   (stats-job (conversion/from-job-data job-data)))
