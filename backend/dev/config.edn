@@ -15,6 +15,8 @@
 
  ;; Default logging level - :trace :debug :info :warn :error :fatal :report (timbre's logging levels)
  :log-level :info
+ ;; Log level for akvo packages, if unset :log-level will be used
+ :akvo-log-level :debug
 
  ;; List of instances to be excluded from the stats report
  :dev-instances ["akvoflowsandbox.appspot.com" "watermappingmonitoring-hrd.appspot.com"
@@ -24,8 +26,7 @@
                  "akvoflow-beta2.appspot.com"]
 
 
- :notification {:mailjet     true
-                :credentials [#env EMAIL_USER #env EMAIL_PASSWORD]
+ :notification {:credentials [#env EMAIL_USER #env EMAIL_PASSWORD]
                 :api-url     "http://wiremock-proxy:8080/mailjet"}
 
  :notification-from "noreply@akvo.org"

@@ -27,8 +27,7 @@
 
 
  ;; Email notifications
- :notification {:mailjet true
-                :credentials [#env EMAIL_USER #env EMAIL_PASSWORD]
+ :notification {:credentials [#env EMAIL_USER #env EMAIL_PASSWORD]
                 :api-url     "https://api.mailjet.com/v3"}
 
  :notification-from "noreply@akvo.org"

@@ -1,7 +1,7 @@
 version: "3"
 services:
 
-  backend:
+  flow-services:
     volumes:
       - ./backend/dev:/app/dev
       - ./backend/dev:/etc/config/akvo-flow-services
@@ -9,10 +9,12 @@ services:
 
   tests:
     image: akvo-flow-services-dev:develop
+    environment:
+     - LOG_LEVEL=info
     volumes:
       - ./backend:/app
       - ~/.m2:/root/.m2
       - ~/.lein:/root/.lein
     depends_on:
-      - backend
+      - flow-services
     command: "true"
