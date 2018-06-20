@@ -52,7 +52,8 @@
     (let [criteria (json/parse-string (:criteria params))  ;; TODO: validation
           callback (:callback params)]
       (if (or (null? criteria)
-              (null? (get criteria "surveyId")))
+              (null? (get criteria "surveyId"))
+              (null? (get criteria "baseUrl")))
         {:status 400 :headers {} :body "Bad Request"}
         (generate-report criteria callback))))
 
