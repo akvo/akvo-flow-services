@@ -36,8 +36,7 @@
 (def gdpr-flow? (comp some? flow-report-id))
 
 (defn common-report-fields [{:strs [exportType opts surveyId]}]
-  {:user       (get opts "email")
-   :formId     surveyId
+  {:formId     surveyId
    :keyId      (get opts "reportId")
    :startDate  (get opts "from")
    :endDate    (get opts "to")

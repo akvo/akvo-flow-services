@@ -24,7 +24,6 @@
                 :url         (str "http://foobar/rest/reports/" flow-id)
                 :form-params {:report {:state      "IN_PROGRESS"
                                        :keyId      flow-id
-                                       :user       "user@akvo.org"
                                        :startDate  "2000-01-01"
                                        :endDate    "9999-01-01"
                                        :formId     "000000000000"
@@ -60,8 +59,7 @@
                                                     report-result)
                    {:method      :put
                     :url         (str "http://foobar/rest/reports/" flow-id)
-                    :form-params {:report (merge {:user       an-email
-                                                  :keyId      flow-id
+                    :form-params {:report (merge {:keyId      flow-id
                                                   :formId     "000000000000"
                                                   :startDate  "2000-01-01"
                                                   :endDate    "9999-01-01"
