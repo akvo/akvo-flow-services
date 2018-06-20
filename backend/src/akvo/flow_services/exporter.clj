@@ -53,7 +53,7 @@
   (select-keys criteria ["service-account-id" "s3bucket" "app-id" "domain" "surveyId" "alias"]))
 
 (defn safe-to-log-options [options]
-  (select-keys options ["exportMode" "lastCollection" "imgPrefix" "uploadUrl" "appId" "flowServices" "maxDataReportsRows" "caddisflyTestsFileUrl"]))
+  (select-keys options ["exportMode" "lastCollection" "imgPrefix" "uploadUrl" "appId" "flowServices" "maxDataReportsRows" "caddisflyTestsFileUrl" "from" "to"]))
 
 (defn ^File export-report
   "Exports a report using SurveyDataImportExportFactory based on the report type.

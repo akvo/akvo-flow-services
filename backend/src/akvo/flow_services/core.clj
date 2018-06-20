@@ -28,7 +28,8 @@
              [exporter :as exporter]]
             [clojure.tools.nrepl.server :as nrepl]
             [taoensso.timbre :as timbre]
-            [taoensso.timbre.appenders.3rd-party.sentry :as sentry])
+            [taoensso.timbre.appenders.3rd-party.sentry :as sentry]
+            timbre-ns-pattern-level)
   (:gen-class))
 
 (defn- generate-report [criteria callback]
@@ -122,10 +123,20 @@
 
 (defonce nrepl-srv (atom nil))
 
+(defn log-level [cfg]
+  (:log-level cfg :info))
+
 (defn config-logging [cfg]
   (timbre/handle-uncaught-jvm-exceptions!)
-  (timbre/set-level! (or (:log-level cfg) :info))
+  (timbre/set-level! (log-level cfg))
   (timbre/merge-config! {:timestamp-opts {:pattern "yyyy-MM-dd HH:mm:ss,SSS"}})
+  (when-let [akvo-log-level (:akvo-log-level cfg)]
+    (when (timbre/level>= (log-level cfg) akvo-log-level)
+      (timbre/set-level! akvo-log-level))
+    (timbre/merge-config!
+      {:middleware [(timbre-ns-pattern-level/middleware {"akvo.*"     akvo-log-level
+                                                         "org.akvo.*" akvo-log-level
+                                                         :all         (log-level cfg)})]}))
   (let [{:keys [dsn env host version]} (:sentry cfg)]
     (when dsn
       (timbre/merge-config! {:appenders {:sentry (-> (sentry/sentry-appender dsn

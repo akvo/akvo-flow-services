@@ -3,8 +3,13 @@
   (:require [clojure.test :refer :all]
             [cheshire.core :as json]
             [clj-http.client :as http]
-            [akvo.flow-services.test-util :as test-util])
+            [akvo.flow-services.test-util :as test-util]
+            [clojure.string :as str]
+            [taoensso.timbre :as timbre])
   (:import java.util.Base64))
+
+(when-let [log-level (System/getenv "LOG_LEVEL")]
+  (timbre/set-level! (keyword log-level)))
 
 (defn encode [to-encode]
   (.encodeToString (Base64/getEncoder) (.getBytes to-encode)))
@@ -13,22 +18,23 @@
 (def wiremock-mappings-url (str wiremock-url "/__admin/mappings"))
 (def flow-services-url "http://mainnetwork:3000")
 
-(defn generate-report [survey-id]
+(defn generate-report [survey-id & [opts]]
   (some->> (http/get (str flow-services-url "/generate")
                      {:query-params {:callback "somejson"
                                      :criteria (json/generate-string
                                                  {"baseURL"    wiremock-url
-                                                  "exportType" "DATA_CLEANING"
+                                                  "exportType" "COMPREHENSIVE"
                                                   "surveyId"   (str survey-id)
                                                   "id"         "asdf"
-                                                  "opts"       {"email"          "dan@akvo.org"
-                                                                "lastCollection" "false"
-                                                                "uploadUrl"      "https://flowservices-dev-config.s3.amazonaws.com"
-                                                                "exportMode"     "DATA_CLEANING"
-                                                                "from"           "2013-03-06"
-                                                                "to"             "2018-03-09"
-                                                                "flowServices"   flow-services-url
-                                                                "appId"          "flowservices-dev-config"}})}})
+                                                  "opts"       (merge {"email"          "dan@akvo.org"
+                                                                       "lastCollection" "false"
+                                                                       "uploadUrl"      "s3/"
+                                                                       "exportMode"     "COMPREHENSIVE"
+                                                                       "from"           "2013-03-06"
+                                                                       "to"             "2018-03-09"
+                                                                       "flowServices"   flow-services-url
+                                                                       "appId"          "akvoflowsandbox"}
+                                                                      opts)})}})
            :body
            (re-seq #"somejson\((.*)\);")
            first
@@ -66,32 +72,32 @@
                      "path"                "/Folder with a few large data sets/NR-handpump"}]))
 
 (defn gae-list-survey-questions [survey-id question-group-id question-id]
-  (survey-rest-api "listSurveyQuestions" survey-id [{"keyId"                 question-id
-                                                     "surveyId"              survey-id
-                                                     "questionGroupId"       question-group-id
-                                                     "text"                  "Location"
-                                                     "order"                 1
-                                                     "allowDecimal"          false
-                                                     "allowSign"             false
-                                                     "dependentFlag"         false
-                                                     "allowMultipleFlag"     false
-                                                     "allowOtherFlag"        false
-                                                     "mandatoryFlag"         true
-                                                     "tip"                   "Some GEO question"
-                                                     "collapseable"          false
-                                                     "immutable"             false
-                                                     "geoLocked"             true
-                                                     "allowExternalSources"  false
-                                                     "localeNameFlag"        false
-                                                     "requireDoubleEntry"    false
-                                                     "localeLocationFlag"    false
-                                                     "variableName"          "location"
-                                                     "allowPoints"           false
-                                                     "allowLine"             false
-                                                     "allowPolygon"          false
-                                                     "caddisflyResourceUuid" "nil"
-                                                     "type"                  "GEO"
-                                                     "path"                  ""}]))
+  (survey-rest-api "listSurveyQuestions" survey-id [{"keyId"                   question-id
+                                                     "text"                    "Financier or donor of rehabilitation"
+                                                     "order"                   1
+                                                     "surveyId"                survey-id
+                                                     "questionGroupId"         question-group-id
+                                                     "allowDecimal"            false
+                                                     "allowSign"               false
+                                                     "dependentFlag"           true
+                                                     "allowMultipleFlag"       false
+                                                     "allowOtherFlag"          true
+                                                     "mandatoryFlag"           true
+                                                     "tip"                     ""
+                                                     "collapseable"            false
+                                                     "immutable"               false
+                                                     "allowExternalSources"    false
+                                                     "geoLocked"               false
+                                                     "localeNameFlag"          false
+                                                     "requireDoubleEntry"      false
+                                                     "localeLocationFlag"      false
+                                                     "variableName"            "rehabDonor"
+                                                     "allowPoints"             false
+                                                     "allowLine"               false
+                                                     "allowPolygon"            false
+                                                     "caddisflyResourceUuid"   "null"
+                                                     "type"                    "OPTION"
+                                                     "path"                    ""}]))
 
 (defn gae-list-groups [survey-id question-group-id]
   (survey-rest-api "listGroups" survey-id [{"surveyId"    survey-id
@@ -128,8 +134,7 @@
                "jsonBody" {"surveyInstanceData"   {"surveyedLocaleDisplayName" ""
                                                    "surveyId"                  survey-id
                                                    "surveyedLocaleId"          147442028
-                                                   "userID"                    1
-                                                   "collectionDate"            1418598306000
+                                                   "userID"                    1 "collectionDate" 1418598306000
                                                    "submitterName"             "BASH & JAMES"
                                                    "deviceIdentifier"          "IMPORTER"
                                                    "surveyalTime"              0
@@ -139,13 +144,25 @@
                            "resultCount"          0
                            "offset"               0}}})
 
+(defn gae-survey-options [survey-id question-id]
+  (survey-rest-api "listSurveyQuestionOptions" survey-id [{"text" "Yes"
+                                                           "order" 1
+                                                           "questionId" question-id
+                                                           "keyId" 3586128}
+                                                          {"text" "No"
+                                                           "order" 2
+                                                           "code" nil
+                                                           "translationMap" nil
+                                                           "questionId" question-id
+                                                           "keyId" 10136126}]))
+
 (defn mock-gae [survey-id]
   (let [question-group-id 148442015
         question-id 144672013
         instance-id 144672047
         messages [(gae-survey-group survey-id)
                   (gae-list-survey-questions survey-id question-group-id question-id)
-                  (survey-rest-api "listSurveyQuestionOptions" survey-id [])
+                  (gae-survey-options survey-id question-id)
                   (gae-list-groups survey-id question-group-id)
 
                   (gae-list-instances survey-id instance-id)
@@ -160,15 +177,30 @@
                                                                  "response" {"status" 200
                                                                              "body"   "ok"}})}))
 
-(defn email-sent-count [body]
-  (-> (http/post (str wiremock-url "/__admin/requests/count")
+(defn text-first-email-sent-to [email]
+  (->> (http/post (str wiremock-url "/__admin/requests/find")
+                  {:as   :json
+                   :body (json/generate-string
+                           {"method"       "POST"
+                            "bodyPatterns" [{"matches" (str ".*" email ".*")}]
+                            "urlPath"      "/mailjet/send"})})
+       :body
+       :requests
+       first
+       :body
+       (#(json/parse-string % true))
+       :Text-part))
+
+(defn report-notifications []
+  (-> (http/post (str wiremock-url "/__admin/requests/find")
                  {:as   :json
                   :body (json/generate-string
-                          {"method"       "POST"
-                           "bodyPatterns" [{"matches" (str ".*" body ".*")}]
-                           "urlPath"      "/mailjet/send"})})
+                          {"urlPath" "/rest/reports"})})
       :body
-      :count))
+      :requests))
+
+(defn assert-report-not-updated-in-flow []
+  (is (empty? (report-notifications))))
 
 (defn reset-wiremock []
   (http/post (str wiremock-mappings-url "/reset")))
@@ -177,7 +209,7 @@
   (test-util/wait-for-server "mainnetwork" 3000)
   (test-util/wait-for-server "wiremock-proxy" 8080))
 
-(use-fixtures :once (fn [f]
+(use-fixtures :each (fn [f]
                       (check-servers-up)
                       (reset-wiremock)
                       (f)))
@@ -193,27 +225,70 @@
       (is (= "OK" (get report-result "status")))
 
       (test-util/try-for "email not sent" 5
-                         (= 1 (email-sent-count (get report-result "file"))))
+                         (str/includes? (text-first-email-sent-to "dan@akvo.org") (get report-result "file")))
 
-      (is (= 200 (:status (http/get (str flow-services-url "/report/" (get report-result "file")))))))))
+      (is (= 200 (:status (http/get (str flow-services-url "/report/" (get report-result "file"))))))
+      (assert-report-not-updated-in-flow))))
 
 (defn sentry-alerts-count []
   (-> (http/post (str wiremock-url "/__admin/requests/count")
                  {:as   :json
                   :body (json/generate-string
-                          {"method"       "POST"
-                           "urlPath"      "/sentry/api/213123/store/"})})
+                          {"method"  "POST"
+                           "urlPath" "/sentry/api/213123/store/"})})
       :body
       :count))
 
-(deftest sentry
+(deftest error-in-report-generation
   (let [survey-id (System/currentTimeMillis)
         current-errors (sentry-alerts-count)]
     (http/post wiremock-mappings-url {:body (json/generate-string {"request"  {"method"          "GET"
                                                                                "urlPath"         "/surveyrestapi"
                                                                                "queryParameters" {"surveyId" {"equalTo" (str survey-id)}}}
-                                                                   "response" {"status"   500}})})
+                                                                   "response" {"status" 500}})})
     (test-util/try-for "Processing for too long" 20
                        (= {"status" "ERROR", "message" "_error_generating_report"}
                           (generate-report survey-id)))
-    (is (< current-errors (sentry-alerts-count)))))
+    (is (< current-errors (sentry-alerts-count)))
+    (assert-report-not-updated-in-flow)))
+
+(defn mock-flow-report-api [flow-report-id]
+  (http/post wiremock-mappings-url
+             {:body (json/generate-string
+                      {"request"  {"method"  "PUT"
+                                   "urlPath" (str "/rest/reports/" flow-report-id)}
+                       "response" {"status"   200
+                                   "jsonBody" {:report {:keyId flow-report-id}}}})}))
+
+(defn final-report-state-in-flow [flow-report-id]
+  (->> (http/post (str wiremock-url "/__admin/requests/find")
+                  {:as   :json
+                   :body (json/generate-string
+                           {"method"  "PUT"
+                            "urlPath" (str "/rest/reports/" flow-report-id)})})
+       :body
+       :requests
+       (map (comp :state :report #(json/parse-string % true) :body))))
+
+(deftest report-generation-flow-notified-of-progress
+  (let [survey-id (System/currentTimeMillis)
+        flow-report-id (str "the-flow-id-" survey-id)
+        user (str survey-id "@akvo.org")
+        opts {"reportId" flow-report-id
+              "email"    user}]
+    (mock-flow-report-api flow-report-id)
+    (mock-gae survey-id)
+    (mock-mailjet)
+    (test-util/try-for "Processing for too long" 20
+                       (not= {"status" "OK", "message" "PROCESSING"}
+                             (generate-report survey-id opts)))
+    (let [report-result (generate-report survey-id opts)]
+      (is (= "OK" (get report-result "status")))
+
+      (test-util/try-for "email not sent" 5
+                         (text-first-email-sent-to user))
+
+      (is (not (str/includes? (text-first-email-sent-to user) (get report-result "file"))))
+
+      (is (= 200 (:status (http/get (str flow-services-url "/report/" (get report-result "file"))))))
+      (is (= ["IN_PROGRESS" "FINISHED_SUCCESS"] (final-report-state-in-flow flow-report-id))))))

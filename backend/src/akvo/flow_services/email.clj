@@ -15,44 +15,34 @@
 (ns akvo.flow-services.email
   (:require [akvo.flow-services.translate :refer (t>)]
             [akvo.commons.config :as config]
-            [postal.core :as postal]
             [clj-http.client :as client]
             [taoensso.timbre :as timbre :refer (infof debugf)]
             [cheshire.core :as json]
             [clojure.string :as str]))
 
-(defn mail-jet-send [settings emails locale url]
+(defn mail-jet-send [settings email locale body]
   (let [body {"FromEmail"  (:notification-from settings)
-              "Recipients" (into []
-                                 (map (fn [email] {"Email" email})
-                                      emails))
+              "Recipients" [{"Email" email}]
               "Subject"    (t> locale "_report_header")
-              "Text-part"  (t> locale "_report_body" url)
+              "Text-part"  body
               "Headers"    {"Reply-To" (:notification-reply-to settings)}}]
     (client/post (format "%s/send" (-> settings :notification :api-url))
                  {:basic-auth (-> settings :notification :credentials)
                   :headers    {"Content-Type" "application/json"}
                   :body       (json/encode body)})))
 
-(defn postal-send [settings emails locale url]
-  (postal/send-message (:notification settings)
-                       {:from     (:notification-from settings)
-                        :to       emails
-                        :subject  (t> locale "_report_header")
-                        :body     (t> locale "_report_body" url)
-                        :Reply-To (:notification-reply-to settings)}))
+(defn obfuscate [email]
+  (when email
+    (str/replace email #"^[^@]*" "****")))
 
-(defn obfuscate [emails]
-  (mapv (fn [email]
-          (when email
-            (str/replace email #"^[^@]*" "****")))
-        emails))
+(defn send-report-ready [email locale url]
+  (infof "Notifying %s" (obfuscate email))
+  (debugf "Notifying %s about %s" email url)
+  (let [settings @config/settings]
+    (mail-jet-send settings email locale (t> locale "_report_body" url))))
 
-(defn send-report-ready [emails locale url]
-  (infof "Notifying %s" (obfuscate emails))
-  (debugf "Notifying %s about %s" emails url)
-  (let [settings @config/settings
-        send-email (if (-> settings :notification :mailjet)
-                     mail-jet-send
-                     postal-send)]
-    (send-email settings emails locale url)))
+(defn send-gdpr-report-ready [email locale]
+  (infof "Notifying %s" (obfuscate email))
+  (debugf "Notifying %s " email)
+  (let [settings @config/settings]
+    (mail-jet-send settings email locale (t> locale "_report_gdpr_body"))))

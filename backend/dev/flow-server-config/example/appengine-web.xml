@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <appengine-web-app xmlns="http://appengine.google.com/ns/1.0">
-    <application>flowservices-dev-config</application>
+    <application>akvoflowsandbox</application>
     <version>1</version>
     <sessions-enabled>true</sessions-enabled>
     <threadsafe>true</threadsafe>
@@ -19,7 +19,7 @@
         <property name="photo_url_root" value="http://s3/images/" />
         <property name="alias" value="akvoflowsandbox.appspot.com" />
         <property name="flowServices" value="http://fake-flow-services/" />
-        <property name="s3bucket" value="akvoflowsandbox" />
+        <property name="s3bucket" value="s3/" />
         <property name="surveyuploadurl" value="http://s3/" />
         <property name="surveyuploaddir" value="surveys" />
         <property name="deviceZipPath" value="http://s3/devicezip/" />
@@ -54,7 +54,7 @@
         <property name="showMonitoringFeature" value="true"/>
         <property name="enableDataApproval" value="true"/>
         <property name="mandatoryQuestionID" value="false"/>
-        <property name="serviceAccountId" value="sa-akvoflowsandbox@akvoflowsandbox.iam.gserviceaccount.com"/>
+        <property name="serviceAccountId" value="this is a hack to force the remote API to use localhost"/>
         <property name="hereMapsAppId" value="none"/>
         <property name="hereMapsAppCode" value="neither"/>
     </system-properties>

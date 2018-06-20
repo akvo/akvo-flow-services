@@ -1,0 +1,31 @@
+version: "3"
+services:
+ flow-services:
+   build:
+     context: .
+     dockerfile: backend/Dockerfile-dev
+   environment:
+     - HOST_UID
+     - HOST_GID
+     - EMAIL_PASSWORD=anything
+     - EMAIL_USER=anything.else
+   external_links:
+     - "akvo-flow:akvoflow.local"
+   ports:
+      - "7888:7888"
+      - "3000:3000"
+   volumes:
+      - ./backend:/app
+      - ~/.m2:/root/.m2
+      - ~/.lein:/root/.lein
+
+ wiremock-proxy:
+   image: rodolpheche/wiremock:2.16.0-alpine
+   volumes:
+     - ./wiremock:/etc/wiremock/files
+   command: --root-dir /etc/wiremock/files --no-request-journal --verbose
+
+networks:
+  default:
+    external:
+      name: akvoflow_together
