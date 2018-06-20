@@ -156,7 +156,7 @@
   (let [importer (RawDataSpreadsheetImporter.)
         errors (validate-raw-data f importer bucket-name surveyId)]
     (if (not (empty? errors))
-      (errorf "Errors in raw data upload - baseURL: %s - file: %s - surveyId: %s - errors: %s" base-url f surveyId errors))
+      (infof "Errors in raw data upload - baseURL: %s - file: %s - surveyId: %s - errors: %s" base-url f surveyId errors))
     (if (empty? errors)
       (.executeImport importer f base-url (config/get-criteria bucket-name surveyId))
       (add-message bucket-name "importData" surveyId
