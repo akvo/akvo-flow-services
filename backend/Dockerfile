@@ -2,7 +2,7 @@ FROM openjdk:8u162-jdk-stretch
 MAINTAINER Akvo Foundation <devops@akvo.org>
 
 RUN set -ex; apt-get update && \
-    apt-get install git openssh-client && \
+    apt-get install -y git openssh-client && \
     rm -rf /var/cache/apt/*
 
 WORKDIR /app

@@ -42,7 +42,8 @@
   (let [criteria (json/parse-string (:criteria params))] ; TODO: validation
     (response (scheduler/invalidate-cache criteria))))
 
-
+(defn- null? [x]
+  (or (nil? x) (= "null" x)))
 
 (defroutes ^:private endpoints
   (GET "/" [] "OK")
@@ -51,7 +52,8 @@
   (GET "/generate" [:as {params :params}]
     (let [criteria (json/parse-string (:criteria params))  ;; TODO: validation
           callback (:callback params)]
-      (if (or (nil? criteria) (= "null" criteria))
+      (if (or (null? criteria)
+              (null? (get criteria "surveyId")))
         {:status 400 :headers {} :body "Bad Request"}
         (generate-report criteria callback))))
 
