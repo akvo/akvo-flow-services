@@ -53,7 +53,7 @@
           callback (:callback params)]
       (if (or (null? criteria)
               (null? (get criteria "surveyId"))
-              (null? (get criteria "baseUrl")))
+              (null? (get criteria "baseURL")))
         {:status 400 :headers {} :body "Bad Request"}
         (generate-report criteria callback))))
 
