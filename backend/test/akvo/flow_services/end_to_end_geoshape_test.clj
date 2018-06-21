@@ -22,7 +22,7 @@
                                                                 "exportMode"     "GEOSHAPE"
                                                                 "questionId"     question-id
                                                                 "flowServices"   test-util/flow-services-url
-                                                                "appId"          "flowservices-dev-config"}})}})
+                                                                "appId"          "akvoflowsandbox"}})}})
            :body
            (re-seq #"somejson\((.*)\);")
            first
