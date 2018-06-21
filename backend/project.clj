@@ -7,18 +7,18 @@
   :dependencies [[org.clojure/clojure "1.9.0"]
                  [org.clojure/data.csv "0.1.3"]
                  [org.clojure/tools.nrepl "0.2.12"]
-                 [org.akvo/commons "0.4.6"]
+                 [org.akvo/commons "0.4.6" :exclusions [me.raynes/fs]]
                  [com.taoensso/timbre "4.10.0"]
+                 [timbre-ns-pattern-level "0.1.2"]
                  [cheshire "5.3.1"]
                  [compojure "1.1.8"]
                  [clojurewerkz/quartzite "1.3.0"]
                  [ring/ring-core "1.3.1"]
                  [ring/ring-jetty-adapter "1.3.1"]
-                 [me.raynes/fs "1.4.6"]
+                 [akvo/fs "20180618-134534.a44cdd5b"]
                  [clj-aws-s3 "0.3.9" :exclusions [joda-time]]
                  [clj-http "3.8.0"]
                  [org.clojure/java.jdbc "0.3.5"]
-                 [com.draines/postal "1.11.3"]
                  ; Java libraries
                  [jfree/jfreechart "1.0.13"]
                  [commons-lang/commons-lang "2.4"]
@@ -46,8 +46,8 @@
   :exclusions [log4j]
   :main akvo.flow-services.core
   :uberjar-name "akvo-flow-services.jar"
-  :test-selectors {:default (fn [m] (not (or (:integration m) (:kubernetes-test m))))
-                   :integration :integration
+  :test-selectors {:default (fn [m] (not (or (:integration m) (:kubernetes-test m) (:wip m))))
+                   :integration (fn [m] (and (:integration m) (not (:wip m))))
                    :kubernetes-test :kubernetes-test}
   :plugins [[lein-ring "0.8.5"]]
   :profiles {:dev  [:project/dev  :profiles/dev]

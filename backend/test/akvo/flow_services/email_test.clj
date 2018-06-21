@@ -3,11 +3,8 @@
             [akvo.flow-services.email :as email]))
 
 (deftest hide-emails
-  (is (= ["****@akvo.org"
-          "****@foo.org"
-          "****"
-          nil]
-         (email/obfuscate ["any.email@akvo.org"
-                           "x@foo.org"
-                           "no at symbol"
-                           nil]))))
+  (are [email expected] (= (email/obfuscate email) expected)
+    "any.email@akvo.org" "****@akvo.org"
+    "x@foo.org" "****@foo.org"
+    "no at symbol" "****"
+    nil nil))

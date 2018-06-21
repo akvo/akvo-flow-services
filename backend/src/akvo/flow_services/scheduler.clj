@@ -14,62 +14,135 @@
 
 (ns akvo.flow-services.scheduler
   (:refer-clojure :exclude [key])
-  (:import [org.quartz JobExecutionContext Scheduler ObjectAlreadyExistsException]
-           java.io.File
-           java.util.UUID)
+  (:import [org.quartz ObjectAlreadyExistsException]
+           java.io.File)
   (:require [clojure.string :as str]
-            [taoensso.timbre :as timbre :refer (infof warnf)]
+            [taoensso.timbre :refer (infof warnf)]
             [clojurewerkz.quartzite [conversion :as conversion]
-                                    [jobs :as jobs]
-                                    [scheduler :as scheduler]
-                                    [triggers :as triggers]]
+             [jobs :as jobs]
+             [scheduler :as scheduler]
+             [triggers :as triggers]]
             [akvo.commons.config :as config]
             [akvo.flow-services.email :as email]
-            [akvo.flow-services.geoshape-export :as geoshape])
+            [akvo.flow-services.geoshape-export :as geoshape]
+            [akvo.flow-services.error :as e]
+            [akvo.flow-services.util :as util])
   (:use [akvo.flow-services.exporter :only (export-report)]
         [akvo.flow-services.uploader :only (bulk-upload)]))
 
-(def cache (ref {}))
+(defn flow-report-id [job-data]
+  (get-in job-data ["opts" "reportId"]))
 
-(def in-flight-reports (atom {}))
+(def gdpr-flow? (comp some? flow-report-id))
+
+(defn common-report-fields [{:strs [exportType opts surveyId]}]
+  {:formId     surveyId
+   :keyId      (get opts "reportId")
+   :startDate  (get opts "from")
+   :endDate    (get opts "to")
+   :reportType exportType})
+
+(defn- notify-flow-request [{:strs [baseURL] :as job-data} report]
+  {:method      :put
+   :url         (str baseURL "/rest/reports/" (flow-report-id job-data))
+   :form-params {:report
+                 (merge
+                   (common-report-fields job-data)
+                   report)}})
+
+(defn create-report-in-flow [job-data]
+  (notify-flow-request job-data {:state "IN_PROGRESS"}))
+
+(defn expect-200 [http-response]
+  (if (e/ok? http-response)
+    (if (not= 200 (:status http-response))
+      (e/error {:message (str "Flow returns error on report creation. HTTP code: " (:status http-response))})
+      http-response)
+    http-response))
+
+(defn handle-start-report-in-flow [http-response]
+  (-> http-response
+      expect-200
+      (e/if-ok (constantly nil))))
+
+(defn report-full-url [opts report]
+  (format "%s/report/%s"
+          (get opts "flowServices")
+          report))
+
+(defn finish-report-in-flow [{:strs [opts] :as job-data} report-result]
+  (let [report (if (e/ok? report-result)
+                 {:state    "FINISHED_SUCCESS"
+                  :filename (report-full-url opts report-result)}
+                 {:state   "FINISHED_ERROR"
+                  :message (e/user-friendly-message report-result)})]
+    (notify-flow-request job-data report)))
+
+(defn notify-report-started-in-flow [job-data]
+  (-> job-data
+      create-report-in-flow
+      (#(util/send-http-json! job-data %))
+      handle-start-report-in-flow
+      e/unwrap-throwing))
+
+(defn notify-report-done-in-flow [job-data report]
+  (-> (finish-report-in-flow job-data report)
+      (#(util/send-http-json! job-data %))
+      expect-200
+      e/unwrap-throwing))
+
+(def cache (atom {}))
 
 (defn- valid-report? [report-path]
   (boolean
     (and (.exists report-path)
-      (pos? (.length report-path)))))
+         (pos? (.length report-path)))))
 
 (defn- get-path [report-file]
   (if (valid-report? report-file)
     (str/join "/" (take-last 3 (str/split (.getAbsolutePath ^File report-file) #"/")))
     "INVALID_PATH"))
 
-(jobs/defjob ExportJob [job-data]
-  (let [{:strs [baseURL exportType surveyId opts id]} (conversion/from-job-data job-data)
-        questionId (get opts "questionId")
-        appId (get opts "appId")
+(defn run-report [{:strs [baseURL exportType surveyId opts id]}]
+  (let [questionId (get opts "questionId")
         config (-> (get opts "uploadUrl")
-                config/get-bucket-name
-                (config/find-config))
+                   config/get-bucket-name
+                   (config/find-config))
         report (if (= exportType "GEOSHAPE")
-                 (geoshape/export baseURL (:apiKey config) appId surveyId questionId)
+                 (geoshape/export baseURL (:apiKey config) (get opts "appId") surveyId questionId)
                  (export-report exportType baseURL surveyId opts))
         path (get-path report)]
-    (dosync
-      (alter cache conj {{:id id
-                          :surveyId surveyId
-                          :questionId questionId
-                          :baseURL (config/get-domain baseURL)} path}))
-    (when (get opts "email")
-      (if (= path "INVALID_PATH")
-        (warnf "Could not generate report %s for surveyId %s" id surveyId)
-        (email/send-report-ready (get @in-flight-reports id)
-                                 (get opts "locale" "en")
-                                 (format "%s/report/%s"
-                                         (get opts "flowServices")
-                                         path)))
-      (swap! in-flight-reports dissoc id))
-    (scheduler/delete-job (jobs/key id))))
+    (swap! cache conj {{:id         id
+                        :surveyId   surveyId
+                        :questionId questionId
+                        :baseURL    (config/get-domain baseURL)} path})
+    (scheduler/delete-job (jobs/key id))
+    (if (= "INVALID_PATH" path)
+      (e/error {:message "Error generating report"})
+      path)))
 
+(defn gdpr-email [{:strs [opts]}]
+  (email/send-gdpr-report-ready (get opts "email")
+                                (get opts "locale" "en")))
+
+(defn old-email [{:strs [opts]} report]
+  (email/send-report-ready (get opts "email")
+                           (get opts "locale" "en")
+                           (report-full-url opts report)))
+
+(defn do-export [job-data]
+  (if (gdpr-flow? job-data)
+    (let [_ (notify-report-started-in-flow job-data)
+          report (e/wrap-exceptions (run-report job-data))]
+      (notify-report-done-in-flow job-data report)
+      (when (e/ok? report)
+        (gdpr-email job-data)))
+    (let [report (run-report job-data)]
+      (when (e/ok? report)
+        (old-email job-data report)))))
+
+(jobs/defjob ExportJob [job-data]
+  (do-export (conversion/from-job-data job-data)))
 
 (jobs/defjob BulkUploadJob [job-data]
   (let [{:strs [baseURL uniqueIdentifier filename uploadDomain surveyId id]} (conversion/from-job-data job-data)]
@@ -82,7 +155,7 @@
 (defn- get-job [job-type id params]
   (jobs/build
     (jobs/of-type job-type)
-    (jobs/using-job-data (conj params {:id id} ))
+    (jobs/using-job-data (conj params {:id id}))
     (jobs/with-identity (jobs/key id))))
 
 (defn- get-trigger [id]
@@ -96,9 +169,7 @@
     (try
       (scheduler/maybe-schedule job trigger)
       (catch ObjectAlreadyExistsException _))
-    (when-let [email (get-in params ["opts" "email"])]
-      (swap! in-flight-reports update-in [id] (fnil conj #{}) email))
-    {:status "OK"
+    {:status  "OK"
      :message "PROCESSING"}))
 
 (defn- get-report-by-id [id]
@@ -112,12 +183,11 @@
   (let [baseURL (config/get-domain (params "baseURL"))
         alias (config/get-alias baseURL)]
     (doseq [sid (params "surveyIds")]
-      (dosync
-        (doseq [k (keys @cache) :when (and (= (:surveyId k) (str sid))
-                                           (or (= (:baseURL k) baseURL)
-                                               (= (:baseURL k) alias)))]
-          (infof "Invalidating: %s" k)
-          (alter cache dissoc k))))
+      (doseq [k (keys @cache) :when (and (= (:surveyId k) (str sid))
+                                         (or (= (:baseURL k) baseURL)
+                                             (= (:baseURL k) alias)))]
+        (infof "Invalidating: %s" k)
+        (swap! cache dissoc k)))
     "OK"))
 
 (defn generate-report
@@ -126,12 +196,12 @@
   (if-let [file (get-report-by-id (report-id criteria))]
     (if (= file "INVALID_PATH")
       (do
-        (invalidate-cache {"baseURL" (criteria "baseURL")
+        (invalidate-cache {"baseURL"   (criteria "baseURL")
                            "surveyIds" [(criteria "surveyId")]})
-        {:status "ERROR"
+        {:status  "ERROR"
          :message "_error_generating_report"})
       {:status "OK"
-       :file file})
+       :file   file})
     (schedule-job ExportJob (report-id criteria) criteria)))
 
 (defn process-and-upload
