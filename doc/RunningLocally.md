@@ -30,6 +30,15 @@ If you want to run both Flow and Flow Services locally and talking to each other
 docker-compose -f docker-compose.together.yml up --build -d
 ```
 
+#### Changing report Java classes
+
+Change the dependency version of ``org.akvo.flow/akvo-flow`` in the ``backend/project.clj`` to ``1``. 
+Then for flow-services to pick up the changes in the flow jar, restart the ``flow-services`` container with:
+
+```
+docker-compose -f docker-compose.together.yml restart flow-services
+```
+
 ### Connecting to Flow services
 
 If you need to connect to a tenant, copy the configuration folder of the tentant from akvo-flow-server-config to `backend/dev/flow-server-config`. 
