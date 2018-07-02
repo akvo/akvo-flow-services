@@ -14,25 +14,21 @@
 (defn encode [to-encode]
   (.encodeToString (Base64/getEncoder) (.getBytes to-encode)))
 
-(def wiremock-url "http://wiremock-proxy:8080")
-(def wiremock-mappings-url (str wiremock-url "/__admin/mappings"))
-(def flow-services-url "http://mainnetwork:3000")
-
 (defn generate-report [survey-id & [opts]]
-  (some->> (http/get (str flow-services-url "/generate")
+  (some->> (http/get (str test-util/flow-services-url "/generate")
                      {:query-params {:callback "somejson"
                                      :criteria (json/generate-string
-                                                 {"baseURL"    wiremock-url
-                                                  "exportType" "COMPREHENSIVE"
+                                                 {"baseURL"    test-util/wiremock-url
+                                                  "exportType" "DATA_CLEANING"
                                                   "surveyId"   (str survey-id)
                                                   "id"         "asdf"
                                                   "opts"       (merge {"email"          "dan@akvo.org"
                                                                        "lastCollection" "false"
-                                                                       "uploadUrl"      "s3/"
-                                                                       "exportMode"     "COMPREHENSIVE"
+                                                                       "uploadUrl"      "https://akvoflowsandbox.s3.amazonaws.com"
+                                                                       "exportMode"     "DATA_CLEANING"
                                                                        "from"           "2013-03-06"
                                                                        "to"             "2018-03-09"
-                                                                       "flowServices"   flow-services-url
+                                                                       "flowServices"   test-util/flow-services-url
                                                                        "appId"          "akvoflowsandbox"}
                                                                       opts)})}})
            :body
@@ -125,25 +121,6 @@
    "response" {"status" 200
                "body"   (str question-id ",0," (encode "https://akvoflow-14.s3.amazonaws.com/images/wfpPhoto8526862486761.jpg|Borehole|By The Chuch|AfriDev") "\n")}})
 
-(defn instance-data [survey-id instance-id]
-  {"request"  {"method"          "GET"
-               "urlPath"         "/instancedata"
-               "queryParameters" {"action"           {"equalTo" "getInstanceData"}
-                                  "surveyInstanceId" {"equalTo" (str instance-id)}}}
-   "response" {"status"   200
-               "jsonBody" {"surveyInstanceData"   {"surveyedLocaleDisplayName" ""
-                                                   "surveyId"                  survey-id
-                                                   "surveyedLocaleId"          147442028
-                                                   "userID"                    1 "collectionDate" 1418598306000
-                                                   "submitterName"             "BASH & JAMES"
-                                                   "deviceIdentifier"          "IMPORTER"
-                                                   "surveyalTime"              0
-                                                   "surveyedLocaleIdentifier"  "a6ey-5r1h-6a0y"
-                                                   "keyId"                     instance-id}
-                           "latestApprovalStatus" ""
-                           "resultCount"          0
-                           "offset"               0}}})
-
 (defn gae-survey-options [survey-id question-id]
   (survey-rest-api "listSurveyQuestionOptions" survey-id [{"text" "Yes"
                                                            "order" 1
@@ -167,18 +144,11 @@
 
                   (gae-list-instances survey-id instance-id)
                   (instance-responses instance-id question-id)
-                  (instance-data survey-id instance-id)]]
-    (doseq [message messages]
-      (http/post wiremock-mappings-url {:body (json/generate-string message)}))))
-
-(defn mock-mailjet []
-  (http/post wiremock-mappings-url {:body (json/generate-string {"request"  {"method"  "POST"
-                                                                             "urlPath" "/mailjet/send"}
-                                                                 "response" {"status" 200
-                                                                             "body"   "ok"}})}))
+                  (test-util/instance-data survey-id instance-id)]]
+    (test-util/setup-wiremock messages)))
 
 (defn text-first-email-sent-to [email]
-  (->> (http/post (str wiremock-url "/__admin/requests/find")
+  (->> (http/post (str test-util/wiremock-url "/__admin/requests/find")
                   {:as   :json
                    :body (json/generate-string
                            {"method"       "POST"
@@ -192,7 +162,7 @@
        :Text-part))
 
 (defn report-notifications []
-  (-> (http/post (str wiremock-url "/__admin/requests/find")
+  (-> (http/post (str test-util/wiremock-url "/__admin/requests/find")
                  {:as   :json
                   :body (json/generate-string
                           {"urlPath" "/rest/reports"})})
@@ -202,22 +172,12 @@
 (defn assert-report-not-updated-in-flow []
   (is (empty? (report-notifications))))
 
-(defn reset-wiremock []
-  (http/post (str wiremock-mappings-url "/reset")))
-
-(defn check-servers-up []
-  (test-util/wait-for-server "mainnetwork" 3000)
-  (test-util/wait-for-server "wiremock-proxy" 8080))
-
-(use-fixtures :each (fn [f]
-                      (check-servers-up)
-                      (reset-wiremock)
-                      (f)))
+(use-fixtures :each test-util/fixture)
 
 (deftest report-generation
   (let [survey-id (System/currentTimeMillis)]
     (mock-gae survey-id)
-    (mock-mailjet)
+    (test-util/mock-mailjet)
     (test-util/try-for "Processing for too long" 20
                        (not= {"status" "OK", "message" "PROCESSING"}
                              (generate-report survey-id)))
@@ -227,11 +187,11 @@
       (test-util/try-for "email not sent" 5
                          (str/includes? (text-first-email-sent-to "dan@akvo.org") (get report-result "file")))
 
-      (is (= 200 (:status (http/get (str flow-services-url "/report/" (get report-result "file"))))))
+      (is (= 200 (:status (test-util/get-report report-result))))
       (assert-report-not-updated-in-flow))))
 
 (defn sentry-alerts-count []
-  (-> (http/post (str wiremock-url "/__admin/requests/count")
+  (-> (http/post (str test-util/wiremock-url "/__admin/requests/count")
                  {:as   :json
                   :body (json/generate-string
                           {"method"  "POST"
@@ -242,10 +202,10 @@
 (deftest error-in-report-generation
   (let [survey-id (System/currentTimeMillis)
         current-errors (sentry-alerts-count)]
-    (http/post wiremock-mappings-url {:body (json/generate-string {"request"  {"method"          "GET"
-                                                                               "urlPath"         "/surveyrestapi"
-                                                                               "queryParameters" {"surveyId" {"equalTo" (str survey-id)}}}
-                                                                   "response" {"status" 500}})})
+    (http/post test-util/wiremock-mappings-url {:body (json/generate-string {"request"  {"method"          "GET"
+                                                                                         "urlPath"         "/surveyrestapi"
+                                                                                         "queryParameters" {"surveyId" {"equalTo" (str survey-id)}}}
+                                                                             "response" {"status" 500}})})
     (test-util/try-for "Processing for too long" 20
                        (= {"status" "ERROR", "message" "_error_generating_report"}
                           (generate-report survey-id)))
@@ -253,7 +213,7 @@
     (assert-report-not-updated-in-flow)))
 
 (defn mock-flow-report-api [flow-report-id]
-  (http/post wiremock-mappings-url
+  (http/post test-util/wiremock-mappings-url
              {:body (json/generate-string
                       {"request"  {"method"  "PUT"
                                    "urlPath" (str "/rest/reports/" flow-report-id)}
@@ -261,7 +221,7 @@
                                    "jsonBody" {:report {:keyId flow-report-id}}}})}))
 
 (defn final-report-state-in-flow [flow-report-id]
-  (->> (http/post (str wiremock-url "/__admin/requests/find")
+  (->> (http/post (str test-util/wiremock-url "/__admin/requests/find")
                   {:as   :json
                    :body (json/generate-string
                            {"method"  "PUT"
@@ -278,7 +238,7 @@
               "email"    user}]
     (mock-flow-report-api flow-report-id)
     (mock-gae survey-id)
-    (mock-mailjet)
+    (test-util/mock-mailjet)
     (test-util/try-for "Processing for too long" 20
                        (not= {"status" "OK", "message" "PROCESSING"}
                              (generate-report survey-id opts)))
@@ -290,5 +250,5 @@
 
       (is (not (str/includes? (text-first-email-sent-to user) (get report-result "file"))))
 
-      (is (= 200 (:status (http/get (str flow-services-url "/report/" (get report-result "file"))))))
+      (is (= 200 (:status (test-util/get-report report-result))))
       (is (= ["IN_PROGRESS" "FINISHED_SUCCESS"] (final-report-state-in-flow flow-report-id))))))

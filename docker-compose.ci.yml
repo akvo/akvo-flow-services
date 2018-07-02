@@ -9,6 +9,7 @@ services:
 
   tests:
     image: akvo-flow-services-dev:develop
+    network_mode: service:mainnetwork
     environment:
      - LOG_LEVEL=info
     volumes:

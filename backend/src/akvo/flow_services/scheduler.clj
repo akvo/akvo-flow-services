@@ -105,8 +105,11 @@
 
 (defn run-report [{:strs [baseURL exportType surveyId opts id]}]
   (let [questionId (get opts "questionId")
+        config (-> (get opts "uploadUrl")
+                   config/get-bucket-name
+                   (config/find-config))
         report (if (= exportType "GEOSHAPE")
-                 (geoshape/export (get opts "appId") surveyId questionId)
+                 (geoshape/export baseURL (:apiKey config) (get opts "appId") surveyId questionId)
                  (export-report exportType baseURL surveyId opts))
         path (get-path report)]
     (swap! cache conj {{:id         id

@@ -19,10 +19,14 @@
             [akvo.commons.config :as config]
             [cheshire.core :as json]
             [taoensso.timbre :as timbre]
-            [akvo.flow-services.util :as util])
-  (:import [java.util UUID]))
+            [akvo.flow-services.util :as util]
+            [clojure.string :as s])
+  (:import [java.util UUID TimeZone]
+           [org.waterforpeople.mapping.dataexport.service BulkDataServiceClient]
+           [org.waterforpeople.mapping.dataexport ExportImportUtils]
+           [java.text SimpleDateFormat]))
 
-(defn feature [question-id questions question-answers]
+(defn feature [question-id questions question-answers instance-data]
   (let [geoshape (-> question-answers
                      (get question-id)
                      json/parse-string
@@ -30,45 +34,76 @@
                      first)]
     (when (and (= "Polygon" (get-in geoshape ["geometry" "type"]))
                (every? #(> (count %) 2) (get-in geoshape ["geometry" "coordinates"])))
-      (reduce (fn [feature [id value]]
-                (if (not= id question-id)
-                  (assoc-in feature ["properties" (get questions id)] value)
-                  feature))
-              geoshape
-              question-answers))))
+      (->
+        (reduce (fn [feature [id value]]
+                  (if (not= id question-id)
+                    (assoc-in feature ["properties" (get questions id)] value)
+                    feature))
+                geoshape
+                question-answers)
+        (update "properties" merge instance-data)))))
+
+(defn sanitize [s]
+  (or
+    (some-> s
+            (s/replace "\n" " ")
+            (s/replace "\t" "")
+            (s/trim))
+    ""))
+
+(defn duration-text [d]
+  (if d
+    (let [date-format (doto
+                        (SimpleDateFormat. "HH:mm:ss")
+                        (.setTimeZone (TimeZone/getTimeZone "GMT")))]
+      (try
+        (.format date-format (* 1000 d))
+        (catch Exception _ "")))
+    ""))
+
+(defn format-instance-data [instance-data]
+  (when instance-data
+    {"Identifier"        (:surveyedLocaleIdentifier instance-data)
+     "Display Name"      (:surveyedLocaleDisplayName instance-data)
+     "Device identifier" (:deviceIdentifier instance-data)
+     "Instance"          (str (:keyId instance-data))
+     "Submission Date"   (ExportImportUtils/formatDateTime (:collectionDate instance-data))
+     "Submitter"         (sanitize (:submitterName instance-data))
+     "Duration"          (duration-text (:surveyalTime instance-data))}))
 
 ;; question-id: the geoshape question id
 ;; quesions:    map from question id -> question text
 ;; responses:   map from instance-id -> question-id -> response text
-(defn build-features [question-id questions responses]
+;; instance-data: map from instance-id -> survey-instance-data
+(defn build-features [question-id questions responses instance-data]
   (for [[instance-id question-answers] responses]
-    (feature question-id questions question-answers)))
+    (feature question-id questions question-answers (format-instance-data (get instance-data instance-id)))))
 
-(defn build-feature-collection [form-id geoshape-question-id questions responses]
-  {:type "FeatureCollection"
-   :properties {:formId form-id
-                :questionId geoshape-question-id
+(defn build-feature-collection* [form-id geoshape-question-id questions responses instance-data]
+  {:type       "FeatureCollection"
+   :properties {:formId       form-id
+                :questionId   geoshape-question-id
                 :questionText (get questions geoshape-question-id)}
-   :features (remove nil? (build-features geoshape-question-id questions responses))})
+   :features   (remove nil? (build-features geoshape-question-id questions responses instance-data))})
 
 
 (defn fetch-responses [ds form-id]
   (let [responses (query/result ds
-                                {:kind "QuestionAnswerStore"
+                                {:kind   "QuestionAnswerStore"
                                  :filter (query/= "surveyId" form-id)}
                                 {:chunk-size 300})]
     (for [response responses]
-      {:value (or (.getProperty response "value")
-                  (.getValue (.getProperty response "valueText")))
-       :iteration (or (.getProperty response "iteration") 0)
+      {:value       (or (.getProperty response "value")
+                        (.getValue (.getProperty response "valueText")))
+       :iteration   (or (.getProperty response "iteration") 0)
        :instance-id (.getProperty response "surveyInstanceId")
        :question-id (Long/parseLong (.getProperty response "questionID"))})))
 
 (defn fetch-questions [ds form-id]
-  (let [questions (query/result ds {:kind "Question"
+  (let [questions (query/result ds {:kind   "Question"
                                     :filter (query/= "surveyId" form-id)})]
     (for [question questions]
-      {:id (-> question .getKey .getId)
+      {:id   (-> question .getKey .getId)
        :text (.getProperty question "text")})))
 
 (defn export-file [app-id form-id geoshape-question-id]
@@ -81,23 +116,44 @@
     (.mkdirs dir)
     (io/file dir filename)))
 
-(defn export [app-id form-id geoshape-question-id]
+(defn fetch-instance-data [server-base api-key instance-id]
+  (dissoc (bean (. (BulkDataServiceClient/fetchInstanceData instance-id server-base api-key) surveyInstanceData))
+          :class :approvedFlag :questionAnswersStore :surveyCode))
+
+(defn key-by [key-f val-f coll]
+  (reduce (fn [result x]
+            (assoc-in result (key-f x) (val-f x)))
+          {}
+          coll))
+
+(def key-questions (partial key-by (juxt :id) :text))
+(def key-responses (comp
+                     (partial key-by (juxt :instance-id :question-id) :value)
+                     (partial filter (comp zero? :iteration))))
+
+(def key-instance-data (partial key-by (juxt :keyId) identity))
+
+(defn build-feature-collection [form-id geoshape-question-id questions responses get-instance-data-fn]
+  (let [questions (key-questions questions)
+        responses (key-responses responses)
+        instance-datas (key-instance-data (get-instance-data-fn (keys responses)))]
+    (build-feature-collection* form-id
+                               geoshape-question-id
+                               questions
+                               responses
+                               instance-datas)))
+
+(defn export [baseUrl api-key app-id form-id geoshape-question-id]
   (timbre/infof "Exporting geoshape app-id: %s - form-id: %s - geoshape-question-id: %s" app-id form-id geoshape-question-id)
   (gae/with-datastore [ds (util/datastore-spec app-id)]
     (let [form-id (Long/parseLong form-id)
-          questions (reduce (fn [result {:keys [id text]}]
-                              (assoc result id text))
-                            {}
-                            (fetch-questions ds form-id))
-          responses (reduce (fn [result {:keys [instance-id question-id value]}]
-                              (assoc-in result [instance-id question-id] value))
-                            {}
-                            (filter #(zero? (:iteration %))
-                                    (fetch-responses ds form-id)))
-          feature-collection (build-feature-collection form-id
-                                                       geoshape-question-id
-                                                       questions
-                                                       responses)
+          questions (fetch-questions ds form-id)
+          responses (fetch-responses ds form-id)
+          instance-data-fn (fn [instance-ids]
+                             (map
+                               (partial fetch-instance-data baseUrl api-key)
+                               instance-ids))
+          feature-collection (build-feature-collection form-id geoshape-question-id questions responses instance-data-fn)
           file (export-file app-id form-id geoshape-question-id)]
       (with-open [writer (io/writer file)]
         (json/generate-stream feature-collection writer)
