@@ -134,9 +134,11 @@
     (when (timbre/level>= (log-level cfg) akvo-log-level)
       (timbre/set-level! akvo-log-level))
     (timbre/merge-config!
-      {:middleware [(timbre-ns-pattern-level/middleware {"akvo.*"     akvo-log-level
-                                                         "org.akvo.*" akvo-log-level
-                                                         :all         (log-level cfg)})]}))
+      {:middleware [(timbre-ns-pattern-level/middleware {"akvo.*"                akvo-log-level
+                                                         "org.akvo.*"            akvo-log-level
+                                                         "org.waterforpeople.*"  akvo-log-level
+                                                         "com.gallatinsystems.*" akvo-log-level
+                                                         :all                    (log-level cfg)})]}))
   (let [{:keys [dsn env host version]} (:sentry cfg)]
     (when dsn
       (timbre/merge-config! {:appenders {:sentry (-> (sentry/sentry-appender dsn
