@@ -4,7 +4,9 @@
   (if error (f-error error)
             (f-ok v)))
 
-(defn error [e]
+(defn error
+  [e]
+  {:pre [(some? e)]}
   {::error e})
 
 (defn if-ok [v f]
@@ -27,6 +29,7 @@
   (or (:message error)
       (some-> error :cause .getMessage)))
 
-(defn ok? [report]
-  (not (::error report)))
+(defn error? [report]
+  (::error report))
 
+(def ok? (complement error?))
