@@ -32,6 +32,8 @@
             [akvo.flow-services.exporter :as exporter]
             [akvo.flow-services.error :as e]))
 
+(def ^:const stats-error-threshold 0.2)
+
 (defn datastore-spec [server]
   (let [host (first (str/split server #"\."))]
     (util/datastore-spec host)))
@@ -79,8 +81,7 @@
   (let [errors (vec (filter e/error? all-data))]
     (cond
       (empty? errors) {:level :info :message "No errors collecting stats" :data ""}
-
-      (< 0.2
+      (< stats-error-threshold
          (/ (count errors)
             (count all-data))) {:level :error :message "Too many errors collecting stats" :data errors}
 
