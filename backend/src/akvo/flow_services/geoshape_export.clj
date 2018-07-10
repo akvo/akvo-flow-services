@@ -26,6 +26,30 @@
            [org.waterforpeople.mapping.dataexport ExportImportUtils]
            [java.text SimpleDateFormat]))
 
+(defn parse-cascade-and-option
+  "Mostly translated from org.waterforpeople.mapping.dataexport.GraphicalSurveySummaryExporter.cascadeCellValues
+  and org.waterforpeople.mapping.dataexport.GraphicalSurveySummaryExporter.buildOptionString"
+  [value field]
+  (if (some-> value (s/starts-with? "["))
+    (try
+      (let [parsed-value (json/parse-string value true)]
+        (s/join "|" (map (fn [m]
+                           (let [field-value (get m field)
+                                 code (get m :code)]
+                             (cond
+                               (nil? code) field-value
+                               (= field-value code) field-value
+                               :else (str code ":" field-value))))
+                         parsed-value)))
+      (catch Exception _ value))
+    value))
+
+(defn parse-value [question value]
+  (case (:type question)
+    :CASCADE (parse-cascade-and-option value :name)
+    :OPTION (parse-cascade-and-option value :text)
+    value))
+
 (defn feature [question-id questions question-answers instance-data]
   (let [geoshape (-> question-answers
                      (get question-id)
@@ -37,7 +61,7 @@
       (->
         (reduce (fn [feature [id value]]
                   (if (not= id question-id)
-                    (assoc-in feature ["properties" (get questions id)] value)
+                    (assoc-in feature ["properties" (get questions id)] (parse-value (get questions id) value))
                     feature))
                 geoshape
                 question-answers)
@@ -104,6 +128,7 @@
                                     :filter (query/= "surveyId" form-id)})]
     (for [question questions]
       {:id   (-> question .getKey .getId)
+       :type (keyword (.getProperty question "type"))
        :text (.getProperty question "text")})))
 
 (defn export-file [app-id form-id geoshape-question-id]
