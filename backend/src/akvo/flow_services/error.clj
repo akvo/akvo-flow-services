@@ -1,8 +1,9 @@
 (ns akvo.flow-services.error)
 
-(defn fmap [{:keys [::error] :as v} f-error f-ok]
-  (if error (f-error error)
-            (f-ok v)))
+(defn fmap [v f-error f-ok]
+  (if-let [error (get v ::error)]
+    (f-error error)
+    (f-ok v)))
 
 (defn error
   [e]
