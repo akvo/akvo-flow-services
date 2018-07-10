@@ -49,6 +49,7 @@
   :test-selectors {:default (fn [m] (not (or (:integration m) (:kubernetes-test m) (:wip m))))
                    :integration (fn [m] (and (:integration m) (not (:wip m))))
                    :kubernetes-test :kubernetes-test}
+  :monkeypatch-clojure-test false
   :plugins [[lein-ring "0.8.5"]]
   :profiles {:dev  [:project/dev  :profiles/dev]
              :test [:project/test :profiles/test]
