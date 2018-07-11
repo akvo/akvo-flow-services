@@ -8,9 +8,9 @@
 
 (deftest too-many-errors
   (is (= (stats/too-many-errors? [error error])
-         {:level :error
+         {:level   :error
           :message "Too many errors collecting stats"
-          :data [error error]}))
+          :data    [error error]}))
   (is (= (stats/too-many-errors? [error ok ok ok])
          {:level   :error
           :message "Too many errors collecting stats"
@@ -22,8 +22,8 @@
   (is (= (stats/too-many-errors? [ok])
          {:level   :info
           :message "No errors collecting stats"
-          :data ""}))
+          :data    ""}))
   (is (= (stats/too-many-errors? [])
          {:level   :info
           :message "No errors collecting stats"
-          :data ""})))
+          :data    ""})))

@@ -2,7 +2,8 @@
   (:require [clj-http.client :as http]
             [akvo.flow-services.core :as core]
             [aero.core :as aero]
-            [cheshire.core :as json])
+            [cheshire.core :as json]
+            [akvo.commons.config :as config])
   (:import (java.net Socket)))
 
 (def wiremock-url "http://wiremock-proxy:8080")
@@ -63,7 +64,11 @@
   (wait-for-server "wiremock-proxy" 8080))
 
 (defn fixture [f]
-  (core/config-logging (aero/read-config "dev/config.edn"))
+  (let [config (aero/read-config "dev/config.edn")]
+    (core/config-logging config)
+    (when (empty? @config/settings)
+      (reset! config/settings config)
+      (config/set-config! "dev/flow-server-config/")))
   (check-servers-up)
   (reset-wiremock)
   (f))

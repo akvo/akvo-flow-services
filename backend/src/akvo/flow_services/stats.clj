@@ -38,16 +38,19 @@
   (let [host (first (str/split server #"\."))]
     (util/datastore-spec host)))
 
+(def ^:dynamic *total-stats-kind* "__Stat_Total__")
+(def ^:dynamic *stats-kind* "__Stat_Kind__")
+
 (defn get-stats
   "Returns a list of stats for the given instance"
   [server kinds]
   (try
     (gae/with-datastore [ds (datastore-spec server)]
-      (let [qt (Query. "__Stat_Total__")
+      (let [qt (Query. *total-stats-kind*)
             total (.asSingleEntity (.prepare ds qt))
-            stats (if total                                 ;; total can be nil on a new unused instance
+            stats (when total                                 ;; total can be nil on a new unused instance
                     (let [ts (.getProperty total "timestamp")
-                          qk (.setFilter (Query. "__Stat_Kind__")
+                          qk (.setFilter (Query. *stats-kind*)
                                          (gae/get-filter "timestamp" ts))]
                       (.asList (.prepare ds qk) (gae/get-fetch-options))))]
         (filter #(kinds (.getProperty % "kind_name")) stats)))
@@ -70,7 +73,8 @@
       (.mkdirs fstats-path))
     (with-open [out-file (io/writer file)]
       (csv/write-csv out-file
-                     (conj data kinds)))))
+                     (conj data kinds)))
+    file))
 
 (defn get-all-data [server-list kinds]
   (for [server server-list]
@@ -91,11 +95,12 @@
   (let [errors (too-many-errors? all-data)]
     (timbre/log (:level errors) (:message errors) (:data errors))))
 
-(defn- stats-job [{:strs [server-list kinds stats-path]}]
+(defn stats-job [{:strs [server-list kinds stats-path]}]
   (let [all-data (get-all-data server-list kinds)
-        valid-stats (filter e/ok? all-data)]
-    (write-stats (conj (seq kinds) "Instance") valid-stats stats-path)
-    (report-errors all-data)))
+        valid-stats (filter e/ok? all-data)
+        stats-file (write-stats (conj (seq kinds) "Instance") valid-stats stats-path)]
+    (report-errors all-data)
+    stats-file))
 
 (jobs/defjob StatsJob [job-data]
   (stats-job (conversion/from-job-data job-data)))
