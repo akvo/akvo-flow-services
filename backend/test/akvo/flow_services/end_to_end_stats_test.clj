@@ -1,4 +1,5 @@
 (ns akvo.flow-services.end-to-end-stats-test
+  {:integration true}
   (:require [clojure.test :refer :all]
             [akvo.flow-services.stats :as stats]
             [akvo.commons.config :as config]
@@ -46,7 +47,7 @@
 
 (use-fixtures :once test-util/fixture)
 
-(deftest ^:integration happy-path
+(deftest happy-path
   (binding [stats/*total-stats-kind* "Testing_Stats_Total"
             stats/*stats-kind* "Testing_Stat_Kind"]
     (let [user-count (rand-int 100000)
