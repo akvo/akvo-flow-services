@@ -71,6 +71,7 @@
                                                                         {:kind stats/*stats-kind*}))))))))
 
 (deftest ^:integration happy-path
+  (println "suspect this is nil" @config/settings)
   (binding [stats/*total-stats-kind* "Testing_Stats_Total"
             stats/*stats-kind* "Testing_Stat_Kind"]
     (let [user-count (rand-int 100000)
