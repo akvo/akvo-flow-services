@@ -129,7 +129,8 @@
 (defn config-logging [cfg]
   (timbre/handle-uncaught-jvm-exceptions!)
   (timbre/set-level! (log-level cfg))
-  (timbre/merge-config! {:timestamp-opts {:pattern "yyyy-MM-dd HH:mm:ss,SSS"}})
+  (timbre/merge-config! {:timestamp-opts {:pattern "yyyy-MM-dd HH:mm:ss,SSS"}
+                         :output-fn (partial timbre/default-output-fn {:stacktrace-fonts {}})})
   (when-let [akvo-log-level (:akvo-log-level cfg)]
     (when (timbre/level>= (log-level cfg) akvo-log-level)
       (timbre/set-level! akvo-log-level))
@@ -163,4 +164,5 @@
                {:join? false :port (:http-port cfg)})))
 
 (comment
-  (reset! config/settings (aero/read-config "dev/config.edn")))
+  (reset! config/settings (aero/read-config "dev/config.edn"))
+  (config-logging (aero/read-config "dev/config.edn")))
