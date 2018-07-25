@@ -28,7 +28,7 @@
             [me.raynes.fs :as fs]
             [clojure.java.jdbc :refer [db-do-commands create-table-ddl insert! query]]
             [clojure.data.csv :as csv]
-            [clojure.string :as str]
+            [clojure.string :as string]
             [aws.sdk.s3 :as s3]
             [taoensso.timbre :refer [errorf debugf infof]]
             [akvo.flow-services.util :as util]))
@@ -174,11 +174,11 @@
                      (cond
                        (not= (count row) expected-column-count)
                        [(format "Wrong number of columns %s on line %s, Row: %s"
-                                (count row) line (str/join separator row))]
+                                (count row) line (string/join separator row))]
 
                        (some #(-> % .trim .isEmpty) row)
                        [(format "Empty cascade node on line %s. Row: %s"
-                                line (str/join separator row))])))))
+                                line (string/join separator row))])))))
       [(format "File Not Found at %s" (.getAbsolutePath f))])))
 
 (defn create-node
@@ -197,7 +197,7 @@
 (defn- get-path
   [level as]
   (format "%s as %s"
-    (str/join "||'|'||" (for [n (range (inc level))]
+    (string/join "||'|'||" (for [n (range (inc level))]
                           (format "code_%s" n))) as))
 
 (defn- get-limit-offset
@@ -350,7 +350,20 @@
           (.put ds entity))
         (errorf "No CascadeResource found with id: %s" cascade-id)))))
 
-(defn- publish-cascade [uploadUrl cascadeResourceId version]
+(defn validate-nodes-data
+  [nodes]
+  (let [groups (group-by #(str (string/trim (:name %)) (:parent %)) nodes)
+        duplicates (filter (fn [[k v]]
+                             (> (count v) 1)) groups)
+        error-data (for [[k v] duplicates]
+                     (map #(format "[code: %s - name: %s]" (:code %) (:name %)) v))]
+    (if (seq duplicates)
+      [:error (str "Found duplicate name with same parent: "
+                   (string/join ","
+                                (apply concat error-data)))]
+      [:ok "No duplicates found"])))
+
+(defn publish-cascade [uploadUrl cascadeResourceId version]
    (let [bucket (config/get-bucket-name uploadUrl)
         tmp-dir (fs/temp-dir (UUID/randomUUID))
         db-name (format  "cascade-%s-v%s.sqlite" cascadeResourceId version)
@@ -358,6 +371,11 @@
         db (create-db db-spec)]
      (if db
        (when-let [nodes (seq (normalize-ids (get-nodes uploadUrl cascadeResourceId)))]
+
+         (let [[valid? msg] (validate-nodes-data nodes)]
+           (when (= :error valid?)
+             (throw (ex-info "Found duplicate names with same parent" {:message msg}))))
+
          (doseq [n nodes]
            (store-node n db-spec))
          ;; recover this when we have more data on the size of db after vacuum
@@ -380,11 +398,12 @@
                                   "cascadeResourceId" cascadeResourceId
                                   "status" "published"}))
       (catch Exception e
-        (errorf e "Publishing cascade failed - resourceId: %s - version: %s - reason: %s"
-                cascadeResourceId version (.getMessage e))
+        (errorf e "Publishing cascade failed - instance: %s - resourceId: %s - version: %s - reason: %s"
+                domain cascadeResourceId version (.getMessage e))
         (future (notify-gae domain {"action" "cascade"
                                     "cascadeResourceId" cascadeResourceId
-                                    "status" "error"}))))))
+                                    "status" "error"
+                                    "message" (:message (ex-data e))}))))))
 
 (defn csv-column-count
   "Given a file-path, try to deduce the number of columns the csv file contains using a specific separator.
