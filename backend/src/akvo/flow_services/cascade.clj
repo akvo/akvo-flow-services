@@ -31,7 +31,8 @@
             [clojure.string :as str]
             [aws.sdk.s3 :as s3]
             [taoensso.timbre :refer [errorf debugf infof]]
-            [akvo.flow-services.util :as util]))
+            [akvo.flow-services.util :as util]
+            [taoensso.timbre :as log]))
 
 ;; Each node is roughly ~1KB (depending on the code & name values)
 ;; We have a maximum of 1MB per request
@@ -422,7 +423,8 @@
     (or separator \,)))
 
 (jobs/defjob UploadCascadeJob [job-data]
-  (let [{:strs [uploadDomain cascadeResourceId numLevels uniqueIdentifier filename includeCodes]} (conversion/from-job-data job-data)
+  (let [{:strs [uploadDomain cascadeResourceId numLevels uniqueIdentifier filename includeCodes] :as data} (conversion/from-job-data job-data)
+        _ (log/info "Upload cascade job" data)
         levels (Long/parseLong numLevels)
         codes? (Boolean/valueOf includeCodes)
         base (format "%s/%s" (:base-path @config/settings) "uploads")

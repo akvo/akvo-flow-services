@@ -17,7 +17,7 @@
   (:import [org.quartz ObjectAlreadyExistsException]
            java.io.File)
   (:require [clojure.string :as str]
-            [taoensso.timbre :refer (infof warnf)]
+            [taoensso.timbre :refer (infof warnf) :as log]
             [clojurewerkz.quartzite [conversion :as conversion]
              [jobs :as jobs]
              [scheduler :as scheduler]
@@ -145,7 +145,8 @@
   (do-export (conversion/from-job-data job-data)))
 
 (jobs/defjob BulkUploadJob [job-data]
-  (let [{:strs [baseURL uniqueIdentifier filename uploadDomain surveyId id]} (conversion/from-job-data job-data)]
+  (let [{:strs [baseURL uniqueIdentifier filename uploadDomain surveyId id] :as data} (conversion/from-job-data job-data)]
+    (log/info "Bulk upload job:" data)
     (bulk-upload baseURL uniqueIdentifier filename uploadDomain surveyId)
     (scheduler/delete-job (jobs/key id))))
 
