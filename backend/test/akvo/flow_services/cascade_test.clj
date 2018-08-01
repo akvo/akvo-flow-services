@@ -27,3 +27,27 @@
   (is (= ["Empty cascade node on line 2. Row: d, ,f"]
          (cascade/validate-csv cascade-with-empty-nodes 3 \,)))
   (is (not (empty? (cascade/validate-csv "no-such-file" 3 \,)))))
+
+(defn are-invalid [nodes]
+  (let [[result msg] (cascade/validate-nodes-data nodes)]
+    (is (= :error result))
+    (is (true? (.contains msg "Found duplicate name with same parent")))))
+
+(defn are-valid [nodes]
+  (let [[result _] (cascade/validate-nodes-data nodes)]
+    (is (= :ok result))))
+
+(deftest test-validate-nodes
+  (testing "same parent, different names"
+    (let [the-same-parent 0]
+      (are-valid [{:name "name 1" :parent the-same-parent}
+                  {:name "name 2" :parent the-same-parent}])))
+  (testing "same name, different parents"
+    (let [the-same-name "name 1"]
+      (are-valid [{:name the-same-name :parent 0}
+                  {:name the-same-name :parent 1}])))
+  (testing "same name, same parent"
+    (are-invalid [{:name "name 1" :parent 0}
+                 {:name "name 1" :parent 0}])
+    (are-invalid [{:name " name 1" :parent 0}
+                 {:name "name 1 " :parent 0}])))
