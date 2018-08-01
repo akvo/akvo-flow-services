@@ -28,17 +28,26 @@
          (cascade/validate-csv cascade-with-empty-nodes 3 \,)))
   (is (not (empty? (cascade/validate-csv "no-such-file" 3 \,)))))
 
+(defn are-invalid [nodes]
+  (let [[result msg] (cascade/validate-nodes-data nodes)]
+    (is (= :error result))
+    (is (true? (.contains msg "Found duplicate name with same parent")))))
+
+(defn are-valid [nodes]
+  (let [[result _] (cascade/validate-nodes-data nodes)]
+    (is (= :ok result))))
+
 (deftest test-validate-nodes
-  (let [nodes-1 [{:id 1 :code "code-1" :name "name 1" :parent 0}
-                 {:id 2 :code "code-2" :name "name 1" :parent 0}
-                 {:id 3 :code "code-3" :name "name 3" :parent 1}
-                 {:id 4 :code "code-4" :name "name 4" :parent 1}
-                 {:id 5 :code "code-5" :name " name 5" :parent 2}
-                 {:id 6 :code "code-6" :name "name 5  " :parent 2}]
-        nodes-2 [{:id 1 :code "code-1" :name "name 1" :parent 0}
-                 {:id 2 :code "code-2" :name "name 2" :parent 0}]
-        [result-1 msg] (cascade/validate-nodes-data nodes-1)
-        [result-2 _] (cascade/validate-nodes-data nodes-2)]
-    (is (= :error result-1))
-    (is (true? (.contains msg "Found duplicate name with same parent")))
-    (is (= :ok result-2))))
+  (testing "same parent, different names"
+    (let [the-same-parent 0]
+      (are-valid [{:name "name 1" :parent the-same-parent}
+                  {:name "name 2" :parent the-same-parent}])))
+  (testing "same name, different parents"
+    (let [the-same-name "name 1"]
+      (are-valid [{:name the-same-name :parent 0}
+                  {:name the-same-name :parent 1}])))
+  (testing "same name, same parent"
+    (are-invalid [{:name "name 1" :parent 0}
+                 {:name "name 1" :parent 0}])
+    (are-invalid [{:name " name 1" :parent 0}
+                 {:name "name 1 " :parent 0}])))
