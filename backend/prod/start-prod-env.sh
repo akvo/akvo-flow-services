@@ -21,4 +21,4 @@ if [ ! -d "/akvo-flow-server-config/" ]; then
     fi
 fi
 
-java -jar akvo-flow-services.jar /etc/config/akvo-flow-services/config.edn
+java -XX:-OmitStackTraceInFastThrow -jar akvo-flow-services.jar /etc/config/akvo-flow-services/config.edn
