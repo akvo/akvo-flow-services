@@ -38,15 +38,27 @@
                                                                  "response" {"status" 200
                                                                              "body"   "ok"}})}))
 
-(defn email-sent-count [body]
-  (-> (http/post (str wiremock-url "/__admin/requests/count")
-                 {:as   :json
-                  :body (json/generate-string
-                          {"method"       "POST"
-                           "bodyPatterns" [{"matches" (str ".*" body ".*")}]
-                           "urlPath"      "/mailjet/send"})})
-      :body
-      :count))
+(defn mock-flow-report-api []
+  (http/post wiremock-mappings-url
+             {:body (json/generate-string
+                      {"request"  {"method"         "PUT"
+                                   "urlPathPattern" "/rest/reports/'*"}
+                       "response" {"status"   200
+                                   "jsonBody" {}}})}))
+
+(defn text-first-email-sent-to [email]
+  (->> (http/post (str wiremock-url "/__admin/requests/find")
+                  {:as   :json
+                   :body (json/generate-string
+                           {"method"       "POST"
+                            "bodyPatterns" [{"matches" (str ".*" email ".*")}]
+                            "urlPath"      "/mailjet/send"})})
+       :body
+       :requests
+       first
+       :body
+       (#(json/parse-string % true))
+       :Text-part))
 
 (defn reset-wiremock []
   (http/post (str wiremock-mappings-url "/reset")))

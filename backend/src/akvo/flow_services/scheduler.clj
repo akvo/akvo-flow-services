@@ -33,8 +33,6 @@
 (defn flow-report-id [job-data]
   (get-in job-data ["opts" "reportId"]))
 
-(def gdpr-flow? (comp some? flow-report-id))
-
 (defn common-report-fields [{:strs [exportType opts surveyId]}]
   {:formId     surveyId
    :keyId      (get opts "reportId")
@@ -60,11 +58,6 @@
       http-response)
     http-response))
 
-(defn handle-start-report-in-flow [http-response]
-  (-> http-response
-      expect-200
-      (e/if-ok (constantly nil))))
-
 (defn report-full-url [opts report]
   (format "%s/report/%s"
           (get opts "flowServices")
@@ -78,16 +71,8 @@
                   :message (e/user-friendly-message report-result)})]
     (notify-flow-request job-data report)))
 
-(defn notify-report-started-in-flow [job-data]
-  (-> job-data
-      create-report-in-flow
-      (#(util/send-http-json! job-data %))
-      handle-start-report-in-flow
-      e/unwrap-throwing))
-
-(defn notify-report-done-in-flow [job-data report]
-  (-> (finish-report-in-flow job-data report)
-      (#(util/send-http-json! job-data %))
+(defn notify-flow! [job-data http-request]
+  (-> (util/send-http-json! job-data http-request)
       expect-200
       e/unwrap-throwing))
 
@@ -125,21 +110,12 @@
   (email/send-gdpr-report-ready (get opts "email")
                                 (get opts "locale" "en")))
 
-(defn old-email [{:strs [opts]} report]
-  (email/send-report-ready (get opts "email")
-                           (get opts "locale" "en")
-                           (report-full-url opts report)))
-
 (defn do-export [job-data]
-  (if (gdpr-flow? job-data)
-    (let [_ (notify-report-started-in-flow job-data)
-          report (e/wrap-exceptions (run-report job-data))]
-      (notify-report-done-in-flow job-data report)
-      (when (e/ok? report)
-        (gdpr-email job-data)))
-    (let [report (run-report job-data)]
-      (when (e/ok? report)
-        (old-email job-data report)))))
+  (let [_ (notify-flow! job-data (create-report-in-flow job-data))
+        report (e/wrap-exceptions (run-report job-data))]
+    (notify-flow! job-data (finish-report-in-flow job-data report))
+    (when (e/ok? report)
+      (gdpr-email job-data))))
 
 (jobs/defjob ExportJob [job-data]
   (do-export (conversion/from-job-data job-data)))

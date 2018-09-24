@@ -1,14 +1,10 @@
 (ns akvo.flow-services.export-job-test
   (:require [clojure.test :refer [deftest is are testing]]
             [akvo.flow-services.scheduler :as scheduler]
-            [akvo.flow-services.error :as e])
-  (:import (java.io IOException)))
+            [akvo.flow-services.error :as e]))
 
 
-(deftest gdpr?
-  (is (scheduler/gdpr-flow? {"opts" {"reportId" 234234}}))
-  (is (not (scheduler/gdpr-flow? {"opts" {}})))
-  (is (not (scheduler/gdpr-flow? {"opts" {"gdpr" nil}})))
+(deftest export-job
 
   (let [flow-id "some-report-id"]
     (testing "flow notifications"
@@ -28,22 +24,6 @@
                                        :endDate    "9999-01-01"
                                        :formId     "000000000000"
                                        :reportType "GEOSHAPE"}}})))
-
-      (testing "handle create response"
-        (is (= (scheduler/handle-start-report-in-flow {:status 200
-                                                        :body  {:report {:keyId flow-id}}})
-               nil))
-
-        (is (= (scheduler/handle-start-report-in-flow {:status 200
-                                                        :body  nil})
-               nil))
-
-        (is (= (scheduler/handle-start-report-in-flow {:status 500})
-               (e/error {:message "Flow returns error on report creation. HTTP code: 500"})))
-
-        (let [an-exception (IOException. "some error")
-              error (::e/error (scheduler/handle-start-report-in-flow (e/error {:cause an-exception})))]
-          (is (= (:cause error) an-exception))))
 
       (testing "finish request"
         (are [report-result expected-body]
