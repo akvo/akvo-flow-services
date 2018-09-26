@@ -7,7 +7,7 @@
             [akvo.commons.gae :as gae]
             [akvo.commons.gae.query :as query]))
 
-(def any-user "dan@akvo.org")
+(def any-user "any.email@akvo.org")
 
 (defn generate-report [survey-id question-id]
   (some->> (http/get (str test-util/flow-services-url "/generate")

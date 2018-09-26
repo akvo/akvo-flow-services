@@ -22,7 +22,7 @@
                                                   "exportType" "DATA_CLEANING"
                                                   "surveyId"   (str survey-id)
                                                   "id"         "asdf"
-                                                  "opts"       (merge {"email"          "dan@akvo.org"
+                                                  "opts"       (merge {"email"          "any.email@akvo.org"
                                                                        "lastCollection" "false"
                                                                        "uploadUrl"      "https://akvoflowsandbox.s3.amazonaws.com"
                                                                        "exportMode"     "DATA_CLEANING"
