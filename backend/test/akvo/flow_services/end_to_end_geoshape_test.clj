@@ -7,6 +7,8 @@
             [akvo.commons.gae :as gae]
             [akvo.commons.gae.query :as query]))
 
+(def any-user "any.email@akvo.org")
+
 (defn generate-report [survey-id question-id]
   (some->> (http/get (str test-util/flow-services-url "/generate")
                      {:query-params {:callback "somejson"
@@ -15,7 +17,7 @@
                                                   "exportType" "GEOSHAPE"
                                                   "surveyId"   (str survey-id)
                                                   "id"         "asdfxxxxx"
-                                                  "opts"       {"email"          "dan@akvo.org"
+                                                  "opts"       {"email"          any-user
                                                                 "lastCollection" "false"
                                                                 "imgPrefix"      "https://akvoflowsandbox.s3.amazonaws.com/images/",
                                                                 "uploadUrl"      "https://akvoflowsandbox.s3.amazonaws.com/",
@@ -69,6 +71,7 @@
                                                                            :filter (query/= "surveyId" survey-id)})))))))
     (mock-gae survey-id survey-instance-id)
     (test-util/mock-mailjet)
+    (test-util/mock-flow-report-api)
     (test-util/try-for "Processing for too long" 20
                        (not= {"status" "OK", "message" "PROCESSING"}
                              (generate-report survey-id (:geo-question question-ids))))
@@ -76,7 +79,7 @@
       (is (= "OK" (get report-result "status")))
 
       (test-util/try-for "email not sent" 5
-                         (= 1 (test-util/email-sent-count (get report-result "file"))))
+                         (test-util/text-first-email-sent-to any-user))
 
       (is (= 200 (:status (test-util/get-report report-result))))
       (let [report (json/parse-string (:body (test-util/get-report report-result)) true)]
