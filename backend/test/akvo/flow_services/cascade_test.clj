@@ -46,6 +46,9 @@
     (let [the-same-name "name 1"]
       (are-valid [{:name the-same-name :parent 0}
                   {:name the-same-name :parent 1}])))
+  (testing "different names and parents, but concatenation results in same"
+    (are-valid [{:name "1" :parent 21}
+                {:name "12" :parent 1}]))
   (testing "same name, same parent"
     (are-invalid [{:name "name 1" :parent 0}
                  {:name "name 1" :parent 0}])
