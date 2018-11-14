@@ -353,11 +353,11 @@
 
 (defn validate-nodes-data
   [nodes]
-  (let [groups (group-by #(str (string/trim (:name %)) (:parent %)) nodes)
+  (let [groups (group-by #(vector (string/trim (:name %)) (:parent %)) nodes)
         duplicates (filter (fn [[k v]]
                              (> (count v) 1)) groups)
         error-data (for [[k v] duplicates]
-                     (map #(format "[code: %s - name: %s]" (:code %) (:name %)) v))]
+                     (map #(format "[parent: %s - code: %s - name: %s]" (:parent %) (:code %) (:name %)) v))]
     (if (seq duplicates)
       [:error (str "Found duplicate name with same parent: "
                    (string/join ","
