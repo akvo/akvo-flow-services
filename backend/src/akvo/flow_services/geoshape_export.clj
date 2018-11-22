@@ -55,9 +55,14 @@
                      (get question-id)
                      json/parse-string
                      (get "features")
-                     first)]
-    (when (and (= "Polygon" (get-in geoshape ["geometry" "type"]))
-               (every? #(> (count %) 2) (get-in geoshape ["geometry" "coordinates"])))
+                     first)
+        geometry-type (get-in geoshape ["geometry" "type"])
+        valid-polygon (and
+                        (= "Polygon" geometry-type)
+                        (every? #(> (count %) 2) (get-in geoshape ["geometry" "coordinates"])))]
+    (when (or
+            (#{"MultiPoint" "LineString"} geometry-type)
+            valid-polygon)
       (->
         (reduce (fn [feature [id value]]
                   (if (not= id question-id)
