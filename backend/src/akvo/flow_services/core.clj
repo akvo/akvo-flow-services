@@ -121,7 +121,7 @@
   (quartzite-scheduler/initialize)
   (quartzite-scheduler/start))
 
-(defonce nrepl-srv (atom nil))
+(defonce system (atom nil))
 
 (defn log-level [cfg]
   (:log-level cfg :info))
@@ -149,20 +149,31 @@
                                                                                              (assoc event :server_name host))})
                                                      (assoc :min-level :error))}}))))
 
+(defn wrap-content-disposition [handler]
+  (fn [req]
+    (if-let [res (handler req)]
+      (ring.util.response/header
+        res
+        "Content-Disposition" "attachment"))))
+
 (defn -main [config-file]
   (when-let [cfg (reset! config/settings (aero/read-config config-file))]
     (config-logging cfg)
     (config/reload (:config-folder cfg))
     (init)
     (stats/schedule-stats-job (:stats-schedule-time cfg))
-    (reset! nrepl-srv (nrepl/start-server :port 7888 :bind (:nrepl-bind cfg "localhost")))
-    (run-jetty (handler/site (routes
-                               ;; This route is using the config, so we need to create it after the
-                               ;; config has been loaded
-                               (route/files "/report/" {:root (exporter/get-report-directory)})
-                               #'endpoints))
-               {:join? false :port (:http-port cfg)})))
+    (reset! system {:nrepl (nrepl/start-server :port 7888 :bind (:nrepl-bind cfg "localhost"))
+                    :jetty (run-jetty (handler/site (routes
+                                                      ;; This route is using the config, so we need to create it after the
+                                                      ;; config has been loaded
+                                                      (wrap-content-disposition
+                                                        (route/files "/report/" {:root (exporter/get-report-directory)
+                                                                                 :mime-types {"xlsx" "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"}}))
+                                                      #'endpoints))
+                             {:join? false :port (:http-port cfg)})})))
 
 (comment
   (reset! config/settings (aero/read-config "dev/config.edn"))
-  (config-logging (aero/read-config "dev/config.edn")))
+  (config-logging (aero/read-config "dev/config.edn"))
+
+  (.stop (:jetty @system)))

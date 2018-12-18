@@ -208,6 +208,7 @@
       (is (not (str/includes? (test-util/text-first-email-sent-to user) (get report-result "file"))))
 
       (is (= 200 (:status (test-util/get-report report-result))))
+      (test-util/check-report-file-headers report-result "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
       (is (= ["IN_PROGRESS" "FINISHED_SUCCESS"] (final-report-state-in-flow flow-report-id))))))
 
 (deftest error-in-report-generation
