@@ -184,10 +184,9 @@
 
 (deftest export-invalid-data
 
-         (invalid {:value (assoc-in valid-polygon [:features 0 :geometry :type] "Other than Polygon")})
+  (invalid {:value (assoc-in valid-polygon [:features 0 :geometry :type] "Other than Polygon")})
   (invalid {:value (assoc-in valid-polygon [:features 0 :geometry :coordinates 1] line-coordinates)})
-  (invalid {:question-id (inc geo-question-id)})
-  (invalid {:iteration 1}))
+  (invalid {:question-id (inc geo-question-id)}))
 
 (deftest parsing-value
          (it/fact "Does not touch question types other than cascade or option"
