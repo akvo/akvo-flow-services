@@ -40,7 +40,7 @@
                                (nil? code) field-value
                                (= field-value code) field-value
                                :else (str code ":" field-value))))
-                         parsed-value)))
+                      parsed-value)))
       (catch Exception _ value))
     value))
 
@@ -50,7 +50,7 @@
     :OPTION (parse-cascade-and-option value :text)
     value))
 
-(defn feature [question-id questions question-answers instance-data]
+(defn feature [question-id questions question-answers other-data]
   (let [geoshape (-> question-answers
                      (get question-id)
                      json/parse-string
@@ -70,7 +70,7 @@
                     feature))
                 geoshape
                 question-answers)
-        (update "properties" merge instance-data)))))
+        (update "properties" merge other-data)))))
 
 (defn sanitize [s]
   (or
@@ -102,11 +102,14 @@
 
 ;; question-id: the geoshape question id
 ;; quesions:    map from question id -> question text
-;; responses:   map from instance-id -> question-id -> response text
+;; responses:   map from instance-id -> iteration -> question-id -> response text
 ;; instance-data: map from instance-id -> survey-instance-data
 (defn build-features [question-id questions responses instance-data]
-  (for [[instance-id question-answers] responses]
-    (feature question-id questions question-answers (format-instance-data (get instance-data instance-id)))))
+  (for [[instance-id iteration-answers] responses
+        [iteration-number question-answers] (sort iteration-answers)]
+    (feature question-id questions question-answers (assoc
+                                                      (format-instance-data (get instance-data instance-id))
+                                                      "Repeat No" (inc iteration-number)))))
 
 (defn build-feature-collection* [form-id geoshape-question-id questions responses instance-data]
   {:type       "FeatureCollection"
@@ -157,9 +160,7 @@
           coll))
 
 (def key-questions (partial key-by (juxt :id) :text))
-(def key-responses (comp
-                     (partial key-by (juxt :instance-id :question-id) :value)
-                     (partial filter (comp zero? :iteration))))
+(def key-responses (partial key-by (juxt :instance-id :iteration :question-id) :value))
 
 (def key-instance-data (partial key-by (juxt :keyId) identity))
 
