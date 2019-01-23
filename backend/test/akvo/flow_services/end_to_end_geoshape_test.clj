@@ -82,6 +82,7 @@
                          (test-util/text-first-email-sent-to any-user))
 
       (is (= 200 (:status (test-util/get-report report-result))))
+      (test-util/check-report-file-headers report-result "application/json")
       (let [report (json/parse-string (:body (test-util/get-report report-result)) true)]
         (is (= coords (get-in report [:features 0 :geometry :coordinates 0])))
         (is (= "the other question response" (get-in report [:features 0 :properties :AnotherQuestion])))
