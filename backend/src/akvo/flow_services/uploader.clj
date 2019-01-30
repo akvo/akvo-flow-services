@@ -14,7 +14,8 @@
 
 (ns akvo.flow-services.uploader
   (:import java.io.File
-           org.waterforpeople.mapping.dataexport.RawDataSpreadsheetImporter)
+           org.waterforpeople.mapping.dataexport.RawDataSpreadsheetImporter
+           java.util.zip.ZipFile)
   (:require [clojure.java.io :as io]
             [clojure.string :as str]
             [clojure.set :as set]
