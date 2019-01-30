@@ -14,11 +14,7 @@
 
 (ns akvo.flow-services.uploader
   (:import java.io.File
-           org.waterforpeople.mapping.dataexport.RawDataSpreadsheetImporter
-           java.util.zip.ZipFile
-           java.net.URLEncoder
-           [org.apache.poi.ss.usermodel Cell Row Sheet]
-           [com.google.appengine.api.datastore Entity Query])
+           org.waterforpeople.mapping.dataexport.RawDataSpreadsheetImporter)
   (:require [clojure.java.io :as io]
             [clojure.string :as str]
             [clojure.set :as set]
@@ -79,12 +75,6 @@
     (if-not (.exists ^File dest)
       (.mkdirs dest))
     (fsc/unzip source dest)))
-
-(defn- get-upload-type [^File path]
-  (if (and (.isFile path)
-           (.endsWith (str/upper-case (.getName path)) "XLSX"))
-    "RAW_DATA"
-    "BULK_SURVEY"))
 
 (defn- get-key
   [f]
