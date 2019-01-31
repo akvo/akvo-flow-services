@@ -70,9 +70,12 @@
   (doseq [file (get-parts path)]
     (fs/delete file)))
 
+(defn- source-file [directory filename]
+  (io/file (format "%s/%s" directory filename)))
+
 (defn- unzip-file [directory filename]
   (let [dest (io/file (format "%s/%s" directory "zip-content"))
-        source (io/file (format "%s/%s" directory filename))]
+        source (source-file directory filename)]
     (if-not (.exists ^File dest)
       (.mkdirs dest))
     (fsc/unzip source dest)))
@@ -209,26 +212,33 @@
       (infof "Successfully notified %s" server)
       (errorf "Failed to notify %s after %s attempts" server max-retries))))
 
-(defn- bulk-survey
-  [path bucket-name filename]
-  (infof "Bulk upload - path: %s - bucket: %s - file: %s" path bucket-name filename)
-  (let [files (group-by get-format (get-zip-files path))
+(defn calc-bulk-survey
+  [path filename]
+  (let [unzipped-dir (unzip-file path filename)
+        files (group-by get-format (or
+                                     (seq (get-zip-files unzipped-dir))
+                                     [(source-file path filename)]))
         tsv-data (group-by #(nth (str/split % #"\t") 11) ;; 12th column contains the UUID
-                           (remove nil? (distinct (mapcat get-data (:tsv files)))))
+                           (remove nil? (distinct (mapcat get-data (:tsv files)))))]
+    {:upload-and-notify (concat
+                          (:json files)
+                          (for [k (keys tsv-data)
+                                :let [fname (format "/tmp/%s.zip" k)
+                                      fzip (io/file fname)]]
+                            (fsc/zip fzip ["data.txt" (str/join "\n" (tsv-data k))])))
+     :just-upload (get-images unzipped-dir)}))
+
+(defn- bulk-survey
+  [path filename bucket-name]
+  (infof "Bulk upload - path: %s - bucket: %s - file: %s" path bucket-name filename)
+  (let [{:keys [upload-and-notify just-upload]} (calc-bulk-survey path filename)
         server (:domain (config/find-config bucket-name))]
-    (doseq [file (:json files)]
+    (doseq [file upload-and-notify]
       (upload file bucket-name)
       (future (notify-gae server {"action" "submit" "fileName" (.getName file)})))
-    (doseq [k (keys tsv-data)
-            :let [fname (format "/tmp/%s.zip" k)
-                  fzip (io/file fname)]]
-      (fsc/zip fzip ["data.txt" (str/join "\n" (tsv-data k))])
-      (upload fzip bucket-name)
-      (future (notify-gae server {"action" "submit" "fileName" (.getName fzip)})))
-    (doseq [f (get-images path)]
-      (upload f bucket-name))
+    (doseq [file just-upload]
+      (upload file bucket-name))
     (add-message bucket-name "bulkUpload" nil (format "File: %s processed" filename))))
-
 
 (defn bulk-upload
   "Combines the parts, extracts and uploads the content of a zip file"
@@ -239,6 +249,6 @@
     (combine path filename)
     (cleanup path)
     (cond
-      (.endsWith uname "ZIP") (bulk-survey (unzip-file path filename) bucket-name filename) ; Extract and upload
+      (.endsWith uname "ZIP") (bulk-survey path filename bucket-name) ; Extract and upload
       (.endsWith uname "XLSX") (raw-data (io/file path filename) base-url bucket-name surveyId) ; Upload raw data
       :else (upload (io/file path) bucket-name))))
