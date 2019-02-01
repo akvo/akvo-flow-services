@@ -58,11 +58,11 @@ sed -e "s/\$TRAVIS_COMMIT/$TRAVIS_COMMIT/" \
   -e "s/\${POD_MEM_REQUESTS}/${POD_MEM_REQUESTS}/" \
   -e "s/\${POD_CPU_LIMITS}/${POD_CPU_LIMITS}/" \
   -e "s/\${POD_MEM_LIMITS}/${POD_MEM_LIMITS}/" \
-  ci/test/akvo-flow-services.yaml.template > akvo-flow-services.yaml
+  ci/akvo-flow-services.yaml.template > akvo-flow-services.yaml
 
 kubectl apply -f akvo-flow-services.yaml
 
-ci/test/wait-for-k8s-deployment-to-be-ready.sh
+ci/wait-for-k8s-deployment-to-be-ready.sh
 
 #docker-compose -p akvo-flow-ci -f docker-compose.yml -f docker-compose.ci.yml run --no-deps tests /import-and-run.sh kubernetes-test
 
