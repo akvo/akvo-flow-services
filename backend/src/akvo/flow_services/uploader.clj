@@ -212,33 +212,42 @@
       (infof "Successfully notified %s" server)
       (errorf "Failed to notify %s after %s attempts" server max-retries))))
 
+(defn- tsv-data [files]
+  (let [tsv-data (group-by #(nth (str/split % #"\t") 11)    ;; 12th column contains the UUID
+                   (remove nil? (distinct (mapcat get-data (:tsv files)))))]
+    (for [k (keys tsv-data)
+          :let [fname (format "/tmp/%s.zip" k)
+                fzip (io/file fname)]]
+      (fsc/zip fzip ["data.txt" (str/join "\n" (tsv-data k))]))))
+
 (defn calc-bulk-survey
   [path filename]
   (let [unzipped-dir (unzip-file path filename)
         files (group-by get-format (or
                                      (seq (get-zip-files unzipped-dir))
                                      [(source-file path filename)]))
-        tsv-data (group-by #(nth (str/split % #"\t") 11) ;; 12th column contains the UUID
-                           (remove nil? (distinct (mapcat get-data (:tsv files)))))]
-    {:upload-and-notify (concat
-                          (:json files)
-                          (for [k (keys tsv-data)
-                                :let [fname (format "/tmp/%s.zip" k)
-                                      fzip (io/file fname)]]
-                            (fsc/zip fzip ["data.txt" (str/join "\n" (tsv-data k))])))
-     :just-upload (get-images unzipped-dir)}))
+        files-to-upload {:upload-and-notify (concat
+                                              (:json files)
+                                              (tsv-data files))
+                         :just-upload (get-images unzipped-dir)}]
+    (assoc files-to-upload
+      :user-message (if (seq (:upload-and-notify files-to-upload))
+                     (format "File: %s processed. Uploaded %d data files and %d images." filename
+                       (count (:upload-and-notify files-to-upload))
+                       (count (:just-upload files-to-upload)))
+                     (format "File: %s processed, but no data found. Please check file." filename)))))
 
 (defn- bulk-survey
   [path filename bucket-name]
   (infof "Bulk upload - path: %s - bucket: %s - file: %s" path bucket-name filename)
-  (let [{:keys [upload-and-notify just-upload]} (calc-bulk-survey path filename)
+  (let [{:keys [upload-and-notify just-upload user-message]} (calc-bulk-survey path filename)
         server (:domain (config/find-config bucket-name))]
     (doseq [file upload-and-notify]
       (upload file bucket-name)
       (future (notify-gae server {"action" "submit" "fileName" (.getName file)})))
     (doseq [file just-upload]
       (upload file bucket-name))
-    (add-message bucket-name "bulkUpload" nil (format "File: %s processed" filename))))
+    (add-message bucket-name "bulkUpload" nil user-message)))
 
 (defn bulk-upload
   "Combines the parts, extracts and uploads the content of a zip file"
