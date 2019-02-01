@@ -80,6 +80,54 @@
                                         "Display Name" "vudhxhx"
                                         "Identifier" "381t-1vk2-2ph7"}}]})))
 
+(deftest repeated-group
+         (let [instance-id 3
+               responses [{:value "one"
+                           :iteration 0
+                           :instance-id instance-id
+                           :question-id 1}
+                          {:value "two"
+                           :iteration 1
+                           :instance-id instance-id
+                           :question-id 1}
+                          {:value (json/generate-string valid-polygon)
+                           :iteration 0
+                           :instance-id instance-id
+                           :question-id geo-question-id}
+                          {:value (json/generate-string {:type "FeatureCollection",
+                                                         :features [{:type "Feature",
+                                                                     :geometry {:type "MultiPoint", :coordinates [[-1.8617066 2.9536206]]},
+                                                                     :properties {:pointCount "1"}}]})
+                           :iteration 1
+                           :instance-id instance-id
+                           :question-id geo-question-id}]
+               instance-data [{:keyId instance-id}]
+               export-result (geoshape-export/build-feature-collection "any"
+                               geo-question-id
+                               questions
+                               responses
+                               (constantly instance-data))]
+
+           (it/fact "both iterations exist"
+             export-result
+             =in=>
+             {:features [{"geometry" {"type" "Polygon"}
+                          "properties" {"Repeat No" 1}}
+                         {"geometry" {"type" "MultiPoint"}
+                          "properties" {"Repeat No" 2}}]})
+
+           (it/fact "each one with its own responses"
+             export-result
+             =in=>
+             {:features [{"properties" {"question 1" "one"}}
+                         {"properties" {"question 1" "two"}}]})
+
+           (it/fact "and the instance data is the same"
+             export-result
+             =in=>
+             {:features [{"properties" {"Instance" (str instance-id)}}
+                         {"properties" {"Instance" (str instance-id)}}]})))
+
 (deftest export-other-geoshapes
          (let [export (fn [response-value]
                         (let [instance-id 3
@@ -110,7 +158,7 @@
                                         "length" "182.15"}
                           "type" "Feature"}]})
 
-           (it/fact "MultiPoing geoshapes"
+           (it/fact "MultiPoint geoshapes"
              (export {:type "FeatureCollection",
                       :features [{:type "Feature",
                                   :geometry {:type "MultiPoint", :coordinates [[-1.8617066 2.9536206]]},
@@ -136,10 +184,9 @@
 
 (deftest export-invalid-data
 
-         (invalid {:value (assoc-in valid-polygon [:features 0 :geometry :type] "Other than Polygon")})
+  (invalid {:value (assoc-in valid-polygon [:features 0 :geometry :type] "Other than Polygon")})
   (invalid {:value (assoc-in valid-polygon [:features 0 :geometry :coordinates 1] line-coordinates)})
-  (invalid {:question-id (inc geo-question-id)})
-  (invalid {:iteration 1}))
+  (invalid {:question-id (inc geo-question-id)}))
 
 (deftest parsing-value
          (it/fact "Does not touch question types other than cascade or option"
