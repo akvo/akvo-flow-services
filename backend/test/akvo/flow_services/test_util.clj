@@ -3,6 +3,7 @@
             [akvo.flow-services.core :as core]
             [aero.core :as aero]
             [cheshire.core :as json]
+            [clojure.test :as clj-test]
             [akvo.commons.config :as config])
   (:import (java.net Socket)))
 
@@ -104,3 +105,8 @@
                            "latestApprovalStatus" ""
                            "resultCount"          0
                            "offset"               0}}})
+
+(defn check-report-file-headers [report-result expected-content-type]
+  (let [headers (:headers (get-report report-result))]
+    (clj-test/is (= expected-content-type (get headers "Content-Type")))
+    (clj-test/is (= "attachment" (get headers "Content-Disposition")))))
