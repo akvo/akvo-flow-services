@@ -24,7 +24,7 @@
                                                   "id"         "asdf"
                                                   "opts"       (merge {"email"          "any.email@akvo.org"
                                                                        "lastCollection" "false"
-                                                                       "uploadUrl"      "https://akvoflowsandbox.s3.amazonaws.com"
+                                                                       "uploadUrl"      "https://akvoflowsandbox.s3.amazonaws.com/"
                                                                        "uploadDir"      "surveys"
                                                                        "exportMode"     "DATA_CLEANING"
                                                                        "from"           "2013-03-06"
