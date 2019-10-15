@@ -21,6 +21,7 @@
                                                                 "lastCollection" "false"
                                                                 "imgPrefix"      "https://akvoflowsandbox.s3.amazonaws.com/images/",
                                                                 "uploadUrl"      "https://akvoflowsandbox.s3.amazonaws.com/",
+                                                                "uploadDir"      "surveys"
                                                                 "exportMode"     "GEOSHAPE"
                                                                 "questionId"     question-id
                                                                 "flowServices"   test-util/flow-services-url

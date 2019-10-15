@@ -25,6 +25,7 @@
                                                   "opts"       (merge {"email"          "any.email@akvo.org"
                                                                        "lastCollection" "false"
                                                                        "uploadUrl"      "https://akvoflowsandbox.s3.amazonaws.com"
+                                                                       "uploadDir"      "surveys"
                                                                        "exportMode"     "DATA_CLEANING"
                                                                        "from"           "2013-03-06"
                                                                        "to"             "2018-03-09"
