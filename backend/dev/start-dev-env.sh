@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-set -e
+set -eu
 
 if [ ! -d "/akvo-flow-server-config/" ]; then
     echo "Creating fake git repo with Flow config"
@@ -15,4 +15,8 @@ if [ ! -d "/akvo-flow-server-config/" ]; then
     popd > /dev/null
 fi
 
-lein run dev/config.edn
+if [[ -f "/root/.lein/profiles.clj" ]]; then
+    lein repl :headless
+else
+    lein run dev/config.edn
+fi

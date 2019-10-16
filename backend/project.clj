@@ -6,8 +6,9 @@
   :min-lein-version "2.0.0"
   :dependencies [[org.clojure/clojure "1.9.0"]
                  [org.clojure/data.csv "0.1.3"]
-                 [org.clojure/tools.nrepl "0.2.12"]
-                 [org.akvo/commons "0.4.6" :exclusions [me.raynes/fs]]
+                 [nrepl/nrepl "0.6.0"]
+                 [org.akvo/commons "0.4.6" :exclusions [me.raynes/fs
+                                                        org.clojure/tools.nrepl]]
                  [com.taoensso/timbre "4.10.0"]
                  [timbre-ns-pattern-level "0.1.2"]
                  [cheshire "5.3.1"]
@@ -33,7 +34,15 @@
                  [com.google.gdata/core "1.47.1"]
                  [org.xerial/sqlite-jdbc "3.7.2"]
                  ; Akvo FLOW dependencies
-                 [org.akvo.flow/akvo-flow "v1.9.49-211-g94e20820" :classifier "classes"]
+                 [org.akvo.flow/akvo-flow "v1.9.49-211-g94e20820" :classifier "classes"
+                  :exclusions [log4j
+                               commons-logging
+                               commons-codec
+                               commons-io
+                               com.fasterxml.jackson.core/jackson-core
+                               com.fasterxml.jackson.core/jackson-databind
+                               com.fasterxml.jackson.core/jackson-annotations
+                               com.fasterxml.jackson.dataformat/jackson-dataformat-xml]]
                  [org.json/json "20090211"]
                  [org.codehaus.jackson/jackson-mapper-asl "1.9.13"]
                  ; Configuration and Stats
@@ -57,5 +66,9 @@
              :profiles/dev  {}
              :profiles/test {}
              :project/dev   {:dependencies [[metosin/testit "0.2.0"]
-                                            [org.clojure/test.check "0.9.0"]]}
+                                            [org.clojure/test.check "0.9.0"]]
+                             :repl-options {:host "0.0.0.0"
+                                            :port 4010
+                                            :init-ns akvo.flow-services.core
+                                            :init (-main "dev/config.edn")}}
              :project/test  {}})

@@ -11,7 +11,7 @@ services:
     image: akvo-flow-services-dev:develop
     network_mode: service:mainnetwork
     environment:
-     - LOG_LEVEL=info
+      - LOG_LEVEL=info
     volumes:
       - ./backend:/app
       - ~/.m2:/root/.m2
