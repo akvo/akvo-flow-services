@@ -1,20 +1,20 @@
 version: "3"
 services:
- mainnetwork:
+  mainnetwork:
     image: alpine
     command: tail -f /dev/null
- gae-dev-server:
-   build: gae-dev-server
-   network_mode: service:mainnetwork
-   volumes:
-     - ~/.m2:/opt/m2/
- flow-services:
-   network_mode: service:mainnetwork
-   environment:
-     - HOST_UID
-     - HOST_GID
-     - EMAIL_PASSWORD=anything
-     - EMAIL_USER=anything.else
-     - APP_VERSION=some.version
- wiremock-proxy:
-   image: rodolpheche/wiremock:2.16.0-alpine
+  gae-dev-server:
+    build: gae-dev-server
+    network_mode: service:mainnetwork
+    volumes:
+      - ~/.m2:/opt/m2/
+  flow-services:
+    network_mode: service:mainnetwork
+    environment:
+      - HOST_UID
+      - HOST_GID
+      - EMAIL_PASSWORD=anything
+      - EMAIL_USER=anything.else
+      - APP_VERSION=some.version
+  wiremock-proxy:
+    image: rodolpheche/wiremock:2.16.0-alpine
