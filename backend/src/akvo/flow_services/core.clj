@@ -26,7 +26,7 @@
              [cascade :as cascade]
              [stats :as stats]
              [exporter :as exporter]]
-            [clojure.tools.nrepl.server :as nrepl]
+            [nrepl.server :as nrepl]
             [taoensso.timbre :as timbre]
             [taoensso.timbre.appenders.3rd-party.sentry :as sentry]
             timbre-ns-pattern-level)
