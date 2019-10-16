@@ -35,14 +35,14 @@
                  [org.xerial/sqlite-jdbc "3.7.2"]
                  ; Akvo FLOW dependencies
                  [org.akvo.flow/akvo-flow "v1.9.49-211-g94e20820" :classifier "classes"
-                  :exclussions [log4j
-                                commons-logging
-                                commons-codec
-                                commons-io
-                                com.fasterxml.jackson.core/jackson-core
-                                com.fasterxml.jackson.core/jackson-databind
-                                com.fasterxml.jackson.core/jackson-annotations
-                                com.fasterxml.jackson.dataformat/jackson-dataformat-xml]]
+                  :exclusions [log4j
+                               commons-logging
+                               commons-codec
+                               commons-io
+                               com.fasterxml.jackson.core/jackson-core
+                               com.fasterxml.jackson.core/jackson-databind
+                               com.fasterxml.jackson.core/jackson-annotations
+                               com.fasterxml.jackson.dataformat/jackson-dataformat-xml]]
                  [org.json/json "20090211"]
                  [org.codehaus.jackson/jackson-mapper-asl "1.9.13"]
                  ; Configuration and Stats
