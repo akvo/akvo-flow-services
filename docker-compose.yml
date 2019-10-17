@@ -18,3 +18,11 @@ services:
       - APP_VERSION=some.version
   wiremock-proxy:
     image: rodolpheche/wiremock:2.16.0-alpine
+  aws-s3:
+    image: abhin4v/hastatic:1.0.0
+    environment:
+      - PORT=3005
+    command: /usr/bin/hastatic
+    working_dir: /s3
+    volumes:
+      - ./s3:/s3:ro

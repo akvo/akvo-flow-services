@@ -24,7 +24,7 @@
                                                   "id"         "asdf"
                                                   "opts"       (merge {"email"          "any.email@akvo.org"
                                                                        "lastCollection" "false"
-                                                                       "uploadUrl"      "https://akvoflowsandbox.s3.amazonaws.com/"
+                                                                       "uploadUrl"      "http://aws-s3:3005/"
                                                                        "uploadDir"      "surveys"
                                                                        "exportMode"     "DATA_CLEANING"
                                                                        "from"           "2013-03-06"
@@ -189,7 +189,7 @@
        (map (comp :state :report #(json/parse-string % true) :body))))
 
 (deftest report-generation
-  (let [survey-id (System/currentTimeMillis)
+  (let [survey-id 43993002
         flow-report-id (str "the-flow-id-" survey-id)
         user (str survey-id "@akvo.org")
         opts {"reportId" flow-report-id
@@ -213,7 +213,7 @@
       (is (= ["IN_PROGRESS" "FINISHED_SUCCESS"] (final-report-state-in-flow flow-report-id))))))
 
 (deftest error-in-report-generation
-  (let [survey-id (System/currentTimeMillis)
+  (let [survey-id 43993002
         current-errors (sentry-alerts-count)]
     (test-util/mock-flow-report-api)
     (http/post test-util/wiremock-mappings-url {:body (json/generate-string {"request"  {"method"          "GET"

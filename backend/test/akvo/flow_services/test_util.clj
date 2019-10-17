@@ -43,7 +43,7 @@
   (http/post wiremock-mappings-url
              {:body (json/generate-string
                       {"request"  {"method"         "PUT"
-                                   "urlPathPattern" "/rest/reports/'*"}
+                                   "urlPathPattern" "/rest/reports/*"}
                        "response" {"status"   200
                                    "jsonBody" {}}})}))
 
