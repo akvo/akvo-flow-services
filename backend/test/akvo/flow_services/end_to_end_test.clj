@@ -38,6 +38,11 @@
            second
            json/parse-string))
 
+(defn invalidate-cache [survey-id]
+  (http/post (str test-util/flow-services-url "/invalidate")
+             {:form-params {:criteria (json/generate-string {"baseURL" test-util/wiremock-url
+                                                             "surveyIds" [survey-id]})}}))
+
 (defn survey-rest-api [action survey-id dto-list]
   {"request"  {"method"          "GET"
                "urlPath"         "/surveyrestapi"
@@ -194,6 +199,7 @@
         user (str survey-id "@akvo.org")
         opts {"reportId" flow-report-id
               "email"    user}]
+    (invalidate-cache survey-id)
     (mock-flow-report-api flow-report-id)
     (mock-gae survey-id)
     (test-util/mock-mailjet)
@@ -215,6 +221,7 @@
 (deftest error-in-report-generation
   (let [survey-id 43993002
         current-errors (sentry-alerts-count)]
+    (invalidate-cache survey-id)
     (test-util/mock-flow-report-api)
     (http/post test-util/wiremock-mappings-url {:body (json/generate-string {"request"  {"method"          "GET"
                                                                                          "urlPath"         "/surveyrestapi"
