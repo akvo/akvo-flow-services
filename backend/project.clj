@@ -11,7 +11,7 @@
                                                         org.clojure/tools.nrepl]]
                  [com.taoensso/timbre "4.10.0"]
                  [timbre-ns-pattern-level "0.1.2"]
-                 [cheshire "5.3.1"]
+                 [cheshire "5.9.0"]
                  [compojure "1.1.8"]
                  [clojurewerkz/quartzite "1.3.0"]
                  [ring/ring-core "1.3.1"]
@@ -34,15 +34,7 @@
                  [com.google.gdata/core "1.47.1"]
                  [org.xerial/sqlite-jdbc "3.7.2"]
                  ; Akvo FLOW dependencies
-                 [org.akvo.flow/akvo-flow "v1.9.49-211-g94e20820" :classifier "classes"
-                  :exclusions [log4j
-                               commons-logging
-                               commons-codec
-                               commons-io
-                               com.fasterxml.jackson.core/jackson-core
-                               com.fasterxml.jackson.core/jackson-databind
-                               com.fasterxml.jackson.core/jackson-annotations
-                               com.fasterxml.jackson.dataformat/jackson-dataformat-xml]]
+                 [org.akvo.flow/akvo-flow "v1.10-6-gcc192104" :classifier "classes"]
                  [org.json/json "20090211"]
                  [org.codehaus.jackson/jackson-mapper-asl "1.9.13"]
                  ; Configuration and Stats

@@ -24,7 +24,7 @@
                                                   "id"         "asdf"
                                                   "opts"       (merge {"email"          "any.email@akvo.org"
                                                                        "lastCollection" "false"
-                                                                       "uploadUrl"      "https://akvoflowsandbox.s3.amazonaws.com/"
+                                                                       "uploadUrl"      "http://aws-s3:3005/"
                                                                        "uploadDir"      "surveys"
                                                                        "exportMode"     "DATA_CLEANING"
                                                                        "from"           "2013-03-06"
@@ -37,6 +37,11 @@
            first
            second
            json/parse-string))
+
+(defn invalidate-cache [survey-id]
+  (http/post (str test-util/flow-services-url "/invalidate")
+             {:form-params {:criteria (json/generate-string {"baseURL" test-util/wiremock-url
+                                                             "surveyIds" [survey-id]})}}))
 
 (defn survey-rest-api [action survey-id dto-list]
   {"request"  {"method"          "GET"
@@ -189,11 +194,12 @@
        (map (comp :state :report #(json/parse-string % true) :body))))
 
 (deftest report-generation
-  (let [survey-id (System/currentTimeMillis)
+  (let [survey-id 43993002
         flow-report-id (str "the-flow-id-" survey-id)
         user (str survey-id "@akvo.org")
         opts {"reportId" flow-report-id
               "email"    user}]
+    (invalidate-cache survey-id)
     (mock-flow-report-api flow-report-id)
     (mock-gae survey-id)
     (test-util/mock-mailjet)
@@ -213,8 +219,9 @@
       (is (= ["IN_PROGRESS" "FINISHED_SUCCESS"] (final-report-state-in-flow flow-report-id))))))
 
 (deftest error-in-report-generation
-  (let [survey-id (System/currentTimeMillis)
+  (let [survey-id 43993002
         current-errors (sentry-alerts-count)]
+    (invalidate-cache survey-id)
     (test-util/mock-flow-report-api)
     (http/post test-util/wiremock-mappings-url {:body (json/generate-string {"request"  {"method"          "GET"
                                                                                          "urlPath"         "/surveyrestapi"

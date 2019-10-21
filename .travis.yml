@@ -1,4 +1,4 @@
-language: node_js
+language: bash
 sudo: required
 services:
 - docker
@@ -15,7 +15,7 @@ before_install:
 script:
 - "./ci/build.sh && ./ci/deploy.sh"
 after_failure:
-- docker-compose -p akvo-flow-ci -f docker-compose.yml -f docker-compose.ci.yml logs
+- docker-compose -p akvo-flow-ci -f docker-compose.yml -f docker-compose.ci.yml logs --no-color
 env:
   global:
   - PATH=${HOME}/google-cloud-sdk/bin:$PATH

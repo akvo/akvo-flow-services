@@ -66,9 +66,8 @@
                        (:max-data-report-rows @config/settings)
                        "caddisflyTestsFileUrl"
                        (get-caddisfly-tests-file-url options))
-        criteria (-> "uploadUrl"
-                     options
-                     config/get-bucket-name
+        criteria (-> (or (get options "appId")
+                         (get options "uploadUrl"))
                      (config/get-criteria id)
                      stringify-keys
                      (assoc "flowServicesVersion" (System/getenv "APP_VERSION")))]
