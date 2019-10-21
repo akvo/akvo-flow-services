@@ -13,6 +13,11 @@ if [ -z "$TRAVIS_COMMIT" ]; then
     export TRAVIS_COMMIT=local
 fi
 
+if [[ "${TRAVIS_TAG:-}" =~ promote-.* ]]; then
+    echo "Skipping build as it is a prod promotion"
+    exit 0
+fi
+
 log Building backend dev container
 docker build --rm=false -t akvo-flow-services-dev:develop backend -f backend/Dockerfile-dev
 log Running backend test and uberjar

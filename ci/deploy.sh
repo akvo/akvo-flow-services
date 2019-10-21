@@ -8,7 +8,7 @@ function log {
 
 export PROJECT_NAME=akvo-lumen
 
-if [[ "${TRAVIS_BRANCH}" != "develop" ]] && [[ "${TRAVIS_BRANCH}" != "master" ]]; then
+if [[ "${TRAVIS_BRANCH}" != "develop" ]] && [[ ! "${TRAVIS_TAG:-}" =~ promote-.* ]]; then
     exit 0
 fi
 
@@ -30,7 +30,7 @@ gcloud config set compute/zone europe-west1-d
 gcloud config set container/use_client_certificate True
 
 ENVIRONMENT=test
-if [[ "${TRAVIS_BRANCH}" == "master" ]]; then
+if [[ "${TRAVIS_TAG:-}" =~ promote-.* ]]; then
     log Environment is production
     gcloud container clusters get-credentials production
     ENVIRONMENT=production
@@ -45,10 +45,9 @@ else
     POD_CPU_LIMITS="400m"
     POD_MEM_REQUESTS="1024Mi"
     POD_MEM_LIMITS="2048Mi"
+    log Pushing images
+    gcloud docker -- push eu.gcr.io/${PROJECT_NAME}/akvo-flow-services
 fi
-
-log Pushing images
-gcloud docker -- push eu.gcr.io/${PROJECT_NAME}/akvo-flow-services
 
 log Deploying
 

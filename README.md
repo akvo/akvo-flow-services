@@ -5,7 +5,9 @@ An HTTP layer on top of the existing Akvo FLOW applet functionality for:
 * Generating reports
 * Importing data
 
-Please read the [running locally](doc/RunningLocally.md).
+Please read the [running locally](doc/RunningLocally.md) for development.
+
+To deploy to production, run the `./ci/promote-test-to-prod.sh` script AND follow the instructions.
 
 ## License
 
