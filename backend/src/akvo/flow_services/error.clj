@@ -24,7 +24,9 @@
 (defmacro wrap-exceptions [body]
   `(try
      ~body
-     (catch Exception e# (error {:cause e#}))))
+     (catch Exception e#
+       (.printStackTrace e#)
+       (error {:cause e#}))))
 
 (defn user-friendly-message [{:keys [::error]}]
   (or (:message error)
