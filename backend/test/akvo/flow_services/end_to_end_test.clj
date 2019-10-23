@@ -203,6 +203,7 @@
     (mock-flow-report-api flow-report-id)
     (mock-gae survey-id)
     (test-util/mock-mailjet)
+    (test-util/mock-sentry)
     (test-util/try-for "Processing for too long" 20
                        (not= {"status" "OK", "message" "PROCESSING"}
                              (generate-report survey-id opts)))
@@ -223,6 +224,7 @@
         current-errors (sentry-alerts-count)]
     (invalidate-cache survey-id)
     (test-util/mock-flow-report-api)
+    (test-util/mock-sentry)
     (http/post test-util/wiremock-mappings-url {:body (json/generate-string {"request"  {"method"          "GET"
                                                                                          "urlPath"         "/surveyrestapi"
                                                                                          "queryParameters" {"surveyId" {"equalTo" (str survey-id)}}}
