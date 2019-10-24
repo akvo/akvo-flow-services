@@ -115,7 +115,7 @@
         report (e/wrap-exceptions (run-report job-data))]
     (notify-flow! job-data (finish-report-in-flow job-data report))
     (e/fmap report
-            #(log/error (-> % ::e/error :cause))
+            #(log/error %)
             (gdpr-email job-data))))
 
 (jobs/defjob ExportJob [job-data]
