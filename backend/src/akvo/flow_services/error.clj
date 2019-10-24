@@ -25,7 +25,6 @@
   `(try
      ~body
      (catch Exception e#
-       (.printStackTrace e#)
        (error {:cause e#}))))
 
 (defn user-friendly-message [{:keys [::error]}]
