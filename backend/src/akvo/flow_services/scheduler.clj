@@ -114,8 +114,9 @@
   (let [_ (notify-flow! job-data (create-report-in-flow job-data))
         report (e/wrap-exceptions (run-report job-data))]
     (notify-flow! job-data (finish-report-in-flow job-data report))
-    (when (e/ok? report)
-      (gdpr-email job-data))))
+    (e/fmap report
+            #(log/error %)
+            (gdpr-email job-data))))
 
 (jobs/defjob ExportJob [job-data]
   (do-export (conversion/from-job-data job-data)))

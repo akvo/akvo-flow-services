@@ -38,6 +38,11 @@
                                                                              "urlPath" "/mailjet/send"}
                                                                  "response" {"status" 200
                                                                              "body"   "ok"}})}))
+(defn mock-sentry []
+  (http/post wiremock-mappings-url {:body (json/generate-string {"request"  {"method"  "POST"
+                                                                             "urlPath" "/sentry/api/213123/store/"}
+                                                                 "response" {"status" 200
+                                                                             "body"   "ok"}})}))
 
 (defn mock-flow-report-api []
   (http/post wiremock-mappings-url
