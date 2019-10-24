@@ -1,5 +1,4 @@
-(ns akvo.flow-services.error
-  (:require [taoensso.timbre :as log]))
+(ns akvo.flow-services.error)
 
 (defn fmap [v f-error f-ok]
   (if-let [error (get v ::error)]
@@ -26,7 +25,6 @@
   `(try
      ~body
      (catch Exception e#
-       (log/error e#)
        (error {:cause e#}))))
 
 (defn user-friendly-message [{:keys [::error]}]

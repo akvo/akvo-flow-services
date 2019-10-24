@@ -217,13 +217,15 @@
 
       (is (= 200 (:status (test-util/get-report report-result))))
       (test-util/check-report-file-headers report-result "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-      (is (= ["IN_PROGRESS" "FINISHED_SUCCESS"] (final-report-state-in-flow flow-report-id))))))
+      (is (= ["IN_PROGRESS" "FINISHED_SUCCESS"] (final-report-state-in-flow flow-report-id)))
+      (is (zero? (sentry-alerts-count))))))
 
 (deftest error-in-report-generation
   (let [survey-id 43993002
         current-errors (sentry-alerts-count)]
     (invalidate-cache survey-id)
     (test-util/mock-flow-report-api)
+    (test-util/mock-mailjet)
     (test-util/mock-sentry)
     (http/post test-util/wiremock-mappings-url {:body (json/generate-string {"request"  {"method"          "GET"
                                                                                          "urlPath"         "/surveyrestapi"
