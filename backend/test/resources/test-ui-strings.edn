@@ -1,0 +1,14 @@
+{:report-header {:en "Your report is ready to download"
+                 :es "Su reporte está listo para descarga"}
+ :report-body {:en "Go to your Akvo Flow instance and download your export from the Export reports page."
+               :es "Puede ir al panel de control de Akvo Flow y el reporte está disponible en la página Exportar."}
+ :statistics-body {:en "Go to your Akvo Flow instance and download your report from the Stats page."
+                   :es "Puede ir al panel de control de Akvo Flow y el reporte está disponible en la pagina de Estadísticas."}
+ ;; Body based on report type
+ "GEOSHAPE" #ref [:report-body]
+ "SURVEY_SUMMARY" #ref [:report-body]
+ "DATA_CLEANING" #ref [:report-body]
+ "DATA_ANALYSIS" #ref [:report-body]
+ "COMPREHENSIVE" #ref [:report-body]
+ "SURVEY_FORM" #ref [:report-body]
+ "STATISTICS" #ref [:statistics-body]}

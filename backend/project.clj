@@ -59,8 +59,9 @@
              :profiles/test {}
              :project/dev   {:dependencies [[metosin/testit "0.2.0"]
                                             [org.clojure/test.check "0.9.0"]]
+                             :resource-paths ["resources" "test/resources"]
                              :repl-options {:host "0.0.0.0"
                                             :port 4010
                                             :init-ns akvo.flow-services.core
                                             :init (-main "dev/config.edn")}}
-             :project/test  {}})
+             :project/test  {:resource-paths ["resources" "test/resources"]}})
