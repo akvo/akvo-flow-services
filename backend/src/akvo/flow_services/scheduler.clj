@@ -1,4 +1,4 @@
-;  Copyright (C) 2013-2015 Stichting Akvo (Akvo Foundation)
+;  Copyright (C) 2013-2019 Stichting Akvo (Akvo Foundation)
 ;
 ;  This file is part of Akvo FLOW.
 ;
@@ -106,9 +106,10 @@
       (e/error {:message "Error generating report"})
       path)))
 
-(defn gdpr-email [{:strs [opts]}]
-  (email/send-gdpr-report-ready (get opts "email")
-                                (get opts "locale" "en")))
+(defn send-email [{:strs [exportType opts]}]
+  (email/send-report-ready (get opts "email")
+                           (get opts "locale" "en")
+                           exportType))
 
 (defn do-export [job-data]
   (let [_ (notify-flow! job-data (create-report-in-flow job-data))
@@ -116,7 +117,7 @@
     (notify-flow! job-data (finish-report-in-flow job-data report))
     (e/fmap report
             #(log/error %)
-            (gdpr-email job-data))))
+            (send-email job-data))))
 
 (jobs/defjob ExportJob [job-data]
   (do-export (conversion/from-job-data job-data)))
