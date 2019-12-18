@@ -34,9 +34,15 @@
                  [com.google.gdata/core "1.47.1"]
                  [org.xerial/sqlite-jdbc "3.7.2"]
                  ; Akvo FLOW dependencies
-                 [org.akvo.flow/akvo-flow "v1.10-58-g867c78e9" :classifier "classes"]
+                 [org.akvo.flow/akvo-flow "v1.10.1.1-5-g8078a337" :classifier "classes"]
                  [org.json/json "20090211"]
-                 [org.codehaus.jackson/jackson-mapper-asl "1.9.13"]
+
+                 ;; Override Jackson version from [cheshire "5.9.0"]
+                 [com.fasterxml.jackson.core/jackson-core "2.10.0"]
+                 [com.fasterxml.jackson.dataformat/jackson-dataformat-smile "2.10.0"]
+                 [com.fasterxml.jackson.dataformat/jackson-dataformat-cbor "2.10.0"]
+                 [tigris "0.1.2"]
+
                  ; Configuration and Stats
                  [com.google.appengine/appengine-tools-sdk "1.9.50"]
                  [com.google.appengine/appengine-remote-api "1.9.50"]
