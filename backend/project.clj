@@ -38,9 +38,9 @@
                  [org.json/json "20090211"]
                  [org.codehaus.jackson/jackson-mapper-asl "1.9.13"]
                  ; Configuration and Stats
-                 [com.google.appengine/appengine-tools-sdk "1.9.50"]
-                 [com.google.appengine/appengine-remote-api "1.9.50"]
-                 [com.google.appengine/appengine-api-1.0-sdk "1.9.50"]
+                 [com.google.appengine/appengine-tools-sdk "1.9.77"]
+                 [com.google.appengine/appengine-remote-api "1.9.77"]
+                 [com.google.appengine/appengine-api-1.0-sdk "1.9.77"]
 
                  [aero "1.1.3"]
                  [raven-clj "1.5.1"]]
