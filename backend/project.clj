@@ -37,6 +37,7 @@
                  [org.akvo.flow/akvo-flow "v1.10.1.1-5-g8078a337" :classifier "classes"]
                  [org.json/json "20090211"]
                  [org.codehaus.jackson/jackson-mapper-asl "1.9.13"]
+                 [com.fasterxml.jackson.core/jackson-core "2.10.0"]
                  ; Configuration and Stats
                  [com.google.appengine/appengine-tools-sdk "1.9.77"]
                  [com.google.appengine/appengine-remote-api "1.9.77"]
