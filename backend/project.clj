@@ -34,7 +34,7 @@
                  [com.google.gdata/core "1.47.1"]
                  [org.xerial/sqlite-jdbc "3.7.2"]
                  ; Akvo FLOW dependencies
-                 [org.akvo.flow/akvo-flow "v1.10.1.3-73-g02dcf259" :classifier "classes"]
+                 [org.akvo.flow/akvo-flow "20200219-102312" :classifier "classes"]
                  [org.json/json "20090211"]
 
                  ;; Override Jackson version from [cheshire "5.9.0"]
