@@ -30,7 +30,7 @@ metadata:
   name: akvo-flow-services
   namespace: default
 ---
-apiVersion: extensions/v1beta1
+apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: akvo-flow-services
