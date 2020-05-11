@@ -18,3 +18,5 @@ akvo-flow-services.yaml
 
 backend/target
 backend/.nrepl-port
+
+notify.slack.sh
