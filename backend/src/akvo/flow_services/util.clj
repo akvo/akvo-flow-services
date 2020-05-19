@@ -3,12 +3,11 @@
             [clj-http.client :as http]
             [akvo.flow-services.error :as e]
             [taoensso.timbre :as timbre])
-  (:import (java.text SimpleDateFormat)
-           (java.util TimeZone Date)
-           (java.net URLEncoder)
-           (javax.crypto Mac)
-           (javax.crypto.spec SecretKeySpec)
-           (com.google.gdata.util.common.util Base64)))
+  (:import [java.text SimpleDateFormat]
+           [java.util TimeZone Date Base64]
+           [java.net URLEncoder]
+           [javax.crypto Mac]
+           [javax.crypto.spec SecretKeySpec]))
 
 (defn datastore-spec [app-id-or-bucket]
   (let [cfg (config/find-config app-id-or-bucket)]
@@ -20,15 +19,23 @@
        :private-key-file   (:private-key-file cfg)
        :port               443})))
 
+
+(defn hmac-sha1
+  [secret content]
+  (let [m (Mac/getInstance "HmacSHA1")]
+    (.init m (SecretKeySpec. (.getBytes secret)
+                             (.getAlgorithm m)))
+    (->> content
+         (.getBytes)
+         (.doFinal m)
+         (.encodeToString (Base64/getEncoder)))))
+
 (defn sign-request-with-timestamp [api-key]
   (let [timestamp (.format (doto (SimpleDateFormat. "yyyy/MM/dd HH:mm:ss")
                              (.setTimeZone (TimeZone/getTimeZone "GMT")))
                            (Date.))
         content (str "ts=" (URLEncoder/encode timestamp "UTF-8"))
-        m (Mac/getInstance "HmacSHA1")
-        _ (.init m (SecretKeySpec. (.getBytes api-key)
-                                   (.getAlgorithm m)))
-        hash (Base64/encode (.doFinal m (.getBytes content)))]
+        hash (hmac-sha1 api-key content)]
     {:query-params {:ts timestamp
                     :h  hash}}))
 
