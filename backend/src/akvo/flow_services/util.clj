@@ -20,15 +20,31 @@
        :port               443})))
 
 
+(defn- hmac-shax
+  [algorithm secret content opts]
+  (let [{:keys [base64]} opts
+        m (Mac/getInstance algorithm)
+        _ (.init m (SecretKeySpec. (if (= (type secret) String)
+                                     (.getBytes ^String secret "UTF-8")
+                                     secret)
+                                   (.getAlgorithm m)))
+        ba (.doFinal m (.getBytes ^String content "UTF-8"))]
+    (if base64
+      (.encodeToString (Base64/getEncoder) ba)
+      ba)))
+
 (defn hmac-sha1
-  [secret content]
-  (let [m (Mac/getInstance "HmacSHA1")]
-    (.init m (SecretKeySpec. (.getBytes secret)
-                             (.getAlgorithm m)))
-    (->> content
-         (.getBytes)
-         (.doFinal m)
-         (.encodeToString (Base64/getEncoder)))))
+  ([secret content]
+   (hmac-sha1 secret content {:base64 true}))
+  ([secret content opts]
+   (hmac-shax "HmacSHA1" secret content opts)))
+
+(defn hmac-sha256
+  ([secret content]
+   (hmac-shax "HmacSHa256" secret content {:base64 true}))
+  ([secret content opts]
+   (hmac-shax "HmacSHA256" secret content opts)))
+
 
 (defn sign-request-with-timestamp [api-key]
   (let [timestamp (.format (doto (SimpleDateFormat. "yyyy/MM/dd HH:mm:ss")
