@@ -6,7 +6,7 @@
            [java.time Instant ZonedDateTime ZoneId]
            [java.time.format DateTimeFormatter]
            [java.util Base64 Date]
-           [org.apache.commons.codec.binary.Hex]))
+           [org.apache.commons.codec.binary Hex]))
 
 ;; https://docs.aws.amazon.com/AmazonS3/latest/API/sigv4-post-example.html
 ;; https://docs.aws.amazon.com/general/latest/gr/signature-v4-examples.html
