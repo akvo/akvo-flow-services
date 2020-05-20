@@ -117,14 +117,14 @@
             region "eu-west-1"
             access-key (:access-key cfg)
             img-policy (image-policy bucket access-key region 3600) ;; TODO: short TTL
-            img-sig (signature (:secret-key cfg) region img-policy)
+            img-sig (signature (:secret-key cfg) region (:policy img-policy))
             zip-policy (data-policy bucket access-key region 3600) ;; TODO: short TTL
-            zip-sig (signature (:secret-key cfg) region zip-policy)]
+            zip-sig (signature (:secret-key cfg) region (:policy zip-policy))]
         (-> {:image (-> img-policy
-                        (assoc :policy (encode-policy img-policy))
+                        (assoc :policy (encode-policy (:policy img-policy)))
                         (assoc :x-amz-signature img-sig))
              :zip (-> zip-policy
-                      (assoc :policy (encode-policy zip-policy))
+                      (assoc :policy (encode-policy (:policy zip-policy)))
                       (assoc :x-amz-signature zip-sig))}
             (json/generate-string)
             (resp/response)
