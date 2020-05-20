@@ -1,7 +1,22 @@
+;  Copyright (C) 2020 Stichting Akvo (Akvo Foundation)
+;
+;  This file is part of Akvo FLOW.
+;
+;  Akvo FLOW is free software: you can redistribute it and modify it under the terms of
+;  the GNU Affero General Public License (AGPL) as published by the Free Software Foundation,
+;  either version 3 of the License or any later version.
+;
+;  Akvo FLOW is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+;  without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+;  See the GNU Affero General Public License included below for more details.
+;
+;  The full license text can also be seen at <http://www.gnu.org/licenses/agpl.html>.
+
 (ns akvo.flow-services.aws-s3
   (:require [akvo.commons.config :as config]
             [akvo.flow-services.util :refer [hmac-sha256]]
-            [cheshire.core :as json])
+            [cheshire.core :as json]
+            [ring.util.response :as resp])
   (:import [java.text DateFormat]
            [java.time Instant ZonedDateTime ZoneId]
            [java.time.format DateTimeFormatter]
@@ -94,7 +109,44 @@
     (Hex/encodeHexString sig)))
 
 
+(defn handler
+  [params]
+  (if-let [instance (get params :instance)]
+    (if-let [cfg (get @config/configs instance)]
+      (let [bucket (:s3bucket cfg)
+            region "eu-west-1"
+            access-key (:access-key cfg)
+            img-policy (image-policy bucket access-key region 3600) ;; TODO: short TTL
+            img-sig (signature (:secret-key cfg) region img-policy)
+            zip-policy (data-policy bucket access-key region 3600) ;; TODO: short TTL
+            zip-sig (signature (:secret-key cfg) region zip-policy)]
+        (-> {:image (-> img-policy
+                        (assoc :policy (encode-policy img-policy))
+                        (assoc :x-amz-signature img-sig))
+             :zip (-> zip-policy
+                      (assoc :policy (encode-policy zip-policy))
+                      (assoc :x-amz-signature zip-sig))}
+            (json/generate-string)
+            (resp/response)
+            (resp/header "content-type" "application/json"))) ;; TODO: move content-type header to middleware
+      (-> {:message (str "Config for instance " instance " not found")}
+          (json/generate-string)
+          (resp/not-found)
+          (resp/header "content-type" "application/json")))
+    (-> {:message (str "instance parameter is required")}
+        (json/generate-string)
+        (resp/response)
+        (resp/status 400)
+        (resp/header "content-type" "application/json"))))
+
+
 (comment
+
+  (handler {})
+
+  (handler {:instance "non-existent"})
+
+  (handler {:instance "akvoflow-uat1"})
 
   (def uat1 (get @config/configs "akvoflow-uat1"))
 
