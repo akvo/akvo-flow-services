@@ -116,9 +116,9 @@
       (let [bucket (:s3bucket cfg)
             region "eu-west-1"
             access-key (:access-key cfg)
-            img-policy (image-policy bucket access-key region 3600) ;; TODO: short TTL
+            img-policy (image-policy bucket access-key region 90)
             img-sig (signature (:secret-key cfg) region (:policy img-policy))
-            zip-policy (data-policy bucket access-key region 3600) ;; TODO: short TTL
+            zip-policy (data-policy bucket access-key region 90)
             zip-sig (signature (:secret-key cfg) region (:policy zip-policy))]
         (-> {:image (-> img-policy
                         (assoc :policy (encode-policy (:policy img-policy)))
