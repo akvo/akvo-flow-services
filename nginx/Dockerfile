@@ -10,6 +10,7 @@ RUN apk add --no-cache \
 
 EXPOSE 8082
 
+COPY authnz.lua /usr/local/openresty/nginx/conf/authnz.lua
 COPY nginx.conf /usr/local/openresty/nginx/conf/nginx.conf
 COPY nginx-test.conf /usr/local/openresty/nginx/conf/nginx-test.conf
 
