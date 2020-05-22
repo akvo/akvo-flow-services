@@ -50,7 +50,7 @@
   (GET "/" [] "OK")
   (GET "/healthz" [] "OK")
 
-  (GET "/sign" [:as {params :params}] ;; TODO: authentication!!!
+  (GET "/sign" [:as {params :params}]
     (s3/handler params))
 
   (GET "/generate" [:as {params :params}]
