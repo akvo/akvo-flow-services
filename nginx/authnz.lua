@@ -51,10 +51,12 @@ if res.email then
       ngx.var.akvoemail = res.email
    else
       ngx.log(ngx.ERR, "Authorization required for user " .. res.email)
+      ngx.status = 403
       ngx.say(cjson.encode({error="Invalid access_token"}))
       ngx.exit(ngx.HTTP_FORBIDDEN)
    end
 else
+   ngx.status = 403
    ngx.say(cjson.encode({error="Invalid access_token"}))
    ngx.exit(ngx.HTTP_FORBIDDEN)
 end
