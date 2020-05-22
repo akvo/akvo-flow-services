@@ -1,4 +1,4 @@
-;  Copyright (C) 2013-2014,2019 Stichting Akvo (Akvo Foundation)
+;  Copyright (C) 2013-2014,2019,2020 Stichting Akvo (Akvo Foundation)
 ;
 ;  This file is part of Akvo FLOW.
 ;
@@ -13,7 +13,7 @@
 ;  The full license text can also be seen at <http://www.gnu.org/licenses/agpl.html>.
 
 (ns akvo.flow-services.core
-  (:require [compojure.core :refer (defroutes GET POST OPTIONS routes)]
+  (:require [compojure.core :refer [defroutes GET POST OPTIONS routes]]
             [ring.util.response :refer (response charset content-type header)]
             [ring.adapter.jetty :refer (run-jetty)]
             [cheshire.core :as json]
@@ -25,7 +25,8 @@
              [uploader :as uploader]
              [cascade :as cascade]
              [stats :as stats]
-             [exporter :as exporter]]
+             [exporter :as exporter]
+             [aws-s3 :as s3]]
             [nrepl.server :as nrepl]
             [taoensso.timbre :as timbre]
             [taoensso.timbre.appenders.3rd-party.sentry :as sentry]
@@ -48,6 +49,9 @@
 (defroutes ^:private endpoints
   (GET "/" [] "OK")
   (GET "/healthz" [] "OK")
+
+  (GET "/sign" [:as {params :params}]
+    (s3/handler params))
 
   (GET "/generate" [:as {params :params}]
     (let [criteria (json/parse-string (:criteria params))  ;; TODO: validation

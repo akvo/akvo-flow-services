@@ -3,12 +3,11 @@
             [clj-http.client :as http]
             [akvo.flow-services.error :as e]
             [taoensso.timbre :as timbre])
-  (:import (java.text SimpleDateFormat)
-           (java.util TimeZone Date)
-           (java.net URLEncoder)
-           (javax.crypto Mac)
-           (javax.crypto.spec SecretKeySpec)
-           (com.google.gdata.util.common.util Base64)))
+  (:import [java.text SimpleDateFormat]
+           [java.util TimeZone Date Base64]
+           [java.net URLEncoder]
+           [javax.crypto Mac]
+           [javax.crypto.spec SecretKeySpec]))
 
 (defn datastore-spec [app-id-or-bucket]
   (let [cfg (config/find-config app-id-or-bucket)]
@@ -20,15 +19,39 @@
        :private-key-file   (:private-key-file cfg)
        :port               443})))
 
+
+(defn- hmac-shax
+  [algorithm secret content opts]
+  (let [{:keys [base64]} opts
+        m (Mac/getInstance algorithm)
+        _ (.init m (SecretKeySpec. (if (= (type secret) String)
+                                     (.getBytes ^String secret "UTF-8")
+                                     secret)
+                                   (.getAlgorithm m)))
+        ba (.doFinal m (.getBytes ^String content "UTF-8"))]
+    (if base64
+      (.encodeToString (Base64/getEncoder) ba)
+      ba)))
+
+(defn hmac-sha1
+  ([secret content]
+   (hmac-sha1 secret content {:base64 true}))
+  ([secret content opts]
+   (hmac-shax "HmacSHA1" secret content opts)))
+
+(defn hmac-sha256
+  ([secret content]
+   (hmac-shax "HmacSHa256" secret content {:base64 true}))
+  ([secret content opts]
+   (hmac-shax "HmacSHA256" secret content opts)))
+
+
 (defn sign-request-with-timestamp [api-key]
   (let [timestamp (.format (doto (SimpleDateFormat. "yyyy/MM/dd HH:mm:ss")
                              (.setTimeZone (TimeZone/getTimeZone "GMT")))
                            (Date.))
         content (str "ts=" (URLEncoder/encode timestamp "UTF-8"))
-        m (Mac/getInstance "HmacSHA1")
-        _ (.init m (SecretKeySpec. (.getBytes api-key)
-                                   (.getAlgorithm m)))
-        hash (Base64/encode (.doFinal m (.getBytes content)))]
+        hash (hmac-sha1 api-key content)]
     {:query-params {:ts timestamp
                     :h  hash}}))
 

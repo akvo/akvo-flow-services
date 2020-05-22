@@ -60,6 +60,21 @@ spec:
           persistentVolumeClaim:
              claimName: akvo-flow-services-reports
       containers:
+      - name: akvo-flow-services-proxy
+        image: eu.gcr.io/akvo-lumen/akvo-flow-services-proxy:$TRAVIS_COMMIT
+        ports:
+        - containerPort: 8082
+        env:
+        - name: OIDC_DISCOVERY_URL
+          valueFrom:
+            configMapKeyRef:
+              name: flow-api
+              key: oidc.discovery.url
+        - name: OIDC_EXPECTED_ISSUER
+          valueFrom:
+            configMapKeyRef:
+              name: flow-api
+              key: oidc.expected.issuer
       - name: akvo-flow-services
         image: eu.gcr.io/akvo-lumen/akvo-flow-services:$TRAVIS_COMMIT
         ports:
@@ -133,8 +148,8 @@ metadata:
 spec:
   type: NodePort
   ports:
-  - port: 3000
-    targetPort: 3000
+  - port: 8082
+    targetPort: 8082
   selector:
     run: akvo-flow-services
 ---
