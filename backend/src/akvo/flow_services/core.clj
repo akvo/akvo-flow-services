@@ -30,7 +30,8 @@
             [nrepl.server :as nrepl]
             [taoensso.timbre :as timbre]
             [taoensso.timbre.appenders.3rd-party.sentry :as sentry]
-            timbre-ns-pattern-level)
+            timbre-ns-pattern-level
+            [clojure.java.io :as io])
   (:gen-class))
 
 (defn- generate-report [criteria callback]
@@ -52,6 +53,21 @@
 
   (GET "/sign" [:as {params :params}]
     (s3/handler params))
+
+  (GET "/wpdx-poc" []
+
+
+    (let [f (exporter/export-report "DATA_ANALYSIS" "https://westafrica.akvoflow.org" "448910924" {"exportMode" "DATA_ANALYSIS", "lastCollection" false, "imgPrefix" "https://akvoflow-45.s3.amazonaws.com/images/", "uploadUrl" "https://akvoflow-45.s3.amazonaws.com/", "appId" "akvoflow-45", "flowServices" "https://flow-services.akvo.org", "caddisflyTestsFileUrl" nil, "from" nil, "to" nil, "uploadDir" "surveys"})
+          file->bytes (fn [file]
+                        (with-open [xin (io/input-stream file)
+                                    xout (java.io.ByteArrayOutputStream.)]
+                          (io/copy xin xout)
+                          (.toByteArray xout)))
+          file-bytes (file->bytes f)]
+      (.delete f)
+      {:status 200
+       :headers {"content-type" "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"}
+       :body (io/input-stream file-bytes)}))
 
   (GET "/generate" [:as {params :params}]
     (let [criteria (json/parse-string (:criteria params))  ;; TODO: validation
