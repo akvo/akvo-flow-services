@@ -1,11 +1,11 @@
 version: v1.0
-name: Build, test & deploy
+name: Flow Services
 agent:
   machine:
     type: e1-standard-2
     os_image: ubuntu1804
 blocks:
-  - name: 'Flow Services: Build, test & deploy'
+  - name: 'Build, test & deploy'
     task:
       secrets:
         - name: GCP
