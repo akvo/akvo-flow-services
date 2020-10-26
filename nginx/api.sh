@@ -2,6 +2,11 @@
 
 set -eu
 
+function log {
+   echo "$(date +"%T") - INFO - $*"
+}
+
+log "Getting Auth0 token"
 token=$(curl --silent \
 	     --data "client_id=0C1NQcW6mMWyvvOOZ6Dd5P6hJrjSbwPL" \
 	     --data "username=${AUTH_CLIENT}" \
@@ -11,7 +16,7 @@ token=$(curl --silent \
 	     --url "https://akvotest.eu.auth0.com/oauth/token" \
 	    | jq -M -r .id_token)
 
-
+log "Auth0 token: $(echo token | cut -c-6)"
 URL="${1}"
 shift
 
