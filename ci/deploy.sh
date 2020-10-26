@@ -40,8 +40,9 @@ else
     POD_MEM_REQUESTS="1024Mi"
     POD_MEM_LIMITS="2048Mi"
     log Pushing images
-    gcloud docker -- push "eu.gcr.io/${PROJECT_NAME}/akvo-flow-services:${TRAVIS_COMMIT}"
-    gcloud docker -- push "eu.gcr.io/${PROJECT_NAME}/akvo-flow-services-proxy:${TRAVIS_COMMIT}"
+    gcloud auth configure-docker
+    docker push "eu.gcr.io/${PROJECT_NAME}/akvo-flow-services:${TRAVIS_COMMIT}"
+    docker push "eu.gcr.io/${PROJECT_NAME}/akvo-flow-services-proxy:${TRAVIS_COMMIT}"
 fi
 
 log Deploying
