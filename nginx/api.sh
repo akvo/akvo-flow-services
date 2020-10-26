@@ -9,8 +9,8 @@ function log {
 log "Getting Auth0 token"
 token=$(curl --silent \
 	     --data "client_id=0C1NQcW6mMWyvvOOZ6Dd5P6hJrjSbwPL" \
-	     --data "username=${AUTH_CLIENT}" \
-	     --data "password=${AUTH_PASSWORD}" \
+	     --data "username=${AUTH0_USER}" \
+	     --data "password=${AUTH0_PASSWORD}" \
 	     --data "grant_type=password" \
 	     --data "scope=openid email" \
 	     --url "https://akvotest.eu.auth0.com/oauth/token" \

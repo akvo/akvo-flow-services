@@ -9,8 +9,8 @@ services:
     volumes:
       - ./:/usr/local/src:ro
     environment:
-      - AUTH_CLIENT
-      - AUTH_PASSWORD
+      - AUTH0_USER
+      - AUTH0_PASSWORD
   nginx:
     image: eu.gcr.io/${PROJECT_NAME}/akvo-flow-services-proxy:latest
     network_mode: service:testnetwork
