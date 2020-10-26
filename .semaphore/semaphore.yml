@@ -10,7 +10,7 @@ blocks:
       secrets:
         - name: GCP
         - name: docker-hub-credentials
-        - name: flow-services-test-account
+        - name: TestEnv
       prologue:
         commands:
           - checkout
