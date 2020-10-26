@@ -16,12 +16,6 @@ if [[ "${TRAVIS_PULL_REQUEST}" != "false" ]]; then
     exit 0
 fi
 
-log Making sure gcloud and kubectl are installed and up to date
-gcloud components install kubectl
-gcloud components update
-gcloud version
-which gcloud kubectl
-
 log Authentication with gcloud and kubectl
 gcloud auth activate-service-account --key-file ci/gcloud-service-account.json
 gcloud config set project akvo-lumen
