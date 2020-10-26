@@ -59,3 +59,4 @@ log Running integration tests
 docker-compose -p akvo-flow-ci -f docker-compose.yml -f docker-compose.ci.yml run --no-deps tests lein test :integration
 
 log Done
+
