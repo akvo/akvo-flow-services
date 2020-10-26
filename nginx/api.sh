@@ -16,7 +16,7 @@ auth0_response=$(curl --silent \
 	     --url "https://akvotest.eu.auth0.com/oauth/token")
 
 token=$(echo "${auth0_response}" \
-	    | jq -M -r .id_token || "")
+	    | jq -M -r .id_token || echo -n "")
 
 if [[ -z "$token" || "$token" == "null" ]]; then
   log "No token found in Auth0 response:"
@@ -24,7 +24,7 @@ if [[ -z "$token" || "$token" == "null" ]]; then
   exit 1
 fi
 
-log "Auth0 token: $(echo token | cut -c-6)"
+log "Auth0 token: $(echo "$token" | cut -c-6)"
 URL="${1}"
 shift
 
@@ -34,8 +34,7 @@ proxy_response=$(curl --silent \
      "$@" \
      --url "${URL}")
 
-parsed_proxy_response=$(echo "${proxy_response}" \
-	    | jq -M . | grep "{}" || "")
+parsed_proxy_response=$(echo "${proxy_response}" | jq -M . | grep "{}" || echo -n "")
 
 if [[ -z "$parsed_proxy_response" ]]; then
   log "Unexpected response from proxy:"
