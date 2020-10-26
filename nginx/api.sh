@@ -18,7 +18,7 @@ auth0_response=$(curl --silent \
 token=$(echo "${auth0_response}" \
 	    | jq -M -r .id_token || "")
 
-if [[ -z "$token" ]]; then
+if [[ -z "$token" || "$token" == "null" ]]; then
   log "No token found in Auth0 response:"
   echo "$auth0_response"
   exit 1
@@ -28,8 +28,17 @@ log "Auth0 token: $(echo token | cut -c-6)"
 URL="${1}"
 shift
 
-curl --silent \
+proxy_response=$(curl --silent \
      --header "Authorization: Bearer ${token}" \
      --request GET \
      "$@" \
-     --url "${URL}" | jq -M .
+     --url "${URL}")
+
+parsed_proxy_response=$(echo "${proxy_response}" \
+	    | jq -M . | grep "{}" || "")
+
+if [[ -z "$parsed_proxy_response" ]]; then
+  log "Unexpected response from proxy:"
+  echo "$parsed_proxy_response"
+  exit 1
+fi

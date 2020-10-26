@@ -18,5 +18,5 @@ log "Check sign fails without an Auth0 token"
 curl --verbose "http://localhost:8082/sign?instance=akvoflow-uat1" 2>&1 | grep 'HTTP.*401'
 
 log "check sign works with a valid Auth0 token"
-./api.sh "http://localhost:8082/sign?instance=akvoflow-uat1" | grep '{}'
+./api.sh "http://localhost:8082/sign?instance=akvoflow-uat1"
 log "Auth0 proxy test passed"
