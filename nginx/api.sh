@@ -26,13 +26,13 @@ fi
 
 log "Auth0 token: $(echo "$token" | cut -c-6)"
 URL="${1}"
-shift
 
 proxy_response=$(curl --silent \
      --header "Authorization: Bearer ${token}" \
      --request GET \
-     "$@" \
      --url "${URL}")
+
+echo "${proxy_response}"
 
 parsed_proxy_response=$(echo "${proxy_response}" | jq -M . | grep "{}" || echo -n "")
 
