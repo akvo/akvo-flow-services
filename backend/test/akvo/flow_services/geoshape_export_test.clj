@@ -78,7 +78,17 @@
                                         "Instance" "3"
                                         "Device identifier" "device"
                                         "Display Name" "vudhxhx"
-                                        "Identifier" "381t-1vk2-2ph7"}}]})))
+                                        "Identifier" "381t-1vk2-2ph7"}}]})
+
+           (testing "proper exception message is thrown with instance id included"
+                    (let [export-result-ex (geoshape-export/build-feature-collection "any"
+                                                                                     geo-question-id
+                                                                                     questions
+                                                                                     (assoc-in responses [1 :value] "{\"a\":1,,}")
+                                                                                     (constantly instance-data))]
+                      (is (thrown-with-msg? Exception #"Error processing geoshape for Instance 3"
+                                            (str export-result-ex)))))))
+
 
 (deftest repeated-group
          (let [instance-id 3

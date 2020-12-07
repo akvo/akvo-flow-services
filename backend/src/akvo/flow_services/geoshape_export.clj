@@ -1,4 +1,4 @@
-;  Copyright (C) 2015,2019 Stichting Akvo (Akvo Foundation)
+;  Copyright (C) 2015,2019,2020 Stichting Akvo (Akvo Foundation)
 ;
 ;  This file is part of Akvo FLOW.
 ;
@@ -51,11 +51,16 @@
     value))
 
 (defn feature [question-id questions question-answers other-data]
-  (let [geoshape (-> question-answers
-                     (get question-id)
-                     json/parse-string
-                     (get "features")
-                     first)
+  (let [geoshape (try
+                   (-> question-answers
+                         (get question-id)
+                         json/parse-string
+                         (get "features")
+                         first)
+                   (catch Exception e
+                     (throw (Exception. (format "Error processing geoshape for Instance %s"
+                                                (get other-data "Instance"))
+                                        e))))
         geometry-type (get-in geoshape ["geometry" "type"])
         valid-polygon (and
                         (= "Polygon" geometry-type)
