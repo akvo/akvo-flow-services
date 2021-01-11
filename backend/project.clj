@@ -23,8 +23,8 @@
                  ; Java libraries
                  [jfree/jfreechart "1.0.13"]
                  [commons-lang/commons-lang "2.4"]
-                 [org.apache.poi/poi "3.8"]
-                 [org.apache.poi/poi-ooxml "3.8"]
+                 [org.apache.poi/poi "3.17"]
+                 [org.apache.poi/poi-ooxml "3.17"]
                  [org.apache.tika/tika-core "1.6"]
                  [org.apache.tika/tika-parsers "1.6"]
                  [com.fzakaria/slf4j-timbre "0.3.8"]
@@ -34,7 +34,7 @@
                  [com.google.gdata/core "1.47.1"]
                  [org.xerial/sqlite-jdbc "3.7.2"]
                  ; Akvo FLOW dependencies
-                 [org.akvo.flow/akvo-flow "promote-20200430-081057-3-g639c72a" :classifier "classes"]
+                 [org.akvo.flow/akvo-flow "20210108-192146.f4f27abe" :classifier "classes"]
                  [org.json/json "20090211"]
 
                  ;; Override Jackson version from [cheshire "5.9.0"]
