@@ -23,8 +23,8 @@
                  ; Java libraries
                  [jfree/jfreechart "1.0.13"]
                  [commons-lang/commons-lang "2.4"]
-                 [org.apache.poi/poi "3.8"]
-                 [org.apache.poi/poi-ooxml "3.8"]
+                 [org.apache.poi/poi "3.17"]
+                 [org.apache.poi/poi-ooxml "3.17"]
                  [org.apache.tika/tika-core "1.6"]
                  [org.apache.tika/tika-parsers "1.6"]
                  [com.fzakaria/slf4j-timbre "0.3.8"]
