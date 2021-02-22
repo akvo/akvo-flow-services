@@ -164,6 +164,9 @@
   (when-let [cfg (reset! config/settings (aero/read-config config-file))]
     (config-logging cfg)
     (config/reload (:config-folder cfg))
+    (when-let [errors-config (seq @config/errors-config)]
+      (doseq [error-config errors-config]
+        (timbre/log :error "Config error" error-config)))
     (init)
     (stats/schedule-stats-job (:stats-schedule-time cfg))
     (reset! system {:nrepl (nrepl/start-server :port 7888 :bind (:nrepl-bind cfg "localhost"))
