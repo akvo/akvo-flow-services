@@ -7,7 +7,7 @@
   :dependencies [[org.clojure/clojure "1.9.0"]
                  [org.clojure/data.csv "0.1.3"]
                  [nrepl/nrepl "0.6.0"]
-                 [org.akvo/commons "0.4.6" :exclusions [me.raynes/fs
+                 [org.akvo/commons "0.4.8" :exclusions [me.raynes/fs
                                                         org.clojure/tools.nrepl]]
                  [com.taoensso/timbre "4.10.0"]
                  [timbre-ns-pattern-level "0.1.2"]
