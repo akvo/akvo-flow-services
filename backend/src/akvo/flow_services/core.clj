@@ -1,4 +1,4 @@
-;  Copyright (C) 2013-2014,2019,2020 Stichting Akvo (Akvo Foundation)
+;  Copyright (C) 2013-2014,2019-2021 Stichting Akvo (Akvo Foundation)
 ;
 ;  This file is part of Akvo FLOW.
 ;
@@ -110,6 +110,23 @@
           response
           (header "Access-Control-Allow-Origin" "*")
           (header "Content-Type" "text/plain")))))
+
+  (POST "/bulk_image_upload" [:as {params :params}]
+    (timbre/debugf "Uploading with params: %s " params)
+    (if (:file params)
+      (-> params
+          uploader/save-chunk
+          response
+          (header "Access-Control-Allow-Origin" "*")
+          (header "Content-Type" "text/plain"))
+      (if (:complete params)
+        (-> params
+            (scheduler/image-bulk-upload)
+            :status
+            response
+            (header "Access-Control-Allow-Origin" "*")
+            (header "Content-Type" "text/plain"))
+        {:status 400 :headers {} :body "Bad Request"})))
 
   (POST "/reload" [params]
     (config/reload (:config-folder @config/settings)))

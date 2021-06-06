@@ -21,6 +21,7 @@
                  [clj-http "3.8.0"]
                  [org.clojure/java.jdbc "0.3.5"]
                  ; Java libraries
+                 [javax.jdo/jdo-api "3.1"]
                  [jfree/jfreechart "1.0.13"]
                  [commons-lang/commons-lang "2.4"]
                  [org.apache.poi/poi "3.17"]
@@ -41,6 +42,7 @@
                  [com.fasterxml.jackson.core/jackson-core "2.10.0"]
                  [com.fasterxml.jackson.dataformat/jackson-dataformat-smile "2.10.0"]
                  [com.fasterxml.jackson.dataformat/jackson-dataformat-cbor "2.10.0"]
+                 [com.fasterxml.jackson.dataformat/jackson-dataformat-xml "2.9.9"]
                  [tigris "0.1.2"]
 
                  ; Configuration and Stats

@@ -1,4 +1,4 @@
-;  Copyright (C) 2013-2019 Stichting Akvo (Akvo Foundation)
+;  Copyright (C) 2013-2019,2021 Stichting Akvo (Akvo Foundation)
 ;
 ;  This file is part of Akvo FLOW.
 ;
@@ -28,7 +28,8 @@
             [akvo.flow-services.error :as e]
             [akvo.flow-services.util :as util])
   (:use [akvo.flow-services.exporter :only (export-report)]
-        [akvo.flow-services.uploader :only (bulk-upload)]))
+        [akvo.flow-services.uploader :only (bulk-upload)]
+        [akvo.flow-services.uploader :only (bulk-image-upload)]))
 
 (defn flow-report-id [job-data]
   (get-in job-data ["opts" "reportId"]))
@@ -128,6 +129,12 @@
     (bulk-upload baseURL uniqueIdentifier filename uploadDomain surveyId)
     (scheduler/delete-job (jobs/key id))))
 
+(jobs/defjob ImageBulkUploadJob [job-data]
+             (let [{:strs [baseURL uniqueIdentifier filename uploadDomain id] :as data} (conversion/from-job-data job-data)]
+               (log/info "Scheduling Bulk image upload job:" data)
+               (bulk-image-upload baseURL uniqueIdentifier filename uploadDomain)
+               (scheduler/delete-job (jobs/key id))))
+
 (defn- report-id [m]
   (format "id%s" (hash m)))
 
@@ -187,3 +194,8 @@
   "Schedules a bulk upload process"
   [params]
   (schedule-job BulkUploadJob (:uniqueIdentifier params) params))
+
+(defn image-bulk-upload
+  "Schedules an image bulk upload job"
+  [params]
+  (schedule-job ImageBulkUploadJob (:uniqueIdentifier params) params))
