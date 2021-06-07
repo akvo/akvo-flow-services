@@ -26,7 +26,7 @@
             [akvo.commons.config :as config]
             [akvo.commons.gae :as gae]
             [akvo.commons.gae.query :as query]
-            [taoensso.timbre :as timbre :refer (debugf infof errorf debugf)]
+            [taoensso.timbre :as timbre :refer (debugf infof errorf)]
             [akvo.flow-services.util :as util]))
 
 
