@@ -265,13 +265,9 @@
 (defn- upload-image
   "Upload images from a specific folder"
   [base-url form-instance-id question-id image]
-  (let [url (format "%s/image_upload/question/%s/instance/%s" base-url question-id form-instance-id)]
+  (let [url (format "%s/rest/image_upload/question/%s/instance/%s" base-url question-id form-instance-id)]
     (debugf "Uploading image to url %s" url)
-    (try
-      (http/post url {:multipart [{:name "Content/type" :content "image/jpeg"}
-                                  {:name "image" :content image}]})
-      (catch Exception e
-        (errorf "Failed to upload image %s from folder %s" (.getName image) form-instance-id)))))
+    (http/post url {:multipart [{:name "image" :mime-type "image/jpeg" :content image}]})))
 
 (defn- process-image-upload
   [base-url folder questions]
