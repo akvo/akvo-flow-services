@@ -14,8 +14,8 @@ if [[ "${TRAVIS_TAG:-}" =~ promote-.* ]]; then
     exit 0
 fi
 
-log Login to DockerHub
-echo "$DOCKER_PASSWORD" | docker login --username "$DOCKER_USERNAME" --password-stdin
+
+
 
 log Building backend dev container
 docker build --rm=false -t akvo-flow-services-dev:develop backend -f backend/Dockerfile-dev
@@ -59,4 +59,3 @@ log Running integration tests
 docker-compose -p akvo-flow-ci -f docker-compose.yml -f docker-compose.ci.yml run --no-deps tests lein test :integration
 
 log Done
-

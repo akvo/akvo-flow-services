@@ -17,6 +17,7 @@ blocks:
       jobs:
         - name: 'Build&Test'
           commands:
+            - echo "$DOCKER_PASSWORD" | docker login --username "$DOCKER_USERNAME" --password-stdin
             - export AUTH0_PASSWORD=${PASSWORD}
             - export AUTH0_USER=${USERNAME}
             - export PATH=${HOME}/google-cloud-sdk/bin:$PATH
