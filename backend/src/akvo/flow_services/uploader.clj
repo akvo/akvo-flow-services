@@ -292,10 +292,6 @@
                         (catch NumberFormatException e
                           (errorf "\"%s\" is not a valid form instance id" instance-id-str)))))
 
-(defn- immediate-parent
-  [file]
-  (last (fs/split (fs/parent file))))
-
 (defn bulk-image-upload
   "Prepare uploaded images to be pushed to the flow backend"
   [base-url unique-identifier filename upload-domain]
@@ -304,7 +300,7 @@
         _ (combine path filename)
         _ (cleanup path)
         unzipped-dir (unzip-file path filename)
-        files-by-folder (group-by immediate-parent (get-images unzipped-dir))
+        files-by-folder (group-by #(fs/base-name (fs/parent %)) (get-images unzipped-dir))
         form-instance (get-form-instance app-id (key (first files-by-folder)))
         form-id (.getProperty form-instance "surveyId")
         xml-form (util/get-published-form app-id form-id)

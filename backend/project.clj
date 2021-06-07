@@ -42,7 +42,7 @@
                  [com.fasterxml.jackson.core/jackson-core "2.10.0"]
                  [com.fasterxml.jackson.dataformat/jackson-dataformat-smile "2.10.0"]
                  [com.fasterxml.jackson.dataformat/jackson-dataformat-cbor "2.10.0"]
-                 [com.fasterxml.jackson.dataformat/jackson-dataformat-xml "2.9.9"]
+                 [com.fasterxml.jackson.dataformat/jackson-dataformat-xml "2.10.0"]
                  [tigris "0.1.2"]
 
                  ; Configuration and Stats
