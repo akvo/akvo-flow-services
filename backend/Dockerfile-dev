@@ -1,6 +1,14 @@
 FROM clojure:lein-2.7.1
 MAINTAINER Akvo Foundation <devops@akvo.org>
 
+RUN set -ex; apt-get update && \
+    apt-get install -y git openssh-client && \
+    rm -rf /var/cache/apt/*
+
+COPY dev/start-dev-env.sh /app/start-dev-env.sh
+
+RUN chmod u+x /app/start-dev-env.sh
+
 WORKDIR /app
 
 CMD [ "dev/start-dev-env.sh" ]

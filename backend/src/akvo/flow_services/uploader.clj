@@ -1,4 +1,4 @@
-;  Copyright (C) 2013-2015,2019 Stichting Akvo (Akvo Foundation)
+;  Copyright (C) 2013-2015,2019,2021 Stichting Akvo (Akvo Foundation)
 ;
 ;  This file is part of Akvo FLOW.
 ;
@@ -14,8 +14,8 @@
 
 (ns akvo.flow-services.uploader
   (:import java.io.File
-           org.waterforpeople.mapping.dataexport.RawDataSpreadsheetImporter
-           java.util.zip.ZipFile)
+           [org.waterforpeople.mapping.dataexport RawDataSpreadsheetImporter]
+           [java.util.zip ZipFile])
   (:require [clojure.java.io :as io]
             [clojure.string :as str]
             [clojure.set :as set]
@@ -261,3 +261,49 @@
       (.endsWith uname "ZIP") (bulk-survey path filename bucket-name) ; Extract and upload
       (.endsWith uname "XLSX") (raw-data (io/file path filename) base-url bucket-name surveyId) ; Upload raw data
       :else (upload (io/file path) bucket-name))))
+
+(defn- upload-image
+  "Upload images from a specific folder"
+  [base-url form-instance-id question-id image]
+  (let [url (format "%s/rest/image_upload/question/%s/instance/%s" base-url question-id form-instance-id)]
+    (debugf "Uploading image to url %s" url)
+    (http/post url {:multipart [{:name "image" :mime-type "image/jpeg" :content image}]})))
+
+(defn- process-image-upload
+  [base-url folder questions]
+  (let [form-instance-id (Long/parseLong (key folder))
+        question-ids (map #(.getId %) questions)
+        images (val folder)]
+    (debugf "Processing images for folder %s:" form-instance-id)
+    (doseq [pair (apply assoc {} (interleave question-ids images))]
+      (upload-image base-url form-instance-id (first pair) (last pair)))))
+
+(defn- get-image-questions
+  [xml-form]
+  (filter #(= (.toLowerCase (.getType %)) "photo") (mapcat #(.getQuestion %) (.getQuestionGroup xml-form))))
+
+(defn- get-form-instance
+  "Retrieve form to which all images will be bulk uploaded"
+  [app-id instance-id-str]
+  (gae/with-datastore [ds (util/datastore-spec app-id)]
+                      (try
+                        (let [instance-id (Long/parseLong instance-id-str)]
+                          (query/entity ds "SurveyInstance" instance-id))
+                        (catch NumberFormatException e
+                          (errorf "\"%s\" is not a valid form instance id" instance-id-str)))))
+
+(defn bulk-image-upload
+  "Prepare uploaded images to be pushed to the flow backend"
+  [base-url unique-identifier filename upload-domain]
+  (let [app-id (get @config/s3bucket->app-id (config/get-bucket-name upload-domain))
+        path (format "%s/%s" (get-path) unique-identifier)
+        _ (combine path filename)
+        _ (cleanup path)
+        unzipped-dir (unzip-file path filename)
+        files-by-folder (group-by #(fs/base-name (fs/parent %)) (get-images unzipped-dir))
+        form-instance (get-form-instance app-id (key (first files-by-folder)))
+        form-id (.getProperty form-instance "surveyId")
+        xml-form (util/get-published-form app-id form-id)
+        image-questions (get-image-questions xml-form)]
+    (doseq [folder files-by-folder]
+      (process-image-upload base-url folder image-questions))))

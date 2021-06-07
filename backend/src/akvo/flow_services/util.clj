@@ -1,13 +1,18 @@
 (ns akvo.flow-services.util
   (:require [akvo.commons.config :as config]
+            [aws.sdk.s3 :as s3]
             [clj-http.client :as http]
+            [clojure.java.io :as io]
             [akvo.flow-services.error :as e]
             [taoensso.timbre :as timbre])
-  (:import [java.text SimpleDateFormat]
+  (:import [com.fasterxml.jackson.dataformat.xml XmlMapper]
+           [java.text SimpleDateFormat]
            [java.util TimeZone Date Base64]
            [java.net URLEncoder]
            [javax.crypto Mac]
-           [javax.crypto.spec SecretKeySpec]))
+           [javax.crypto.spec SecretKeySpec]
+           [java.util.zip ZipInputStream]
+           [org.akvo.flow.xml XmlForm]))
 
 (defn datastore-spec [app-id-or-bucket]
   (let [cfg (config/find-config app-id-or-bucket)]
@@ -70,3 +75,16 @@
                    (http/request final-request))]
     (timbre/debug "response" response)
     response))
+
+(defn get-published-form
+  "Retrieve published form from S3"
+  [app-id form-id]
+  (let [credentials (select-keys (config/find-config app-id) [:access-key :secret-key :s3bucket])
+        object-key (str "surveys/" form-id ".zip")]
+    (try
+      (with-open [in (ZipInputStream. (io/input-stream (:content (s3/get-object credentials (:s3bucket credentials) object-key))))]
+        (let [file (.getNextEntry in)]
+          (when (= (.getName file) (str form-id ".xml"))
+            (.readValue (XmlMapper.) in (class (XmlForm.))))))
+      (catch Exception e
+        (timbre/errorf "Failed to retrieve form %s" form-id)))))
