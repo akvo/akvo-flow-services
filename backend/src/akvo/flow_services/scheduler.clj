@@ -17,7 +17,7 @@
   (:import [org.quartz ObjectAlreadyExistsException]
            java.io.File)
   (:require [clojure.string :as str]
-            [taoensso.timbre :refer (infof warnf) :as log]
+            [taoensso.timbre :refer [infof] :as log]
             [clojurewerkz.quartzite [conversion :as conversion]
              [jobs :as jobs]
              [scheduler :as scheduler]
@@ -26,10 +26,9 @@
             [akvo.flow-services.email :as email]
             [akvo.flow-services.geoshape-export :as geoshape]
             [akvo.flow-services.error :as e]
-            [akvo.flow-services.util :as util])
-  (:use [akvo.flow-services.exporter :only (export-report)]
-        [akvo.flow-services.uploader :only (bulk-upload)]
-        [akvo.flow-services.uploader :only (bulk-image-upload)]))
+            [akvo.flow-services.util :as util]
+            [akvo.flow-services.exporter :refer [export-report]]
+            [akvo.flow-services.uploader :refer [bulk-upload bulk-image-upload]]))
 
 (defn flow-report-id [job-data]
   (get-in job-data ["opts" "reportId"]))
