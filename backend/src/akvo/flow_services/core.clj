@@ -111,6 +111,9 @@
           (header "Access-Control-Allow-Origin" "*")
           (header "Content-Type" "text/plain")))))
 
+  (OPTIONS "/bulk_image_upload" [:as {params :params}]
+      (header (response "OK") "Access-Control-Allow-Origin" "*"))
+
   (POST "/bulk_image_upload" [:as {params :params}]
     (timbre/debugf "Uploading with params: %s " params)
     (if (:file params)
