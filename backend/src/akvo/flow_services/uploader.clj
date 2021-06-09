@@ -186,7 +186,7 @@
 
 (defn- get-images
   [path]
-  (filter-files (fs/find-files path #".*\.(jpg|JPG|jpeg|JPEG)$")))
+  (filter-files (fs/find-files path #".*\.(jpg|JPG|jpeg|JPEG|png|PNG)$")))
 
 (defn query-string
   [params]
@@ -265,9 +265,13 @@
 (defn- upload-image
   "Upload images from a specific folder"
   [base-url form-instance-id question-id image]
-  (let [url (format "%s/rest/image_upload/question/%s/instance/%s" base-url question-id form-instance-id)]
+  (let [url (format "%s/rest/image_upload/question/%s/instance/%s" base-url question-id form-instance-id)
+        ext (.toLowerCase (fs/extension image))
+        mime-type (cond
+                    (or (= ext ".jpg") (= ext ".jpeg")) "image/jpeg"
+                    (= ext ".png") "image/png")]
     (debugf "Uploading image to url %s" url)
-    (http/post url {:multipart [{:name "image" :mime-type "image/jpeg" :content image}]})))
+    (http/post url {:multipart [{:name "image" :mime-type mime-type :content image}]})))
 
 (defn- process-image-upload
   [base-url folder questions]
