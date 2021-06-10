@@ -269,10 +269,11 @@
         grouped-responses (group-by :status responses)
         success-msg (partial (format "File: '%1$s' processed. '%4$s' out of '%3$s' images successfully added to instance id: '%2$s'") file-name form-instance-id total-images)
         failure-msg (partial (format "Failed to add '%4$s' out of '%2$s' image files for folder '%3$s' in file '%1$s': %5$s ") file-name total-images form-instance-id)]
-    (doseq [response grouped-responses]
-      (if (= (:status response) 200)
-        (add-message bucket "Image bulk upload" form-instance-id (success-msg (count (val response))))
-        (add-message bucket "Image bulk upload" form-instance-id (failure-msg (count (val response)) (val response)))))))
+    (->> grouped-responses
+         (mapv (fn [[status responses]]
+                 (if (= status 200)
+                   (add-message bucket "Image bulk upload" form-instance-id (success-msg (count responses)))
+                   (add-message bucket "Image bulk upload" form-instance-id (failure-msg (count responses) responses))))))))
 
 (defn- upload-image
   "Upload images from a specific folder"
@@ -286,16 +287,14 @@
     (http/post url {:multipart [{:name "image" :mime-type mime-type :content image}]})))
 
 (defn- process-image-upload-folder
-  [app-id base-url file-name folder questions]
-  (let [form-instance-id (Long/parseLong (key folder))
-        question-ids (map #(.getId %) questions)
-        images (val folder)
-        responses (atom [])]
-    (debugf "Processing images for folder %s:" form-instance-id)
-    (doseq [pair (apply assoc {} (interleave question-ids images))]
-      (swap! responses conj {:status (:status (upload-image base-url form-instance-id (first pair) (last pair)))
-                             :file-name (fs/base-name (last pair))}))
-    (add-image-upload-messages app-id file-name form-instance-id @responses)))
+  [app-id base-url file-name {:keys [form-instance-id images] :as folder-data} questions]
+  (let [question-ids (map #(.getId %) questions)
+        _  (debugf "Processing images for folder %s:" form-instance-id)]
+    (->> (mapv (fn [question-id image]
+                 {:status (:status (upload-image base-url form-instance-id question-id image))
+                  :file-name (fs/base-name image)})
+               question-ids images)
+         (add-image-upload-messages app-id file-name form-instance-id))))
 
 (defn- get-image-questions
   [xml-form]
@@ -324,5 +323,8 @@
         form-id (.getProperty form-instance "surveyId")
         xml-form (util/get-published-form app-id form-id)
         image-questions (get-image-questions xml-form)]
-    (doseq [folder files-by-folder]
-      (process-image-upload-folder app-id base-url file-name folder image-questions))))
+    (->> files-by-folder
+         (mapv (fn [[form-instance-id images]]
+                 (let [folder-data {:form-instance-id (Long/parseLong form-instance-id)
+                                    :images images}]
+                   (process-image-upload-folder app-id base-url file-name folder-data image-questions)))))))
