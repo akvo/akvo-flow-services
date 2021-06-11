@@ -101,7 +101,7 @@
 
 (defn add-message [bucket-name action obj-id content]
   (let [msg {"actionAbout" action
-             "objectId" (if obj-id (Long/parseLong obj-id))
+             "objectId" obj-id
              ;; Return only first 500 xters of message due to GAE String limitation
              "shortMessage" (if (nil? content)
                               ""
@@ -153,7 +153,7 @@
       (infof "Errors in raw data upload - baseURL: %s - file: %s - surveyId: %s - errors: %s" base-url f surveyId errors))
     (if (empty? errors)
       (.executeImport importer f base-url (config/get-criteria bucket-name surveyId))
-      (add-message bucket-name "importData" surveyId
+      (add-message bucket-name "importData" (Long/parseLong surveyId)
                    (format "Invalid RAW DATA file: %s - Errors: %s" (.getName f) (str/join ", " (vals errors)))))))
 
 (defn- get-data [f]
@@ -262,6 +262,19 @@
       (.endsWith uname "XLSX") (raw-data (io/file path filename) base-url bucket-name surveyId) ; Upload raw data
       :else (upload (io/file path) bucket-name))))
 
+(defn- add-image-upload-messages
+  [app-id file-name form-instance-id responses]
+  (let [bucket (:s3bucket (config/find-config app-id))
+        total-images (count responses)
+        grouped-responses (group-by :status responses)
+        success-msg "File: '%s' processed. '%s' out of '%s' images successfully added to instance id: '%s'"
+        failure-msg "Failed to add '%s' out of '%s' image files for folder '%s' in file '%s': %s"]
+    (->> grouped-responses
+         (mapv (fn [[status responses]]
+                 (if (= status 200)
+                   (add-message bucket "Image bulk upload" form-instance-id (format success-msg file-name (count responses) total-images form-instance-id))
+                   (add-message bucket "Image bulk upload" form-instance-id (format failure-msg (count responses) total-images form-instance-id file-name responses))))))))
+
 (defn- upload-image
   "Upload images from a specific folder"
   [base-url form-instance-id question-id image]
@@ -273,14 +286,15 @@
     (debugf "Uploading image to url %s" url)
     (http/post url {:multipart [{:name "image" :mime-type mime-type :content image}]})))
 
-(defn- process-image-upload
-  [base-url folder questions]
-  (let [form-instance-id (Long/parseLong (key folder))
-        question-ids (map #(.getId %) questions)
-        images (val folder)]
-    (debugf "Processing images for folder %s:" form-instance-id)
-    (doseq [pair (apply assoc {} (interleave question-ids images))]
-      (upload-image base-url form-instance-id (first pair) (last pair)))))
+(defn- process-image-upload-folder
+  [app-id base-url file-name {:keys [form-instance-id images] :as folder-data} questions]
+  (let [question-ids (map #(.getId %) questions)
+        _  (debugf "Processing images for folder %s:" form-instance-id)]
+    (->> (mapv (fn [question-id image]
+                 {:status (:status (upload-image base-url form-instance-id question-id image))
+                  :file-name (fs/base-name image)})
+               question-ids images)
+         (add-image-upload-messages app-id file-name form-instance-id))))
 
 (defn- get-image-questions
   [xml-form]
@@ -298,16 +312,19 @@
 
 (defn bulk-image-upload
   "Prepare uploaded images to be pushed to the flow backend"
-  [base-url unique-identifier filename upload-domain]
+  [base-url unique-identifier file-name upload-domain]
   (let [app-id (get @config/s3bucket->app-id (config/get-bucket-name upload-domain))
         path (format "%s/%s" (get-path) unique-identifier)
-        _ (combine path filename)
+        _ (combine path file-name)
         _ (cleanup path)
-        unzipped-dir (unzip-file path filename)
+        unzipped-dir (unzip-file path file-name)
         files-by-folder (group-by #(fs/base-name (fs/parent %)) (get-images unzipped-dir))
         form-instance (get-form-instance app-id (key (first files-by-folder)))
         form-id (.getProperty form-instance "surveyId")
         xml-form (util/get-published-form app-id form-id)
         image-questions (get-image-questions xml-form)]
-    (doseq [folder files-by-folder]
-      (process-image-upload base-url folder image-questions))))
+    (->> files-by-folder
+         (mapv (fn [[form-instance-id images]]
+                 (let [folder-data {:form-instance-id (Long/parseLong form-instance-id)
+                                    :images images}]
+                   (process-image-upload-folder app-id base-url file-name folder-data image-questions)))))))
