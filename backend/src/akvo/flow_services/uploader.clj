@@ -267,13 +267,13 @@
   (let [bucket (:s3bucket (config/find-config app-id))
         total-images (count responses)
         grouped-responses (group-by :status responses)
-        success-msg (partial (format "File: '%1$s' processed. '%4$s' out of '%3$s' images successfully added to instance id: '%2$s'") file-name form-instance-id total-images)
-        failure-msg (partial (format "Failed to add '%4$s' out of '%2$s' image files for folder '%3$s' in file '%1$s': %5$s ") file-name total-images form-instance-id)]
+        success-msg "File: '%s' processed. '%s' out of '%s' images successfully added to instance id: '%s'"
+        failure-msg "Failed to add '%s' out of '%s' image files for folder '%s' in file '%s': %s"]
     (->> grouped-responses
          (mapv (fn [[status responses]]
                  (if (= status 200)
-                   (add-message bucket "Image bulk upload" form-instance-id (success-msg (count responses)))
-                   (add-message bucket "Image bulk upload" form-instance-id (failure-msg (count responses) responses))))))))
+                   (add-message bucket "Image bulk upload" form-instance-id (format success-msg file-name (count responses) total-images form-instance-id))
+                   (add-message bucket "Image bulk upload" form-instance-id (format failure-msg (count responses) total-images form-instance-id file-name responses))))))))
 
 (defn- upload-image
   "Upload images from a specific folder"
