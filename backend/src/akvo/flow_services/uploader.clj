@@ -101,7 +101,7 @@
 
 (defn add-message [bucket-name action obj-id content]
   (let [msg {"actionAbout" action
-             "objectId" (if obj-id (Long/parseLong obj-id))
+             "objectId" obj-id
              ;; Return only first 500 xters of message due to GAE String limitation
              "shortMessage" (if (nil? content)
                               ""
@@ -153,7 +153,7 @@
       (infof "Errors in raw data upload - baseURL: %s - file: %s - surveyId: %s - errors: %s" base-url f surveyId errors))
     (if (empty? errors)
       (.executeImport importer f base-url (config/get-criteria bucket-name surveyId))
-      (add-message bucket-name "importData" surveyId
+      (add-message bucket-name "importData" (Long/parseLong surveyId)
                    (format "Invalid RAW DATA file: %s - Errors: %s" (.getName f) (str/join ", " (vals errors)))))))
 
 (defn- get-data [f]

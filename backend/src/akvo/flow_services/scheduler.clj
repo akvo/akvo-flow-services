@@ -131,7 +131,8 @@
 (jobs/defjob ImageBulkUploadJob [job-data]
              (let [{:strs [baseURL uniqueIdentifier filename uploadDomain id] :as data} (conversion/from-job-data job-data)]
                (log/info "Scheduling Bulk image upload job:" data)
-               (log/info "Bulk image upload result:" (bulk-image-upload baseURL uniqueIdentifier filename uploadDomain))
+               (bulk-image-upload baseURL uniqueIdentifier filename uploadDomain)
+               (log/info "Bulk image upload completed: " (jobs/key id))
                (scheduler/delete-job (jobs/key id))))
 
 (defn- report-id [m]
