@@ -262,10 +262,12 @@
       (.endsWith uname "XLSX") (raw-data (io/file path filename) base-url bucket-name surveyId) ; Upload raw data
       :else (upload (io/file path) bucket-name))))
 
-(defn- add-unable-to-process-folder-message
-  [bucket folder-name]
-  (let [failure-msg "Unable to process folder '%s'"]
-    (add-message bucket "Image bulk upload" nil (format failure-msg folder-name))))
+(defn- add-unable-to-process-message
+  [bucket file-name folder-name]
+  (let [failure-msg "Unable to process"
+        folder-str (when folder-name (format " folder '%s' in" folder-name))
+        file-str (when file-name (format " file '%s'" file-name))]
+    (add-message bucket "Image bulk upload" nil (str failure-msg folder-str file-str))))
 
 (defn- add-image-upload-messages
   [bucket file-name form-instance-id responses]
@@ -291,12 +293,11 @@
     (http/post url {:multipart [{:name "image" :mime-type mime-type :content image}]})))
 
 (defn- process-image-upload-folder
-  [app-id base-url file-name {:keys [form-instance-id images error folder-name] :as folder-data} questions]
+  [bucket base-url file-name {:keys [form-instance-id images error folder-name] :as folder-data} questions]
   (let [question-ids (map #(.getId %) questions)
-        _  (debugf "Processing images for folder %s:" form-instance-id)
-        bucket (:s3bucket (config/find-config app-id))]
+        _  (debugf "Processing images for folder %s:" form-instance-id)]
     (if error
-      (add-unable-to-process-folder-message bucket folder-name)
+      (add-unable-to-process-message bucket file-name folder-name)
       (->> (mapv (fn [question-id image]
                    {:status (:status (upload-image base-url form-instance-id question-id image))
                     :file-name (fs/base-name image)})
@@ -330,6 +331,7 @@
   "Prepare uploaded images to be pushed to the flow backend"
   [base-url unique-identifier file-name upload-domain]
   (let [app-id (get @config/s3bucket->app-id (config/get-bucket-name upload-domain))
+        bucket (:s3bucket (config/find-config app-id))
         path (format "%s/%s" (get-path) unique-identifier)
         _ (combine path file-name)
         _ (cleanup path)
@@ -340,6 +342,8 @@
         form-id (when form-instance (.getProperty form-instance "surveyId"))
         xml-form (when form-id (util/get-published-form app-id form-id))
         image-questions (when xml-form (get-image-questions xml-form))]
-    (->> folder-data
-         (mapv (fn [folder]
-                 (process-image-upload-folder app-id base-url file-name folder image-questions))))))
+    (if xml-form
+      (->> folder-data
+           (mapv (fn [folder]
+                   (process-image-upload-folder bucket base-url file-name folder image-questions))))
+      (add-unable-to-process-message bucket nil file-name))))
