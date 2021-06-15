@@ -346,4 +346,4 @@
       (->> folder-data
            (mapv (fn [folder]
                    (process-image-upload-folder bucket base-url file-name folder image-questions))))
-      (add-unable-to-process-message bucket nil file-name))))
+      (add-unable-to-process-message bucket file-name nil))))
