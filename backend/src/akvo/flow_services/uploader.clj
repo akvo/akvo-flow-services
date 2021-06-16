@@ -293,16 +293,14 @@
     (http/post url {:multipart [{:name "image" :mime-type mime-type :content image}]})))
 
 (defn- process-image-upload-folder
-  [bucket base-url file-name {:keys [form-instance-id images error folder-name] :as folder-data} questions]
+  [bucket base-url file-name {:keys [form-instance-id images] :as folder-data} questions]
   (let [question-ids (map #(.getId %) questions)
         _  (debugf "Processing images for folder %s:" form-instance-id)]
-    (if error
-      (add-unable-to-process-message bucket file-name folder-name)
-      (->> (mapv (fn [question-id image]
-                   {:status (:status (upload-image base-url form-instance-id question-id image))
-                    :file-name (fs/base-name image)})
-                 question-ids images)
-           (add-image-upload-messages bucket file-name form-instance-id)))))
+    (->> (mapv (fn [question-id image]
+                 {:status (:status (upload-image base-url form-instance-id question-id image))
+                  :file-name (fs/base-name image)})
+               question-ids images)
+         (add-image-upload-messages bucket file-name form-instance-id))))
 
 (defn- get-image-questions
   [xml-form]
@@ -343,7 +341,8 @@
         xml-form (when form-id (util/get-published-form app-id form-id))
         image-questions (when xml-form (get-image-questions xml-form))]
     (if xml-form
-      (->> folder-data
-           (mapv (fn [folder]
-                   (process-image-upload-folder bucket base-url file-name folder image-questions))))
+      (doseq [{:keys [error folder-name] :as folder} folder-data]
+        (if error
+          (add-unable-to-process-message bucket file-name folder-name)
+          (process-image-upload-folder bucket base-url file-name folder image-questions)))
       (add-unable-to-process-message bucket file-name nil))))
