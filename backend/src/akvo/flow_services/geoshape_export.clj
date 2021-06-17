@@ -131,7 +131,7 @@
                                 {:chunk-size 300})]
     (for [response responses]
       {:value       (or (.getProperty response "value")
-                        (.getValue (.getProperty response "valueText")))
+                        (some-> response (.getProperty "valueText") .getValue))
        :iteration   (or (.getProperty response "iteration") 0)
        :instance-id (.getProperty response "surveyInstanceId")
        :question-id (Long/parseLong (.getProperty response "questionID"))})))
