@@ -1,9 +1,12 @@
 (ns akvo.flow-services.uploader-test
   (:require [clojure.test :refer :all]
             [clojure.string :as str]
+            [clj-http.client :as http]
+            [akvo.flow-services.util :as util]
             [me.raynes.fs.compression :as fsc]
             [akvo.flow-services.uploader :as uploader])
   (:import (java.io File)
+           (java.net URLEncoder)
            (java.nio.file Files)
            (java.nio.file.attribute FileAttribute)))
 
@@ -74,3 +77,19 @@
       (is (str/includes?
             (:user-message (upload no-data))
             "no data found")))))
+
+(deftest upload-image-signs-request
+  (testing "upload-image attaches ts/h query params signed with the instance api key"
+    (let [captured (atom nil)
+          img (doto (File/createTempFile "img" ".jpg") .deleteOnExit)]
+      (with-redefs [http/post (fn [url opts]
+                                (reset! captured {:url url :opts opts})
+                                {:status 200})]
+        (#'uploader/upload-image "http://backend" "very private" 222 111 img))
+      (let [qp (get-in @captured [:opts :query-params])]
+        (is (contains? qp :ts) "sends a ts param")
+        (is (contains? qp :h) "sends an h param")
+        ;; h must be HmacSHA1/Base64 over "ts=<url-encoded-ts>" — exactly what RestAuthFilter recomputes
+        (is (= (:h qp)
+               (util/hmac-sha1 "very private"
+                               (str "ts=" (URLEncoder/encode (:ts qp) "UTF-8")))))))))

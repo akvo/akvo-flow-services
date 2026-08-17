@@ -283,21 +283,22 @@
 
 (defn- upload-image
   "Upload images from a specific folder"
-  [base-url form-instance-id question-id image]
+  [base-url api-key form-instance-id question-id image]
   (let [url (format "%s/rest/image_upload/question/%s/instance/%s" base-url question-id form-instance-id)
         ext (.toLowerCase (fs/extension image))
         mime-type (cond
                     (or (= ext ".jpg") (= ext ".jpeg")) "image/jpeg"
                     (= ext ".png") "image/png")]
     (debugf "Uploading image to url %s" url)
-    (http/post url {:multipart [{:name "image" :mime-type mime-type :content image}]})))
+    (http/post url (merge {:multipart [{:name "image" :mime-type mime-type :content image}]}
+                          (util/sign-request-with-timestamp api-key)))))
 
 (defn- process-image-upload-folder
-  [bucket base-url file-name {:keys [form-instance-id images] :as folder-data} questions]
+  [bucket base-url api-key file-name {:keys [form-instance-id images] :as folder-data} questions]
   (let [question-ids (map #(.getId %) questions)
         _  (debugf "Processing images for folder %s:" form-instance-id)]
     (->> (mapv (fn [question-id image]
-                 {:status (:status (upload-image base-url form-instance-id question-id image))
+                 {:status (:status (upload-image base-url api-key form-instance-id question-id image))
                   :file-name (fs/base-name image)})
                question-ids images)
          (add-image-upload-messages bucket file-name form-instance-id))))
@@ -330,6 +331,7 @@
   [base-url unique-identifier file-name upload-domain]
   (let [app-id (get @config/s3bucket->app-id (config/get-bucket-name upload-domain))
         bucket (:s3bucket (config/find-config app-id))
+        api-key (:apiKey (config/find-config app-id))
         path (format "%s/%s" (get-path) unique-identifier)
         _ (combine path file-name)
         _ (cleanup path)
@@ -344,5 +346,5 @@
       (doseq [{:keys [error folder-name] :as folder} folder-data]
         (if error
           (add-unable-to-process-message bucket file-name folder-name)
-          (process-image-upload-folder bucket base-url file-name folder image-questions)))
+          (process-image-upload-folder bucket base-url api-key file-name folder image-questions)))
       (add-unable-to-process-message bucket file-name nil))))
