@@ -19,7 +19,7 @@ services:
   wiremock-proxy:
     image: rodolpheche/wiremock:2.16.0-alpine
   aws-s3:
-    image: abhin4v/hastatic:1.0.0
+    image: abhin4v/hastatic:0.10.0
     environment:
       - PORT=3005
     command: /usr/bin/hastatic
