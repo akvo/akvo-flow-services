@@ -1,9 +1,9 @@
 version: "3"
 services:
  flow-services:
-   build:
-     context: .
-     dockerfile: backend/Dockerfile-dev
+   image: clojure:openjdk-8-lein-2.9.1
+   working_dir: /app
+   command: ./dev/start-dev-env.sh
    environment:
      - HOST_UID
      - HOST_GID
@@ -11,7 +11,7 @@ services:
      - EMAIL_USER=anything.else
      - APP_VERSION=some.version
    external_links:
-     - "akvo-flow:akvoflow.local"
+     - "akvo-flow:akvoflow.test"
    ports:
       - "7888:7888"
       - "3000:3000"
