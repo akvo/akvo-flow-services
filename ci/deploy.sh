@@ -32,6 +32,10 @@ if [[ "${TRAVIS_TAG:-}" =~ promote-.* ]]; then
     POD_CPU_LIMITS="10000m"
     POD_MEM_REQUESTS="5120Mi"
     POD_MEM_LIMITS="5632Mi"
+    # Production's reports volume was expanded to 350Gi at some point without the
+    # template following. A PersistentVolumeClaim can grow but never shrink, so every
+    # apply since then was rejected -- see the commit message.
+    REPORTS_STORAGE="350Gi"
 else
     log Environment is test
     gcloud container clusters get-credentials test
@@ -39,6 +43,9 @@ else
     POD_CPU_LIMITS="400m"
     POD_MEM_REQUESTS="1024Mi"
     POD_MEM_LIMITS="2048Mi"
+    # Test's volume is genuinely 200Gi. Naming the sizes separately keeps this fix from
+    # silently growing it to production's, which could not be undone.
+    REPORTS_STORAGE="200Gi"
     log Pushing images
     gcloud auth configure-docker
     docker push "eu.gcr.io/${PROJECT_NAME}/akvo-flow-services:${TRAVIS_COMMIT}"
@@ -53,6 +60,7 @@ sed -e "s/\$TRAVIS_COMMIT/$TRAVIS_COMMIT/" \
   -e "s/\${POD_MEM_REQUESTS}/${POD_MEM_REQUESTS}/" \
   -e "s/\${POD_CPU_LIMITS}/${POD_CPU_LIMITS}/" \
   -e "s/\${POD_MEM_LIMITS}/${POD_MEM_LIMITS}/" \
+  -e "s/\${REPORTS_STORAGE}/${REPORTS_STORAGE}/" \
   ci/akvo-flow-services.yaml.template > akvo-flow-services.yaml
 
 kubectl apply -f akvo-flow-services.yaml
