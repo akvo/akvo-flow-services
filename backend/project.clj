@@ -47,10 +47,21 @@
                  [com.fasterxml.jackson.dataformat/jackson-dataformat-xml "2.10.0"]
                  [tigris "0.1.2"]
 
-                 ; Configuration and Stats
-                 [com.google.appengine/appengine-tools-sdk "1.9.50"]
-                 [com.google.appengine/appengine-remote-api "1.9.50"]
-                 [com.google.appengine/appengine-api-1.0-sdk "1.9.50"]
+                 ; Configuration and Stats.
+                 ;
+                 ; 2.0.38 rather than 1.9.50 because the instance descriptors in
+                 ; akvo-flow-server-config are now second-generation App Engine
+                 ; descriptors, and `akvo.commons.config/get-config` parses every one of
+                 ; them at startup with `AppEngineWebXmlReader` from appengine-tools-sdk.
+                 ; 1.9.50 predates `<app-engine-apis>` and rejects the whole file, which
+                 ; takes the service down on its next restart -- see the commit message.
+                 ;
+                 ; All three move together on purpose. tools-sdk and api-1.0-sdk share
+                 ; some 2300 repackaged classes (a shaded Guava among them), so mixing
+                 ; versions leaves which copy wins up to classpath order.
+                 [com.google.appengine/appengine-tools-sdk "2.0.38"]
+                 [com.google.appengine/appengine-remote-api "2.0.38"]
+                 [com.google.appengine/appengine-api-1.0-sdk "2.0.38"]
 
                  [aero "1.1.3"]
                  [raven-clj "1.5.1"]]
