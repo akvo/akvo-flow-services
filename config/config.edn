@@ -45,7 +45,10 @@
                 :ssl     #boolean #or [#env EMAIL_USE_SSL false]
                 :timeout #long #or [#env EMAIL_TIMEOUT 10000]}
 
- :notification-from "noreply@akvo.org"
+ ;; The relay has to be permitted to send as this address, and relays commonly
+ ;; reject a From that does not match the authenticated account -- so this
+ ;; usually has to track EMAIL_HOST_USER.
+ :notification-from #or [#env EMAIL_FROM "noreply@akvo.org"]
  :notification-reply-to "reports@akvoflow.org"
 
  ;; Maximum number of rows generated for raw data reports. Nil means no limit.
@@ -56,3 +59,4 @@
           :env #env ENV_NAME
           :host #env POD_NAME
           :version #env APP_VERSION}
+ }

@@ -28,7 +28,10 @@ data:
                         :tls     #boolean #or [#env EMAIL_USE_TLS true]
                         :ssl     #boolean #or [#env EMAIL_USE_SSL false]
                         :timeout #long #or [#env EMAIL_TIMEOUT 10000]}
-         :notification-from "noreply@akvo.org"
+         ;; The relay has to be permitted to send as this address, and relays
+         ;; commonly reject a From that does not match the authenticated
+         ;; account, so this usually has to track EMAIL_HOST_USER.
+         :notification-from #or [#env EMAIL_FROM "noreply@akvo.org"]
          :notification-reply-to "reports@akvoflow.org"
           :sentry {:dsn #env SENTRY_DSN
                    :env #env ENV_NAME
@@ -136,6 +139,12 @@ spec:
              secretKeyRef:
                name: mailjet
                key: email-password
+         - name: EMAIL_FROM
+           valueFrom:
+             secretKeyRef:
+               name: mailjet
+               key: email-from
+               optional: true
          - name: EMAIL_PORT
            valueFrom:
              secretKeyRef:
