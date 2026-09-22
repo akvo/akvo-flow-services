@@ -26,9 +26,24 @@
                  "akvoflow-beta2.appspot.com"]
 
 
- ;; Email notifications
- :notification {:credentials [#env EMAIL_USER #env EMAIL_PASSWORD]
-                :api-url     "https://api.mailjet.com/v3"}
+ ;; Email notifications, delivered through an SMTP relay.
+ ;;
+ ;; The defaults are the ones a real relay usually wants: STARTTLS on port 587,
+ ;; implicit SSL off. A relay on port 465 needs EMAIL_PORT and EMAIL_USE_SSL
+ ;; together, not just the port -- 465 is implicit SSL, and neither TLS mode is
+ ;; inferable from the port number. Picking the wrong one opens a plaintext
+ ;; socket against a TLS-only port and blocks until the timeout.
+ ;;
+ ;; Leave an optional variable unset rather than setting it empty: #or takes the
+ ;; first non-nil value, and an empty string is not nil, so EMAIL_PORT="" fails
+ ;; with a bare NumberFormatException that does not name the variable.
+ :notification {:host    #env EMAIL_HOST
+                :port    #long #or [#env EMAIL_PORT 587]
+                :user    #env EMAIL_HOST_USER
+                :pass    #env EMAIL_HOST_PASSWORD
+                :tls     #boolean #or [#env EMAIL_USE_TLS true]
+                :ssl     #boolean #or [#env EMAIL_USE_SSL false]
+                :timeout #long #or [#env EMAIL_TIMEOUT 10000]}
 
  :notification-from "noreply@akvo.org"
  :notification-reply-to "reports@akvoflow.org"
