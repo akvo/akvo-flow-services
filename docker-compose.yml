@@ -13,11 +13,15 @@ services:
     environment:
       - HOST_UID
       - HOST_GID
-      - EMAIL_PASSWORD=anything
-      - EMAIL_USER=anything.else
       - APP_VERSION=some.version
   wiremock-proxy:
     image: rodolpheche/wiremock:2.16.0-alpine
+  # Catches the report-ready notifications. dev/config.edn points the relay at
+  # its SMTP port (1025); the end-to-end tests read what arrived back off its
+  # HTTP API (8025). No credentials, so EMAIL_HOST_USER/PASSWORD stay unset --
+  # postal only attempts an AUTH handshake when a user is present.
+  mailpit:
+    image: axllent/mailpit:v1.29.7
   aws-s3:
     image: abhin4v/hastatic:0.10.0
     environment:

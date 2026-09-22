@@ -9,6 +9,9 @@
 
 (def wiremock-url "http://wiremock-proxy:8080")
 (def wiremock-mappings-url (str wiremock-url "/__admin/mappings"))
+;; Mailpit is a real SMTP server rather than a stub, so notifications are not
+;; mocked any more -- they are delivered and then read back off this API.
+(def mailpit-url "http://mailpit:8025")
 (def flow-services-url "http://localhost:3000")
 (def gae-local {:hostname "localhost"
                 :port     8888})
@@ -33,11 +36,6 @@
            (with-open [_ (Socket. host (int port))]
              true)))
 
-(defn mock-mailjet []
-  (http/post wiremock-mappings-url {:body (json/generate-string {"request"  {"method"  "POST"
-                                                                             "urlPath" "/mailjet/send"}
-                                                                 "response" {"status" 200
-                                                                             "body"   "ok"}})}))
 (defn mock-sentry []
   (http/post wiremock-mappings-url {:body (json/generate-string {"request"  {"method"  "POST"
                                                                              "urlPath" "/sentry/api/213123/store/"}
@@ -52,22 +50,28 @@
                        "response" {"status"   200
                                    "jsonBody" {}}})}))
 
-(defn text-first-email-sent-to [email]
-  (->> (http/post (str wiremock-url "/__admin/requests/find")
-                  {:as   :json
-                   :body (json/generate-string
-                           {"method"       "POST"
-                            "bodyPatterns" [{"matches" (str ".*" email ".*")}]
-                            "urlPath"      "/mailjet/send"})})
-       :body
-       :requests
-       first
-       :body
-       (#(json/parse-string % true))
-       :Text-part))
+(defn text-first-email-sent-to
+  "Plain-text body of the first message Mailpit holds for `email`, or nil.
+
+  Mailpit's search returns message summaries without their bodies, so the body
+  takes a second call. Every test address here is unique to its test, so \"first\"
+  is unambiguous."
+  [email]
+  (when-let [id (-> (http/get (str mailpit-url "/api/v1/search")
+                              {:as :json :query-params {"query" (str "to:" email)}})
+                    :body
+                    :messages
+                    first
+                    :ID)]
+    (-> (http/get (str mailpit-url "/api/v1/message/" id) {:as :json})
+        :body
+        :Text)))
 
 (defn reset-wiremock []
   (http/post (str wiremock-mappings-url "/reset")))
+
+(defn reset-mailpit []
+  (http/delete (str mailpit-url "/api/v1/messages")))
 
 (defn get-report [report-result]
   (http/get (str flow-services-url "/report/" (get report-result "file"))))
@@ -79,7 +83,8 @@
 (defn check-servers-up []
   (wait-for-server "localhost" 3000)
   (wait-for-server "localhost" 8888)
-  (wait-for-server "wiremock-proxy" 8080))
+  (wait-for-server "wiremock-proxy" 8080)
+  (wait-for-server "mailpit" 1025))
 
 (defn fixture [f]
   (let [config (aero/read-config "dev/config.edn")]
@@ -89,6 +94,7 @@
       (config/set-config! "dev/flow-server-config/")))
   (check-servers-up)
   (reset-wiremock)
+  (reset-mailpit)
   (f))
 
 (defn instance-data [survey-id instance-id]

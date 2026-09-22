@@ -71,7 +71,6 @@
                                                                           {:kind   "QuestionAnswerStore"
                                                                            :filter (query/= "surveyId" survey-id)})))))))
     (mock-gae survey-id survey-instance-id)
-    (test-util/mock-mailjet)
     (test-util/mock-flow-report-api)
     (test-util/try-for "Processing for too long" 20
                        (not= {"status" "OK", "message" "PROCESSING"}

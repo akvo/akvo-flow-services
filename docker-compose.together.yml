@@ -7,8 +7,6 @@ services:
    environment:
      - HOST_UID
      - HOST_GID
-     - EMAIL_PASSWORD=anything
-     - EMAIL_USER=anything.else
      - APP_VERSION=some.version
    external_links:
      - "akvo-flow:akvoflow.test"
@@ -19,6 +17,9 @@ services:
       - ./backend:/app
       - ~/.m2:/root/.m2
       - ~/.lein:/root/.lein
+
+ mailpit:
+   image: axllent/mailpit:v1.29.7
 
  wiremock-proxy:
    image: rodolpheche/wiremock:2.16.0-alpine

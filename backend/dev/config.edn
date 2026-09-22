@@ -26,8 +26,14 @@
                  "akvoflow-beta2.appspot.com"]
 
 
- :notification {:credentials [#env EMAIL_USER #env EMAIL_PASSWORD]
-                :api-url     "http://wiremock-proxy:8080/mailjet"}
+ ;; Mail goes to the Mailpit container, which speaks plain SMTP on 1025 and
+ ;; wants no credentials. The end-to-end tests read what arrived back off its
+ ;; HTTP API on 8025.
+ :notification {:host    "mailpit"
+                :port    1025
+                :tls     false
+                :ssl     false
+                :timeout 10000}
 
  :notification-from "noreply@akvo.org"
  :notification-reply-to "reports@akvoflow.org"

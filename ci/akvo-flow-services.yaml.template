@@ -13,10 +13,25 @@ data:
                          "akvoflow-dev1.appspot.com" "akvoflow-dev2.appspot.com" "wfp-161.appspot.com"
                          "flowdemoenvironment-hrd.appspot.com" "akvoflow-beta1.appspot.com"
                          "akvoflow-beta2.appspot.com"]
-         :notification {:mailjet true
-                        :credentials [#env EMAIL_USER #env EMAIL_PASSWORD]
-                        :api-url     "https://api.mailjet.com/v3"}
-         :notification-from "noreply@akvo.org"
+         ;; STARTTLS on 587 with implicit SSL off. Port 465 needs EMAIL_PORT and
+         ;; EMAIL_USE_SSL set together: implicit SSL does not follow from the
+         ;; port number, and without it the client opens a plaintext socket
+         ;; against a TLS-only port and hangs until the timeout. EMAIL_USE_TLS
+         ;; has no secret key because starttls.enable is "use it if offered",
+         ;; so the default is right even for a relay that has none. Leave an
+         ;; optional key out of the secret rather than setting it empty --
+         ;; #or takes the first non-nil value, and "" is not nil.
+         :notification {:host    #env EMAIL_HOST
+                        :port    #long #or [#env EMAIL_PORT 587]
+                        :user    #env EMAIL_HOST_USER
+                        :pass    #env EMAIL_HOST_PASSWORD
+                        :tls     #boolean #or [#env EMAIL_USE_TLS true]
+                        :ssl     #boolean #or [#env EMAIL_USE_SSL false]
+                        :timeout #long #or [#env EMAIL_TIMEOUT 10000]}
+         ;; The relay has to be permitted to send as this address, and relays
+         ;; commonly reject a From that does not match the authenticated
+         ;; account, so this usually has to track EMAIL_HOST_USER.
+         :notification-from #or [#env EMAIL_FROM "noreply@akvo.org"]
          :notification-reply-to "reports@akvoflow.org"
           :sentry {:dsn #env SENTRY_DSN
                    :env #env ENV_NAME
@@ -107,16 +122,41 @@ spec:
              secretKeyRef:
                name: akvo-flow-services
                key: sentry-dsn
-         - name: EMAIL_USER
+         # The optional keys have defaults in the ConfigMap above, so the pod
+         # still starts before they are populated. EMAIL_HOST has none.
+         - name: EMAIL_HOST
+           valueFrom:
+             secretKeyRef:
+               name: mailjet
+               key: email-host
+         - name: EMAIL_HOST_USER
            valueFrom:
              secretKeyRef:
                name: mailjet
                key: email-user
-         - name: EMAIL_PASSWORD
+         - name: EMAIL_HOST_PASSWORD
            valueFrom:
              secretKeyRef:
                name: mailjet
                key: email-password
+         - name: EMAIL_FROM
+           valueFrom:
+             secretKeyRef:
+               name: mailjet
+               key: email-from
+               optional: true
+         - name: EMAIL_PORT
+           valueFrom:
+             secretKeyRef:
+               name: mailjet
+               key: email-port
+               optional: true
+         - name: EMAIL_USE_SSL
+           valueFrom:
+             secretKeyRef:
+               name: mailjet
+               key: email-use-ssl
+               optional: true
         volumeMounts:
           - name: config-volume
             mountPath: /etc/config/akvo-flow-services

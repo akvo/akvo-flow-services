@@ -19,6 +19,10 @@
                  [akvo/fs "20180618-134534.a44cdd5b"]
                  [clj-aws-s3 "0.3.9" :exclusions [joda-time]]
                  [clj-http "3.8.0"]
+                 ;; commons-codec comes in via clj-http at 1.11; postal asks for 1.9 and
+                 ;; only uses Base64 from it, so take clj-http's rather than leave the
+                 ;; version to resolution order.
+                 [com.draines/postal "2.0.5" :exclusions [commons-codec]]
                  [org.clojure/java.jdbc "0.3.5"]
                  ; Java libraries
                  [javax.jdo/jdo-api "3.1"]
@@ -32,7 +36,12 @@
                  [org.slf4j/log4j-over-slf4j "1.7.25"]
                  [org.slf4j/jul-to-slf4j "1.7.25"]
                  [org.slf4j/jcl-over-slf4j "1.7.25"]
-                 [com.google.gdata/core "1.47.1"]
+                 ;; gdata brings javax.mail/mail 1.4, the same javax.mail package
+                 ;; postal's jakarta.mail ships -- 243 class files in common, with
+                 ;; the winner set by classpath order. Inert while nothing sent
+                 ;; mail; not any more. 1.6.5 is the last javax-namespace release
+                 ;; and a superset of what gdata uses.
+                 [com.google.gdata/core "1.47.1" :exclusions [javax.mail/mail]]
                  [org.xerial/sqlite-jdbc "3.7.2"]
                  ; Akvo FLOW dependencies
                  [org.akvo.flow/akvo-flow "20220120-233458.89643d80" :classifier "classes"]
