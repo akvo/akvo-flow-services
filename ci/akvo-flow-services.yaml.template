@@ -122,39 +122,42 @@ spec:
              secretKeyRef:
                name: akvo-flow-services
                key: sentry-dsn
-         # The optional keys have defaults in the ConfigMap above, so the pod
-         # still starts before they are populated. EMAIL_HOST has none.
+         # These live in the akvo-flow-services secret alongside sentry-dsn. The
+         # optional keys have defaults in the ConfigMap above, so the pod still
+         # starts before they are populated; EMAIL_HOST has none, so a missing
+         # email-host fails container creation rather than booting a service
+         # that cannot send.
          - name: EMAIL_HOST
            valueFrom:
              secretKeyRef:
-               name: mailjet
+               name: akvo-flow-services
                key: email-host
          - name: EMAIL_HOST_USER
            valueFrom:
              secretKeyRef:
-               name: mailjet
+               name: akvo-flow-services
                key: email-user
          - name: EMAIL_HOST_PASSWORD
            valueFrom:
              secretKeyRef:
-               name: mailjet
+               name: akvo-flow-services
                key: email-password
          - name: EMAIL_FROM
            valueFrom:
              secretKeyRef:
-               name: mailjet
+               name: akvo-flow-services
                key: email-from
                optional: true
          - name: EMAIL_PORT
            valueFrom:
              secretKeyRef:
-               name: mailjet
+               name: akvo-flow-services
                key: email-port
                optional: true
          - name: EMAIL_USE_SSL
            valueFrom:
              secretKeyRef:
-               name: mailjet
+               name: akvo-flow-services
                key: email-use-ssl
                optional: true
         volumeMounts:
