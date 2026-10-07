@@ -57,7 +57,10 @@
         [:parent :integer])
       "CREATE UNIQUE INDEX node_idx ON nodes (name, parent)")
        (catch Exception e
-         (errorf e "Error creating database %s" db-spec))))
+         ;; Returning nil left the caller to invent its own reason the db was missing and
+         ;; threw away the one the driver gave us. Rethrow, so the cause reaches the log.
+         (errorf e "Error creating database %s" db-spec)
+         (throw e))))
 
 (defn- create-tmp-data-db
   [levels]
@@ -77,7 +80,8 @@
       (db-do-commands spec mapping-ddl)
       spec
       (catch Exception e
-        (errorf e "Error creating temp db - spec: %s - schema: %s" spec schema)))))
+        (errorf e "Error creating temp db - spec: %s - schema: %s" spec schema)
+        (throw e)))))
 
 (defn- store-node
   "write the item to the sqlite database"
@@ -167,19 +171,25 @@
   (let [f (io/file fpath)]
     (if (and (.exists f) (.canRead f))
       (with-open [r (io/reader f)]
-        (->> (csv/read-csv r :separator separator)
-             (map-indexed (fn [idx row]
-                            {:line (inc idx)
-                             :row row}))
-             (some (fn [{:keys [line row]}]
-                     (cond
-                       (not= (count row) expected-column-count)
-                       [(format "Wrong number of columns %s on line %s, Row: %s"
-                                (count row) line (string/join separator row))]
+        (let [rows (csv/read-csv r :separator separator)]
+          ;; A file with no rows has nothing for the checks below to reject, so they answer
+          ;; nil, the import writes no nodes and still reports success. An empty cascade is
+          ;; never what was meant, so the emptiness is itself the error.
+          (if (empty? rows)
+            [(format "No rows found in %s" (.getName f))]
+            (->> rows
+                 (map-indexed (fn [idx row]
+                                {:line (inc idx)
+                                 :row row}))
+                 (some (fn [{:keys [line row]}]
+                         (cond
+                           (not= (count row) expected-column-count)
+                           [(format "Wrong number of columns %s on line %s, Row: %s"
+                                    (count row) line (string/join separator row))]
 
-                       (some #(-> % .trim .isEmpty) row)
-                       [(format "Empty cascade node on line %s. Row: %s"
-                                line (string/join separator row))])))))
+                           (some #(-> % .trim .isEmpty) row)
+                           [(format "Empty cascade node on line %s. Row: %s"
+                                    line (string/join separator row))])))))))
       [(format "File Not Found at %s" (.getAbsolutePath f))])))
 
 (defn create-node
@@ -282,10 +292,19 @@
   [upload-url cascade-id csv-path levels codes? separator]
   (gae/with-datastore [ds (datastore-spec upload-url)]
     (let [db (csv-to-db csv-path levels codes? separator)
-          sql-limit page-size]
+          sql-limit page-size
+          root-count (:count (first (query db (get-count-sql 0))))]
+      ;; With no level-0 nodes the loop below does not run, puts no entities and returns
+      ;; normally -- which the caller reports to the user as a successful import. Whatever
+      ;; left the first level empty, an import that stores nothing has not succeeded.
+      (when-not (pos? root-count)
+        (throw (ex-info "Cascade CSV produced no nodes"
+                        {:cascade-id cascade-id
+                         :csv-path   csv-path
+                         :levels     levels})))
       (loop [level 0
              offset 0
-             level-count (:count (first (query db (get-count-sql level))))]
+             level-count root-count]
         (if (and (pos? level-count) (< level levels))
           (let [data-sql (get-nodes-sql level sql-limit offset)
                 data (query db data-sql)
@@ -371,7 +390,16 @@
         db-spec (get-db-spec (.getAbsolutePath tmp-dir) db-name)
         db (create-db db-spec)]
      (if db
-       (when-let [nodes (seq (normalize-ids (get-nodes uploadUrl cascadeResourceId)))]
+       (let [nodes (seq (normalize-ids (get-nodes uploadUrl cascadeResourceId)))]
+
+         ;; This was a `when-let`, which skipped the upload below and the log line that
+         ;; reports it in one go: a resource with no nodes published no database and said
+         ;; nothing about it, leaving a started-but-never-finished publish looking exactly
+         ;; like a successful one. Devices have no cascade to download either way.
+         (when-not nodes
+           (throw (ex-info "No cascade nodes to publish"
+                           {"cascadeResourceId" cascadeResourceId
+                            "version"           version})))
 
          (let [[valid? msg] (validate-nodes-data nodes)]
            (when (= :error valid?)

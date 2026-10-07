@@ -1,12 +1,19 @@
 (ns akvo.flow-services.cascade-test
   (:require [clojure.test :refer :all]
-            [akvo.flow-services.cascade :as cascade]))
+            [clojure.java.jdbc :as jdbc]
+            [akvo.flow-services.cascade :as cascade])
+  (:import [java.io File]))
 
 (def comma-sep-2-levels "test/cascades/comma-sep-2-levels.csv")
 (def semicolon-sep-3-levels "test/cascades/semicolon-sep-3-levels.csv")
 (def tab-sep-4-levels "test/cascades/tab-sep-4-levels.csv")
 (def cascade-with-empty-nodes "test/cascades/empty-nodes.csv")
 (def quoted-comma-separator "test/cascades/quoted-comma-separator.csv")
+;; A real three-level cascade whose first two levels repeat across rows, so the DISTINCT
+;; in the per-level inserts has something to collapse. Stored with the line endings
+;; `text-file-utils/clean` normalises to, which is what csv-to-db is given in production.
+(def comma-sep-3-levels-repeated-parents
+  "test/cascades/comma-sep-3-levels-repeated-parents.csv")
 
 (deftest test-find-csv-separator
   (is (= \, (cascade/find-csv-separator comma-sep-2-levels 2)))
@@ -27,6 +34,28 @@
   (is (= ["Empty cascade node on line 2. Row: d, ,f"]
          (cascade/validate-csv cascade-with-empty-nodes 3 \,)))
   (is (not (empty? (cascade/validate-csv "no-such-file" 3 \,)))))
+
+
+(deftest test-validate-csv-rejects-an-empty-file
+  ;; An empty file has no row for the column and emptiness checks to reject, so they used
+  ;; to answer nil and the import went on to store nothing and report success.
+  (let [f (doto (File/createTempFile "cascade" ".csv") (.deleteOnExit))]
+    (is (= [(format "No rows found in %s" (.getName f))]
+           (cascade/validate-csv (.getAbsolutePath f) 3 \,)))))
+
+
+(defn- row-count [db table]
+  (:count (first (jdbc/query db [(format "SELECT count(*) AS count FROM %s" table)]))))
+
+(deftest test-csv-to-db-derives-one-node-table-per-level
+  ;; csv-to-db and the node tables it derives had no coverage, which is how an import that
+  ;; stored nothing could still be reported as successful. These counts are what the
+  ;; fixture must produce for the import to have anything to write.
+  (let [db (cascade/csv-to-db comma-sep-3-levels-repeated-parents 3 false \,)]
+    (is (= 31 (row-count db "data")) "every CSV row is staged")
+    (is (= 2 (row-count db "nodes_0")) "two distinct regions")
+    (is (= 2 (row-count db "nodes_1")) "one distinct province under each region")
+    (is (= 31 (row-count db "nodes_2")) "every village is distinct")))
 
 (defn are-invalid [nodes]
   (let [[result msg] (cascade/validate-nodes-data nodes)]
