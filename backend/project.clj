@@ -68,9 +68,19 @@
                  ; All three move together on purpose. tools-sdk and api-1.0-sdk share
                  ; some 2300 repackaged classes (a shaded Guava among them), so mixing
                  ; versions leaves which copy wins up to classpath order.
+                 ;
+                 ; tools-sdk also vendors slf4j-api 2.x unrelocated, which wins the uberjar
+                 ; merge and leaves SLF4J a no-op -- slf4j-timbre has no 2.x binding. Quartz
+                 ; reports a job that threw through SLF4J, so error paths must log through
+                 ; timbre directly. Not fixable here; see the catch Throwable in cascade.clj.
                  [com.google.appengine/appengine-tools-sdk "2.0.38"]
                  [com.google.appengine/appengine-remote-api "2.0.38"]
                  [com.google.appengine/appengine-api-1.0-sdk "2.0.38"]
+
+                 ; remote-api references the unshaded com.google.gson.stream.JsonWriter and
+                 ; nothing supplies it -- api-1.0-sdk carries only a repackaged copy -- so its
+                 ; first datastore call dies. 2.10.1 is the gson that release was built against.
+                 [com.google.code.gson/gson "2.10.1"]
 
                  [aero "1.1.3"]
                  [raven-clj "1.5.1"]]

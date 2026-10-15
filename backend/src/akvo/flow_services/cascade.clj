@@ -426,7 +426,8 @@
       (future (notify-gae domain {"action" "cascade"
                                   "cascadeResourceId" cascadeResourceId
                                   "status" "published"}))
-      (catch Exception e
+      ;; Throwable for the same reason as UploadCascadeJob below.
+      (catch Throwable e
         (errorf e "Publishing cascade failed - instance: %s - resourceId: %s - version: %s - reason: %s"
                 domain cascadeResourceId version (.getMessage e))
         (future (notify-gae domain {"action" "cascade"
@@ -494,7 +495,10 @@
         (create-nodes uploadDomain cascadeResourceId cleaned-csv-path levels codes? separator)
         (update-number-levels uploadDomain cascadeResourceId numLevels)
         (add-message bucket-name "cascadeImport" nil (format "Successfully imported csv file %s" filename))
-        (catch Exception e
+        ;; Throwable, not Exception: NoClassDefFoundError from the remote API is an Error,
+        ;; and Quartz -- the only other thing that would report it -- logs through SLF4J,
+        ;; which is a no-op here. Caught narrowly, the import leaves no trace at all.
+        (catch Throwable e
           (errorf e (format "Error uploading CSV: %s" (.getMessage e)))
           (add-message bucket-name "cascadeImport" nil (format "Failed to import csv file %s" filename)))))))
 
