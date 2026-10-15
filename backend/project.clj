@@ -77,10 +77,16 @@
                  [com.google.appengine/appengine-remote-api "2.0.38"]
                  [com.google.appengine/appengine-api-1.0-sdk "2.0.38"]
 
-                 ; remote-api references the unshaded com.google.gson.stream.JsonWriter and
-                 ; nothing supplies it -- api-1.0-sdk carries only a repackaged copy -- so its
-                 ; first datastore call dies. 2.10.1 is the gson that release was built against.
+                 ; remote-api repackages google-http-client 1.43.3 but renames only the
+                 ; http-client packages, so its references to gson and opencensus stay
+                 ; unshaded -- and its pom declares neither. Nothing else supplies them
+                 ; (api-1.0-sdk carries only repackaged copies), so RemoteApiInstaller.install
+                 ; dies on the first datastore call. Scanning the jar finds 22 unshaded
+                 ; references in total; these three artifacts cover all of them, at the
+                 ; versions that http-client release was built against.
                  [com.google.code.gson/gson "2.10.1"]
+                 [io.opencensus/opencensus-api "0.31.1"]
+                 [io.opencensus/opencensus-contrib-http-util "0.31.1"]
 
                  [aero "1.1.3"]
                  [raven-clj "1.5.1"]]
